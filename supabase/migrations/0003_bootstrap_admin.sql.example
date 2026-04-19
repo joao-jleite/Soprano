@@ -1,0 +1,16 @@
+-- Soprano — Bootstrap do primeiro admin
+-- NÃO rode automaticamente. Copie, ajuste o email e execute no SQL Editor
+-- depois de ter criado o usuário no Supabase Auth (Dashboard → Authentication → Users → Add user).
+
+-- 1. Promove um usuário existente a admin
+update profiles
+  set role = 'admin',
+      company = 'Zitrón Brasil'
+  where email = 'seu-email@zitron.com.br';
+
+-- 2. (Opcional) Cria um cliente de exemplo
+-- Primeiro crie o usuário no Auth com email + senha, depois:
+update profiles
+  set role = 'cliente',
+      company = 'LinhaUni / Acciona'
+  where email = 'cliente@exemplo.com.br';

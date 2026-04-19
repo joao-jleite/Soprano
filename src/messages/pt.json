@@ -1,0 +1,159 @@
+{
+  "app": {
+    "name": "Soprano",
+    "tagline": "Registro vivo da obra",
+    "description": "Registro de atividades da Zitrón Brasil — Linha 6 do Metrô de São Paulo"
+  },
+  "nav": {
+    "dashboard": "Painel",
+    "linha6": "Linha 6",
+    "activities": "Atividades",
+    "locations": "Locais",
+    "team": "Equipe",
+    "reports": "Relatórios",
+    "complaints": "Reclamos",
+    "settings": "Configurações",
+    "logout": "Sair"
+  },
+  "auth": {
+    "signIn": "Entrar",
+    "signInTitle": "Entre na Soprano",
+    "signInSubtitle": "Continue de onde parou",
+    "email": "Email",
+    "password": "Senha",
+    "forgotPassword": "Esqueci minha senha",
+    "noAccount": "Fale com o administrador para solicitar acesso",
+    "invalidCredentials": "Email ou senha inválidos",
+    "signingIn": "Entrando..."
+  },
+  "roles": {
+    "admin": "Administrador",
+    "supervisor": "Supervisor",
+    "cliente": "Cliente"
+  },
+  "dashboard": {
+    "welcome": "Olá, {name}",
+    "today": "Hoje",
+    "pendingSignatures": "Assinaturas pendentes",
+    "recentActivities": "Atividades recentes",
+    "quickStats": "Resumo",
+    "activitiesThisMonth": "Atividades no mês",
+    "signedThisMonth": "Assinadas no mês",
+    "teamOnSite": "Equipe em campo"
+  },
+  "linha6": {
+    "title": "Linha 6 — Laranja",
+    "subtitle": "Brasilândia ↔ São Joaquim — 15 estações + pátio Morro Grande",
+    "stationsLabel": "Estações",
+    "shaftsLabel": "Poços de ventilação (VSE)",
+    "emergencyLabel": "Saídas de emergência (SE)",
+    "totalActivities": "Total de atividades",
+    "byLocation": "Por local"
+  },
+  "activities": {
+    "title": "Atividades",
+    "newActivity": "Nova atividade",
+    "empty": "Nenhuma atividade ainda.",
+    "emptyCta": "Registre a primeira",
+    "filterByType": "Tipo",
+    "filterByLocation": "Local",
+    "filterByDate": "Data",
+    "filterByStatus": "Status",
+    "filterClear": "Limpar filtros",
+    "fields": {
+      "location": "Local",
+      "type": "Tipo de atividade",
+      "description": "Descrição",
+      "participants": "Equipe",
+      "photos": "Fotos",
+      "startedAt": "Início",
+      "endedAt": "Término",
+      "notes": "Observações"
+    },
+    "placeholders": {
+      "description": "Descreva o que foi executado...",
+      "selectLocation": "Selecione o local",
+      "selectType": "Selecione o tipo",
+      "addNew": "+ Adicionar novo"
+    },
+    "status": {
+      "rascunho": "Rascunho",
+      "enviada": "Aguardando assinatura",
+      "assinada": "Assinada",
+      "rejeitada": "Rejeitada"
+    },
+    "actions": {
+      "save": "Salvar rascunho",
+      "submit": "Enviar para assinatura",
+      "edit": "Editar",
+      "delete": "Excluir",
+      "sign": "Assinar",
+      "download": "Baixar PDF"
+    }
+  },
+  "expandableSelect": {
+    "addNewTitle": "Adicionar novo",
+    "addNewLabel": "Nome",
+    "addNewPlaceholder": "Digite o nome...",
+    "addNewConfirm": "Adicionar",
+    "addNewCancel": "Cancelar",
+    "search": "Buscar..."
+  },
+  "locations": {
+    "title": "Locais",
+    "description": "Estações, poços de ventilação, saídas de emergência e demais pontos da Linha 6",
+    "kinds": {
+      "estacao": "Estação",
+      "vse": "Poço de ventilação",
+      "se": "Saída de emergência",
+      "escadaria": "Escadaria",
+      "patio": "Pátio",
+      "outro": "Outro"
+    }
+  },
+  "activityTypes": {
+    "title": "Tipos de atividade",
+    "default": {
+      "eletrica": "Elétrica",
+      "mecanica": "Mecânica",
+      "pintura": "Pintura",
+      "estrutura": "Estrutura",
+      "dutos": "Dutos",
+      "instalacao_ventilador": "Instalação de ventilador",
+      "comissionamento": "Comissionamento",
+      "manutencao": "Manutenção",
+      "inspecao": "Inspeção"
+    }
+  },
+  "signature": {
+    "title": "Assinatura do cliente",
+    "subtitle": "Ao assinar, você confirma que o trabalho descrito foi executado conforme apresentado",
+    "draw": "Assine abaixo",
+    "clear": "Limpar",
+    "confirm": "Confirmar assinatura",
+    "reject": "Recusar",
+    "rejectReason": "Motivo da recusa",
+    "signedBy": "Assinado por",
+    "signedAt": "Em",
+    "verification": "Código de verificação"
+  },
+  "photo": {
+    "upload": "Enviar foto",
+    "uploading": "Enviando...",
+    "remove": "Remover",
+    "capturedAt": "Tirada em"
+  },
+  "common": {
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "confirm": "Confirmar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "loading": "Carregando...",
+    "search": "Buscar",
+    "noResults": "Nenhum resultado",
+    "error": "Ocorreu um erro",
+    "tryAgain": "Tentar novamente"
+  }
+}

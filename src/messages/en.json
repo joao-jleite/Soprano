@@ -1,0 +1,159 @@
+{
+  "app": {
+    "name": "Soprano",
+    "tagline": "The living record of the works",
+    "description": "Activity log for Zitrón Brasil — São Paulo Metro Line 6"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "linha6": "Line 6",
+    "activities": "Activities",
+    "locations": "Locations",
+    "team": "Team",
+    "reports": "Reports",
+    "complaints": "Complaints",
+    "settings": "Settings",
+    "logout": "Sign out"
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "signInTitle": "Sign in to Soprano",
+    "signInSubtitle": "Pick up where you left off",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot password",
+    "noAccount": "Contact the administrator to request access",
+    "invalidCredentials": "Invalid email or password",
+    "signingIn": "Signing in..."
+  },
+  "roles": {
+    "admin": "Administrator",
+    "supervisor": "Supervisor",
+    "cliente": "Client"
+  },
+  "dashboard": {
+    "welcome": "Hi, {name}",
+    "today": "Today",
+    "pendingSignatures": "Pending signatures",
+    "recentActivities": "Recent activities",
+    "quickStats": "Overview",
+    "activitiesThisMonth": "Activities this month",
+    "signedThisMonth": "Signed this month",
+    "teamOnSite": "Team on site"
+  },
+  "linha6": {
+    "title": "Line 6 — Orange",
+    "subtitle": "Brasilândia ↔ São Joaquim — 15 stations + Morro Grande yard",
+    "stationsLabel": "Stations",
+    "shaftsLabel": "Ventilation shafts (VSE)",
+    "emergencyLabel": "Emergency exits (SE)",
+    "totalActivities": "Total activities",
+    "byLocation": "By location"
+  },
+  "activities": {
+    "title": "Activities",
+    "newActivity": "New activity",
+    "empty": "No activities yet.",
+    "emptyCta": "Log the first one",
+    "filterByType": "Type",
+    "filterByLocation": "Location",
+    "filterByDate": "Date",
+    "filterByStatus": "Status",
+    "filterClear": "Clear filters",
+    "fields": {
+      "location": "Location",
+      "type": "Activity type",
+      "description": "Description",
+      "participants": "Team",
+      "photos": "Photos",
+      "startedAt": "Started",
+      "endedAt": "Ended",
+      "notes": "Notes"
+    },
+    "placeholders": {
+      "description": "Describe what was done...",
+      "selectLocation": "Select location",
+      "selectType": "Select type",
+      "addNew": "+ Add new"
+    },
+    "status": {
+      "rascunho": "Draft",
+      "enviada": "Awaiting signature",
+      "assinada": "Signed",
+      "rejeitada": "Rejected"
+    },
+    "actions": {
+      "save": "Save draft",
+      "submit": "Submit for signature",
+      "edit": "Edit",
+      "delete": "Delete",
+      "sign": "Sign",
+      "download": "Download PDF"
+    }
+  },
+  "expandableSelect": {
+    "addNewTitle": "Add new",
+    "addNewLabel": "Name",
+    "addNewPlaceholder": "Type the name...",
+    "addNewConfirm": "Add",
+    "addNewCancel": "Cancel",
+    "search": "Search..."
+  },
+  "locations": {
+    "title": "Locations",
+    "description": "Stations, ventilation shafts, emergency exits and other points of Line 6",
+    "kinds": {
+      "estacao": "Station",
+      "vse": "Ventilation shaft",
+      "se": "Emergency exit",
+      "escadaria": "Stairway",
+      "patio": "Yard",
+      "outro": "Other"
+    }
+  },
+  "activityTypes": {
+    "title": "Activity types",
+    "default": {
+      "eletrica": "Electrical",
+      "mecanica": "Mechanical",
+      "pintura": "Painting",
+      "estrutura": "Structural",
+      "dutos": "Ducting",
+      "instalacao_ventilador": "Fan installation",
+      "comissionamento": "Commissioning",
+      "manutencao": "Maintenance",
+      "inspecao": "Inspection"
+    }
+  },
+  "signature": {
+    "title": "Client signature",
+    "subtitle": "By signing, you confirm the described work was performed as presented",
+    "draw": "Sign below",
+    "clear": "Clear",
+    "confirm": "Confirm signature",
+    "reject": "Reject",
+    "rejectReason": "Reason for rejection",
+    "signedBy": "Signed by",
+    "signedAt": "At",
+    "verification": "Verification code"
+  },
+  "photo": {
+    "upload": "Upload photo",
+    "uploading": "Uploading...",
+    "remove": "Remove",
+    "capturedAt": "Taken"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "loading": "Loading...",
+    "search": "Search",
+    "noResults": "No results",
+    "error": "Something went wrong",
+    "tryAgain": "Try again"
+  }
+}

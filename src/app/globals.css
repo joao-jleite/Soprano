@@ -1,0 +1,150 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Soprano — Design Tokens
+  ------------------------------------------------
+  A paleta inteira da aplicação mora aqui.
+  Quando o manual de marca Zitrón oficial chegar,
+  só os valores HSL precisam mudar — nenhum componente.
+
+  Cor primária: AZUL industrial Zitrón.
+*/
+
+@layer base {
+  :root {
+    /* Modo escuro é o padrão — industrial premium */
+    --zitron-blue: 212 95% 42%;         /* ~#0959C8 — azul industrial Zitrón */
+    --zitron-blue-bright: 208 100% 58%; /* acento mais vivo, tipo LED */
+    --zitron-ink: 220 20% 5%;           /* fundo principal (quase preto azulado) */
+    --zitron-graphite: 220 16% 10%;     /* superfícies elevadas */
+    --zitron-steel: 220 9% 46%;         /* texto secundário */
+    --zitron-chrome: 220 14% 96%;       /* texto claro / superfícies claras */
+    --zitron-cyan: 190 100% 55%;        /* dados / telemetria */
+
+    /* Shadcn tokens (derivados dos brand tokens) */
+    --background: var(--zitron-ink);
+    --foreground: var(--zitron-chrome);
+
+    --card: 220 16% 8%;
+    --card-foreground: var(--zitron-chrome);
+
+    --popover: 220 16% 7%;
+    --popover-foreground: var(--zitron-chrome);
+
+    --primary: var(--zitron-blue);
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 14% 14%;
+    --secondary-foreground: var(--zitron-chrome);
+
+    --muted: 220 14% 12%;
+    --muted-foreground: 220 9% 60%;
+
+    --accent: var(--zitron-blue-bright);
+    --accent-foreground: 220 20% 5%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 14% 17%;
+    --input: 220 14% 14%;
+    --ring: var(--zitron-blue);
+
+    --radius: 0.625rem;
+  }
+
+  /* Modo claro opcional — preparado mas não é o padrão */
+  .light {
+    --background: 0 0% 100%;
+    --foreground: 220 20% 5%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 5%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 5%;
+    --primary: var(--zitron-blue);
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 20% 5%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 220 14% 96%;
+    --accent-foreground: 220 20% 5%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: var(--zitron-blue);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    @apply antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'ss01', 'cv11';
+  }
+  body {
+    @apply bg-background text-foreground;
+    background-image:
+      radial-gradient(1200px circle at 50% -10%, hsl(var(--zitron-blue) / 0.12), transparent 55%),
+      radial-gradient(900px circle at 0% 100%, hsl(var(--zitron-cyan) / 0.04), transparent 60%);
+    background-attachment: fixed;
+  }
+  ::selection {
+    background: hsl(var(--zitron-blue) / 0.4);
+    color: hsl(var(--zitron-chrome));
+  }
+}
+
+@layer components {
+  /* Linhas de grid premium — usado em dashboards */
+  .grid-lines {
+    background-image:
+      linear-gradient(hsl(var(--border) / 0.5) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.5) 1px, transparent 1px);
+    background-size: 64px 64px;
+    background-position: -1px -1px;
+  }
+
+  /* Brilho sutil em cards importantes (headline de obra) */
+  .surface-elevated {
+    background: linear-gradient(
+      180deg,
+      hsl(var(--card)) 0%,
+      hsl(220 16% 6%) 100%
+    );
+    box-shadow:
+      0 1px 0 0 hsl(var(--border)) inset,
+      0 24px 48px -12px hsl(0 0% 0% / 0.6);
+  }
+
+  /* Texto "data" — tipo indicador técnico */
+  .text-data {
+    @apply font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground;
+  }
+
+  /* Efeito shimmer para skeletons */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--secondary)) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    @apply animate-shimmer;
+  }
+
+  /* Glow azul sutil em elementos de destaque */
+  .glow-primary {
+    box-shadow:
+      0 0 0 1px hsl(var(--zitron-blue) / 0.4),
+      0 8px 32px -8px hsl(var(--zitron-blue) / 0.5);
+  }
+}

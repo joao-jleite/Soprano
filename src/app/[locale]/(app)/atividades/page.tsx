@@ -1,0 +1,124 @@
+import { Plus } from 'lucide-react';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { createClient } from '@/lib/supabase/server';
+import { Link } from '@/i18n/navigation';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { ActivityFilters } from './filters';
+import { formatDate } from '@/lib/utils';
+
+type SearchParams = Promise<{
+  location?: string;
+  type?: string;
+  status?: string;
+  from?: string;
+  to?: string;
+}>;
+
+export default async function ActivitiesPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>;
+  searchParams: SearchParams;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  const sp = await searchParams;
+  const t = await getTranslations();
+  const supabase = await createClient();
+
+  let q = supabase
+    .from('activities')
+    .select('id, description, status, started_at, locations(name, kind), activity_types(label_pt, label_en, label_es), profiles!activities_supervisor_id_fkey(full_name)')
+    .order('started_at', { ascending: false })
+    .limit(100);
+
+  if (sp.location) q = q.eq('location_id', sp.location);
+  if (sp.type) q = q.eq('activity_type_id', sp.type);
+  if (sp.status) q = q.eq('status', sp.status);
+  if (sp.from) q = q.gte('started_at', sp.from);
+  if (sp.to) q = q.lte('started_at', sp.to);
+
+  const [{ data: activities }, { data: locations }, { data: types }] = await Promise.all([
+    q,
+    supabase.from('locations').select('id, name, kind').eq('line', 'linha-6').order('sort_order'),
+    supabase.from('activity_types').select('id, slug, label_pt, label_en, label_es').order('label_pt'),
+  ]);
+
+  const localeKey = (locale === 'en' ? 'label_en' : locale === 'es' ? 'label_es' : 'label_pt') as
+    | 'label_pt'
+    | 'label_en'
+    | 'label_es';
+
+  return (
+    <div className="space-y-6">
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">{t('activities.title')}</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {activities?.length ?? 0} {t('activities.title').toLowerCase()}
+          </p>
+        </div>
+        <Button asChild>
+          <Link href="/atividades/nova">
+            <Plus />
+            {t('activities.newActivity')}
+          </Link>
+        </Button>
+      </header>
+
+      <ActivityFilters locations={locations ?? []} types={types ?? []} localeKey={localeKey} />
+
+      {(!activities || activities.length === 0) && (
+        <Card>
+          <CardContent className="p-10 flex flex-col items-center gap-3 text-center">
+            <p className="text-sm text-muted-foreground">{t('activities.empty')}</p>
+            <Button asChild size="sm" variant="outline">
+              <Link href="/atividades/nova">{t('activities.emptyCta')}</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      <ul className="space-y-2">
+        {(activities ?? []).map((a: any) => (
+          <li key={a.id}>
+            <Link
+              href={`/atividades/${a.id}`}
+              className="block group"
+            >
+              <Card className="transition-all group-hover:border-primary/40">
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <StatusBadge status={a.status} />
+                      <span className="text-xs text-muted-foreground">
+                        {a.activity_types?.[localeKey]}
+                      </span>
+                    </div>
+                    <p className="text-sm font-medium truncate">{a.description}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {a.locations?.name} · {a.profiles?.full_name} · {formatDate(a.started_at, locale === 'pt' ? 'pt-BR' : locale)}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const map: Record<string, 'default' | 'warning' | 'success' | 'destructive' | 'secondary'> = {
+    rascunho: 'secondary',
+    enviada: 'warning',
+    assinada: 'success',
+    rejeitada: 'destructive',
+  };
+  return <Badge variant={map[status] ?? 'secondary'}>{status}</Badge>;
+}
