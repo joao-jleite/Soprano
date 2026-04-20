@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import { locales, type Locale } from '@/i18n/config';
+import { Providers } from '@/components/providers';
 import '../globals.css';
 
 export function generateStaticParams() {
@@ -52,7 +53,7 @@ export default async function LocaleLayout({
     <html lang={locale} className={`${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
       <body className="min-h-screen font-sans">
         <NextIntlClientProvider messages={messages}>
-          {children}
+          <Providers>{children}</Providers>
         </NextIntlClientProvider>
       </body>
     </html>

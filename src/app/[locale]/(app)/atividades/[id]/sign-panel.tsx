@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { toast } from 'sonner';
 import { useRouter } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { SignatureCanvas } from '@/components/signature/signature-canvas';
@@ -16,14 +17,24 @@ export function SignActivityPanel({ activityId }: { activityId: string }) {
   const [reason, setReason] = React.useState('');
 
   async function onConfirm(svg: string) {
-    await signActivity({ activityId, svgData: svg });
-    router.refresh();
+    try {
+      await signActivity({ activityId, svgData: svg });
+      toast.success(t('confirm') + ' ✓');
+      router.refresh();
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Erro ao assinar');
+    }
   }
 
   async function onReject() {
     if (!reason.trim()) return;
-    await rejectActivity({ activityId, reason, svgData: '<svg/>' });
-    router.refresh();
+    try {
+      await rejectActivity({ activityId, reason, svgData: '<svg/>' });
+      toast.success(t('reject') + ' ✓');
+      router.refresh();
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Erro ao rejeitar');
+    }
   }
 
   return (

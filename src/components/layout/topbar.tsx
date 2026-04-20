@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { LocaleSwitcher } from './locale-switcher';
+import { ThemeToggle } from './theme-toggle';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from '@/i18n/navigation';
 import { initials } from '@/lib/utils';
@@ -36,6 +37,7 @@ export function Topbar({ fullName, role }: Props) {
         </div>
 
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           <LocaleSwitcher />
           <div className="hidden md:flex items-center gap-2.5 pl-3 border-l border-border">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/15 text-primary text-xs font-semibold border border-primary/25">

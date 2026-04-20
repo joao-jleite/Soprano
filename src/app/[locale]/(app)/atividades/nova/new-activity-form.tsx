@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { Loader2, Save, Send } from 'lucide-react';
+import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -73,17 +74,29 @@ export function NewActivityForm({ locations, types, clients, locale }: Props) {
   const [savingAs, setSavingAs] = React.useState<'draft' | 'submit' | null>(null);
 
   async function handleCreateLocation(name: string): Promise<Option> {
-    const created = await createLocation(name, 'outro');
-    const opt: Option = { value: created.id, label: created.name, sublabel: 'Outro' };
-    setLocationOptions((prev) => [...prev, opt]);
-    return opt;
+    try {
+      const created = await createLocation(name, 'outro');
+      const opt: Option = { value: created.id, label: created.name, sublabel: 'Outro' };
+      setLocationOptions((prev) => [...prev, opt]);
+      toast.success(`Local criado: ${created.name}`);
+      return opt;
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Erro ao criar local');
+      throw e;
+    }
   }
 
   async function handleCreateType(name: string): Promise<Option> {
-    const created = await createActivityType({ labelPt: name });
-    const opt: Option = { value: created.id, label: created.label_pt };
-    setTypeOptions((prev) => [...prev, opt]);
-    return opt;
+    try {
+      const created = await createActivityType({ labelPt: name });
+      const opt: Option = { value: created.id, label: created.label_pt };
+      setTypeOptions((prev) => [...prev, opt]);
+      toast.success(`Tipo criado: ${created.label_pt}`);
+      return opt;
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Erro ao criar tipo');
+      throw e;
+    }
   }
 
   async function submit(submitForSignature: boolean) {
@@ -102,7 +115,10 @@ export function NewActivityForm({ locations, types, clients, locale }: Props) {
         photos: photos.map((p) => ({ storagePath: p.storagePath })),
         submit: submitForSignature,
       });
+      toast.success(submitForSignature ? 'Atividade enviada para assinatura' : 'Rascunho salvo');
       router.push(`/atividades/${id}`);
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Erro ao salvar atividade');
     } finally {
       setSavingAs(null);
     }
