@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 
-const PUBLIC_ROUTES = ['/login'];
+const PUBLIC_ROUTES = ['/login', '/verify'];
 
 export async function middleware(request: NextRequest) {
   const { response: supaResponse, user } = await updateSession(request);
@@ -25,8 +25,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Autenticado caindo em /login
-  if (isPublic && user) {
+  // Autenticado caindo em /login (mas /verify é acessível sempre)
+  if (isPublic && user && pathWithoutLocale.startsWith('/login')) {
     const url = request.nextUrl.clone();
     url.pathname = '/pt';
     url.searchParams.delete('next');

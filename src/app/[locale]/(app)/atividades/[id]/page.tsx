@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { SignActivityPanel } from './sign-panel';
+import { PdfDownloadButton } from '@/components/activity/pdf-download-button';
 import { formatDateTime } from '@/lib/utils';
 
 export default async function ActivityDetailPage({
@@ -68,9 +69,12 @@ export default async function ActivityDetailPage({
   return (
     <div className="max-w-4xl space-y-6">
       <header className="space-y-3">
-        <div className="flex items-center gap-2">
-          <StatusBadge status={act.status} />
-          <span className="text-data">{typeLabel}</span>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <StatusBadge status={act.status} />
+            <span className="text-data">{typeLabel}</span>
+          </div>
+          <PdfDownloadButton activityId={act.id} />
         </div>
         <h1 className="text-3xl font-semibold tracking-tight">{act.description}</h1>
       </header>
