@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Link } from '@/i18n/navigation';
+import { Linha6Map } from '@/components/map/linha-6-map';
 
 const KIND_META: Record<string, { label: string; icon: React.ComponentType<{ className?: string }>; tone: string }> = {
   estacao: { label: 'Estação', icon: Building2, tone: 'text-primary' },
@@ -43,6 +44,8 @@ export default async function Linha6Page({
         <h1 className="text-3xl lg:text-4xl font-semibold tracking-tight">{t('title')}</h1>
         <p className="text-muted-foreground max-w-3xl">{t('subtitle')}</p>
       </header>
+
+      <Linha6Map stops={(locations ?? []) as any} />
 
       <section className="grid gap-4 sm:grid-cols-3">
         <StatBlock label={t('stationsLabel')} value={grouped.estacao?.length ?? 0} icon={<Building2 className="h-4 w-4" />} />

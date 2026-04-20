@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
+import { getUserEmail } from '@/lib/supabase/service';
+import { activitySignedEmail } from '@/lib/notify/email';
 
 const signSchema = z.object({
   activityId: z.string().uuid(),
@@ -46,6 +48,36 @@ export async function signActivity(input: z.infer<typeof signSchema>) {
     ip_address: ip,
   });
   if (error) throw error;
+
+  // Notifica supervisor
+  try {
+    const { data: act } = await supabase
+      .from('activities')
+      .select('description, supervisor_id')
+      .eq('id', parsed.activityId)
+      .single();
+    const supId = (act as any)?.supervisor_id;
+    if (supId) {
+      const { data: sup } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', supId)
+        .single();
+      const email = await getUserEmail(supId);
+      if (email) {
+        const origin = h.get('origin') ?? '';
+        await activitySignedEmail({
+          supervisorEmail: email,
+          supervisorName: (sup as any)?.full_name ?? 'supervisor',
+          description: (act as any).description,
+          clientName: profile.full_name,
+          activityUrl: `${origin}/pt/atividades/${parsed.activityId}`,
+        });
+      }
+    }
+  } catch (e) {
+    console.warn('[notify] sign email failed', e);
+  }
 
   revalidatePath(`/atividades/${parsed.activityId}`);
   revalidatePath('/atividades');

@@ -3,6 +3,9 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
+import { getUserEmail } from '@/lib/supabase/service';
+import { activitySubmittedEmail } from '@/lib/notify/email';
+import { headers } from 'next/headers';
 
 const participantSchema = z.object({
   name: z.string().min(1),
@@ -97,6 +100,36 @@ export async function submitActivityForSignature(activityId: string) {
     .update({ status: 'enviada', submitted_at: new Date().toISOString() })
     .eq('id', activityId);
   if (error) throw error;
+
+  // Notifica cliente por email (se configurado)
+  try {
+    const { data: act } = await supabase
+      .from('activities')
+      .select('description, client_id')
+      .eq('id', activityId)
+      .single();
+    if ((act as any)?.client_id) {
+      const { data: client } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', (act as any).client_id)
+        .single();
+      const email = await getUserEmail((act as any).client_id);
+      if (email) {
+        const h = await headers();
+        const origin = h.get('origin') ?? h.get('referer')?.replace(/\/[^/]*$/, '') ?? '';
+        await activitySubmittedEmail({
+          clientEmail: email,
+          clientName: (client as any)?.full_name ?? 'cliente',
+          description: (act as any).description,
+          activityUrl: `${origin}/pt/atividades/${activityId}`,
+        });
+      }
+    }
+  } catch (e) {
+    console.warn('[notify] submit email failed', e);
+  }
+
   revalidatePath(`/atividades/${activityId}`);
   revalidatePath('/atividades');
 }
