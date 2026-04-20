@@ -60,6 +60,20 @@
     "filterByDate": "Fecha",
     "filterByStatus": "Estado",
     "filterClear": "Limpiar filtros",
+    "duplicate": "Duplicar",
+    "duplicating": "Duplicando actividad",
+    "register": "Registrar actividad",
+    "duplicateHelp": "Prellenado desde la actividad original. Ajusta fechas y fotos antes de enviar.",
+    "newHelp": "Completa los datos de la obra ejecutada. Puedes guardar como borrador y enviar a firma después.",
+    "editDraft": "Editar borrador",
+    "editActivity": "Editar actividad",
+    "rejectReason": "Motivo",
+    "copyVerifyLink": "Enlace de verificación",
+    "copiedLink": "Enlace de verificación copiado",
+    "copiedLinkError": "No se pudo copiar",
+    "copied": "Copiado",
+    "waitingClient": "Esperando acción del cliente asignado.",
+    "draftNotice": "Esta actividad sigue siendo un borrador. Envíala a firma cuando esté lista.",
     "fields": {
       "location": "Ubicación",
       "type": "Tipo de actividad",
@@ -68,7 +82,9 @@
       "photos": "Fotos",
       "startedAt": "Inicio",
       "endedAt": "Fin",
-      "notes": "Observaciones"
+      "notes": "Observaciones",
+      "supervisor": "Supervisor",
+      "client": "Cliente"
     },
     "placeholders": {
       "description": "Describe lo ejecutado...",
@@ -141,7 +157,91 @@
     "upload": "Subir foto",
     "uploading": "Subiendo...",
     "remove": "Quitar",
-    "capturedAt": "Tomada el"
+    "capturedAt": "Tomada el",
+    "view": "Ver foto",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "close": "Cerrar"
+  },
+  "team": {
+    "title": "Equipo",
+    "description": "Supervisores, administradores y clientes registrados en Soprano.",
+    "adminHint": "Puedes editar nombre, empresa y rol haciendo clic en el lápiz.",
+    "audit": "Auditoría",
+    "trash": "Papelera",
+    "invite": "Invitar",
+    "inviteTitle": "Invitar usuario",
+    "inviteDescription": "El invitado recibe un correo con enlace para crear su contraseña.",
+    "inviteEmail": "Correo",
+    "inviteFullName": "Nombre completo",
+    "inviteCompany": "Empresa (opcional)",
+    "inviteRole": "Rol",
+    "inviteSend": "Enviar invitación",
+    "inviteSent": "Invitación enviada a {email}",
+    "inviteError": "Error al enviar la invitación",
+    "roleSupervisor": "Supervisor (crea actividades)",
+    "roleClient": "Cliente (solo firma)",
+    "roleAdmin": "Admin (todo)",
+    "profileUpdated": "Perfil actualizado",
+    "profileUpdateError": "Error al actualizar"
+  },
+  "audit": {
+    "title": "Auditoría",
+    "description": "Historial de cambios sensibles (últimos 50).",
+    "filters": {
+      "table": "Tabla",
+      "action": "Acción",
+      "actor": "Correo del actor",
+      "all": "Todas"
+    },
+    "actions": {
+      "insert": "Creado",
+      "update": "Actualizado",
+      "delete": "Eliminado",
+      "soft_delete": "Removido",
+      "restore": "Restaurado"
+    },
+    "empty": "Sin registros.",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "showDiff": "Ver diff"
+  },
+  "trash": {
+    "title": "Papelera",
+    "description": "Ítems eliminados en los últimos 30 días. Restaura o destruye permanentemente.",
+    "tabs": {
+      "activities": "Actividades",
+      "locations": "Ubicaciones",
+      "types": "Tipos"
+    },
+    "restore": "Restaurar",
+    "destroy": "Destruir",
+    "empty": "Papelera vacía.",
+    "restored": "Restaurado",
+    "destroyed": "Destruido permanentemente",
+    "confirmDestroy": "¿Destruir permanentemente?",
+    "confirmDestroyHelp": "Esta acción no se puede deshacer."
+  },
+  "reports": {
+    "title": "Informes",
+    "subtitle": "Últimos 90 días · datos en tiempo real",
+    "total90": "Total (90d)",
+    "signed": "Firmadas",
+    "pending": "Pendientes",
+    "rejected": "Rechazadas",
+    "monthlyChart": "Actividades por mes (12m)",
+    "topLocations": "Top ubicaciones (90d)",
+    "noData": "Sin datos.",
+    "avgTimeToSign": "Tiempo medio hasta la firma",
+    "avgTimeToSignHelp": "Desde el envío hasta la confirmación del cliente",
+    "avgTimeToSignBase": "Basado en {count} actividad(es) firmada(s).",
+    "exports": "Exportaciones",
+    "exportsHelp": "Descarga la planilla completa del período",
+    "csvDays": "CSV ({days} días)",
+    "csv12m": "CSV (12 meses)",
+    "monthlyReport": "Informe mensual consolidado",
+    "monthlyReportHelp": "PDF con KPIs del mes + tabla de todas las actividades + agrupación por ubicación. Ideal para LinhaUni/Acciona.",
+    "downloadPdf": "Descargar PDF"
   },
   "common": {
     "save": "Guardar",
@@ -154,6 +254,7 @@
     "search": "Buscar",
     "noResults": "Sin resultados",
     "error": "Ocurrió un error",
-    "tryAgain": "Reintentar"
+    "tryAgain": "Reintentar",
+    "home": "Inicio"
   }
 }

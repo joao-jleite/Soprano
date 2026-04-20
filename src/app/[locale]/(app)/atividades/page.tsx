@@ -112,7 +112,7 @@ export default async function ActivitiesPage({
                 <CardContent className="p-4 flex items-center gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <StatusBadge status={a.status} />
+                      <StatusBadge status={a.status} label={t(`activities.status.${a.status}`)} />
                       <span className="text-xs text-muted-foreground">
                         {a.activity_types?.[localeKey]}
                       </span>
@@ -123,7 +123,8 @@ export default async function ActivitiesPage({
                     </p>
                     {a.status === 'rejeitada' && a.reject_reason && (
                       <p className="text-xs text-destructive mt-1 line-clamp-2">
-                        <span className="font-medium">Motivo:</span> {a.reject_reason}
+                        <span className="font-medium">{t('activities.rejectReason')}:</span>{' '}
+                        {a.reject_reason}
                       </p>
                     )}
                   </div>
@@ -137,12 +138,12 @@ export default async function ActivitiesPage({
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, label }: { status: string; label?: string }) {
   const map: Record<string, 'default' | 'warning' | 'success' | 'destructive' | 'secondary'> = {
     rascunho: 'secondary',
     enviada: 'warning',
     assinada: 'success',
     rejeitada: 'destructive',
   };
-  return <Badge variant={map[status] ?? 'secondary'}>{status}</Badge>;
+  return <Badge variant={map[status] ?? 'secondary'}>{label ?? status}</Badge>;
 }

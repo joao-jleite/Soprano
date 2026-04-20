@@ -60,6 +60,20 @@
     "filterByDate": "Date",
     "filterByStatus": "Status",
     "filterClear": "Clear filters",
+    "duplicate": "Duplicate",
+    "duplicating": "Duplicating activity",
+    "register": "Log activity",
+    "duplicateHelp": "Pre-filled from the original activity. Adjust dates and photos before submitting.",
+    "newHelp": "Fill in the work performed. You can save as draft and submit for signature later.",
+    "editDraft": "Edit draft",
+    "editActivity": "Edit activity",
+    "rejectReason": "Reason",
+    "copyVerifyLink": "Verification link",
+    "copiedLink": "Verification link copied",
+    "copiedLinkError": "Could not copy",
+    "copied": "Copied",
+    "waitingClient": "Waiting for the assigned client to take action.",
+    "draftNotice": "This activity is still a draft. Submit it for signature when ready.",
     "fields": {
       "location": "Location",
       "type": "Activity type",
@@ -68,7 +82,9 @@
       "photos": "Photos",
       "startedAt": "Started",
       "endedAt": "Ended",
-      "notes": "Notes"
+      "notes": "Notes",
+      "supervisor": "Supervisor",
+      "client": "Client"
     },
     "placeholders": {
       "description": "Describe what was done...",
@@ -141,7 +157,91 @@
     "upload": "Upload photo",
     "uploading": "Uploading...",
     "remove": "Remove",
-    "capturedAt": "Taken"
+    "capturedAt": "Taken",
+    "view": "View photo",
+    "previous": "Previous",
+    "next": "Next",
+    "close": "Close"
+  },
+  "team": {
+    "title": "Team",
+    "description": "Supervisors, administrators and clients registered on Soprano.",
+    "adminHint": "You can edit name, company and role by clicking the pencil.",
+    "audit": "Audit log",
+    "trash": "Trash",
+    "invite": "Invite",
+    "inviteTitle": "Invite user",
+    "inviteDescription": "The invitee receives an email with a link to set their password.",
+    "inviteEmail": "Email",
+    "inviteFullName": "Full name",
+    "inviteCompany": "Company (optional)",
+    "inviteRole": "Role",
+    "inviteSend": "Send invite",
+    "inviteSent": "Invite sent to {email}",
+    "inviteError": "Failed to send invite",
+    "roleSupervisor": "Supervisor (creates activities)",
+    "roleClient": "Client (signs only)",
+    "roleAdmin": "Admin (everything)",
+    "profileUpdated": "Profile updated",
+    "profileUpdateError": "Update failed"
+  },
+  "audit": {
+    "title": "Audit log",
+    "description": "History of sensitive changes (last 50).",
+    "filters": {
+      "table": "Table",
+      "action": "Action",
+      "actor": "Actor email",
+      "all": "All"
+    },
+    "actions": {
+      "insert": "Created",
+      "update": "Updated",
+      "delete": "Deleted",
+      "soft_delete": "Removed",
+      "restore": "Restored"
+    },
+    "empty": "No records found.",
+    "previous": "Previous",
+    "next": "Next",
+    "showDiff": "Show diff"
+  },
+  "trash": {
+    "title": "Trash",
+    "description": "Items deleted in the last 30 days. Restore or destroy permanently.",
+    "tabs": {
+      "activities": "Activities",
+      "locations": "Locations",
+      "types": "Types"
+    },
+    "restore": "Restore",
+    "destroy": "Destroy",
+    "empty": "Trash is empty.",
+    "restored": "Restored",
+    "destroyed": "Destroyed permanently",
+    "confirmDestroy": "Destroy permanently?",
+    "confirmDestroyHelp": "This action cannot be undone."
+  },
+  "reports": {
+    "title": "Reports",
+    "subtitle": "Last 90 days · real-time data",
+    "total90": "Total (90d)",
+    "signed": "Signed",
+    "pending": "Pending",
+    "rejected": "Rejected",
+    "monthlyChart": "Activities per month (12m)",
+    "topLocations": "Top locations (90d)",
+    "noData": "No data.",
+    "avgTimeToSign": "Average time to signature",
+    "avgTimeToSignHelp": "From submission to client confirmation",
+    "avgTimeToSignBase": "Based on {count} signed activity(ies).",
+    "exports": "Exports",
+    "exportsHelp": "Download the full spreadsheet for the period",
+    "csvDays": "CSV ({days} days)",
+    "csv12m": "CSV (12 months)",
+    "monthlyReport": "Monthly consolidated report",
+    "monthlyReportHelp": "PDF with month KPIs + full activity table + grouping by location. Ideal for LinhaUni/Acciona delivery.",
+    "downloadPdf": "Download PDF"
   },
   "common": {
     "save": "Save",
@@ -154,6 +254,7 @@
     "search": "Search",
     "noResults": "No results",
     "error": "Something went wrong",
-    "tryAgain": "Try again"
+    "tryAgain": "Try again",
+    "home": "Home"
   }
 }

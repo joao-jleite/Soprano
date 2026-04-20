@@ -77,7 +77,7 @@ export default async function ActivityDetailPage({
       <header className="space-y-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <StatusBadge status={act.status} />
+            <StatusBadge status={act.status} label={t(`activities.status.${act.status}`)} />
             <span className="text-data">{typeLabel}</span>
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end">
@@ -90,7 +90,7 @@ export default async function ActivityDetailPage({
                 <Button asChild variant="outline" size="sm">
                   <Link href={`/atividades/${act.id}/editar`}>
                     <Pencil className="h-4 w-4" />
-                    Editar
+                    {t('activities.actions.edit')}
                   </Link>
                 </Button>
               )}
@@ -100,7 +100,7 @@ export default async function ActivityDetailPage({
                   href={`/atividades/nova?from=${act.id}`}
                 >
                   <Copy className="h-4 w-4" />
-                  Duplicar
+                  {t('activities.duplicate')}
                 </Link>
               </Button>
             )}
@@ -120,10 +120,10 @@ export default async function ActivityDetailPage({
         <InfoBlock icon={<Calendar className="h-4 w-4" />} label={t('activities.fields.startedAt')}>
           {formatDateTime(act.started_at, locale === 'pt' ? 'pt-BR' : locale)}
         </InfoBlock>
-        <InfoBlock icon={<User className="h-4 w-4" />} label="Supervisor">
+        <InfoBlock icon={<User className="h-4 w-4" />} label={t('activities.fields.supervisor')}>
           {act.supervisor?.full_name ?? '—'}
         </InfoBlock>
-        <InfoBlock icon={<User className="h-4 w-4" />} label="Cliente">
+        <InfoBlock icon={<User className="h-4 w-4" />} label={t('activities.fields.client')}>
           {act.client?.full_name ?? '—'}
         </InfoBlock>
       </section>
@@ -188,8 +188,8 @@ export default async function ActivityDetailPage({
           ) : (
             <p className="text-sm text-muted-foreground">
               {act.status === 'rascunho'
-                ? 'Esta atividade ainda é um rascunho. Envie para assinatura quando estiver pronta.'
-                : 'Aguardando ação do cliente designado.'}
+                ? t('activities.draftNotice')
+                : t('activities.waitingClient')}
             </p>
           )}
         </CardContent>
@@ -240,12 +240,12 @@ function SignatureDisplay({ signature, locale }: { signature: any; locale: strin
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, label }: { status: string; label?: string }) {
   const map: Record<string, 'default' | 'warning' | 'success' | 'destructive' | 'secondary'> = {
     rascunho: 'secondary',
     enviada: 'warning',
     assinada: 'success',
     rejeitada: 'destructive',
   };
-  return <Badge variant={map[status] ?? 'secondary'}>{status}</Badge>;
+  return <Badge variant={map[status] ?? 'secondary'}>{label ?? status}</Badge>;
 }

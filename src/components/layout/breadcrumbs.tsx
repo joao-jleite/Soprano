@@ -3,32 +3,41 @@
 import { usePathname } from 'next/navigation';
 import { ChevronRight, Home } from 'lucide-react';
 import * as React from 'react';
+import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
-
-const LABELS: Record<string, string> = {
-  atividades: 'Atividades',
-  nova: 'Nova',
-  editar: 'Editar',
-  equipe: 'Equipe',
-  auditoria: 'Auditoria',
-  lixeira: 'Lixeira',
-  locais: 'Locais',
-  relatorios: 'Relatórios',
-  configuracoes: 'Configurações',
-  reclamos: 'Reclamos',
-  'linha-6': 'Linha 6',
-  verify: 'Verificar',
-};
-
-function humanize(seg: string) {
-  if (LABELS[seg]) return LABELS[seg];
-  // UUID-ish → identifier curto
-  if (/^[0-9a-f]{8}-/.test(seg)) return seg.slice(0, 8);
-  return seg.charAt(0).toUpperCase() + seg.slice(1).replace(/-/g, ' ');
-}
 
 export function Breadcrumbs() {
   const pathname = usePathname();
+  const tn = useTranslations('nav');
+  const ta = useTranslations('activities');
+  const tt = useTranslations('team');
+  const tr = useTranslations('reports');
+  const tTrash = useTranslations('trash');
+  const tAudit = useTranslations('audit');
+  const tc = useTranslations('common');
+
+  function humanize(seg: string) {
+    const key = seg.toLowerCase();
+    const map: Record<string, string> = {
+      atividades: tn('activities'),
+      nova: ta('newActivity'),
+      editar: ta('editActivity'),
+      equipe: tt('title'),
+      auditoria: tAudit('title'),
+      lixeira: tTrash('title'),
+      locais: tn('locations'),
+      relatorios: tr('title'),
+      configuracoes: tn('settings'),
+      reclamos: tn('complaints'),
+      'linha-6': tn('linha6'),
+      verify: 'Verify',
+    };
+    if (map[key]) return map[key];
+    // UUID-ish → identifier curto
+    if (/^[0-9a-f]{8}-/.test(seg)) return seg.slice(0, 8);
+    return seg.charAt(0).toUpperCase() + seg.slice(1).replace(/-/g, ' ');
+  }
+
   if (!pathname) return null;
 
   // Remove locale prefix (/pt, /en, /es) if presente
@@ -53,7 +62,7 @@ export function Breadcrumbs() {
         className="flex items-center gap-1 hover:text-foreground transition-colors"
       >
         <Home className="h-3.5 w-3.5" />
-        <span className="sr-only">Início</span>
+        <span className="sr-only">{tc('home')}</span>
       </Link>
       {crumbs.map((c, i) => {
         const isLast = i === crumbs.length - 1;

@@ -3,6 +3,7 @@ import { FileText, Download, Activity as ActivityIcon, CheckCircle2, Clock, XCir
 import { createClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { MonthlyPicker } from './monthly-picker';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +15,7 @@ export default async function RelatoriosPage({
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations();
+  const tr = await getTranslations('reports');
   const supabase = await createClient();
 
   const sinceISO = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
@@ -71,32 +73,30 @@ export default async function RelatoriosPage({
   return (
     <div className="space-y-8 max-w-5xl">
       <header>
-        <h1 className="text-3xl font-semibold tracking-tight">{t('nav.reports')}</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Indicadores dos últimos 90 dias · dados em tempo real
-        </p>
+        <h1 className="text-3xl font-semibold tracking-tight">{tr('title')}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{tr('subtitle')}</p>
       </header>
 
       <section className="grid gap-4 sm:grid-cols-4">
         <Stat
           icon={<ActivityIcon className="h-4 w-4" />}
-          label="Total (90d)"
+          label={tr('total90')}
           value={total}
         />
         <Stat
           icon={<CheckCircle2 className="h-4 w-4 text-green-500" />}
-          label="Assinadas"
+          label={tr('signed')}
           value={statusCounts['assinada'] ?? 0}
           accent
         />
         <Stat
           icon={<Clock className="h-4 w-4 text-amber-400" />}
-          label="Pendentes"
+          label={tr('pending')}
           value={statusCounts['enviada'] ?? 0}
         />
         <Stat
           icon={<XCircle className="h-4 w-4 text-destructive" />}
-          label="Rejeitadas"
+          label={tr('rejected')}
           value={statusCounts['rejeitada'] ?? 0}
         />
       </section>
@@ -104,11 +104,11 @@ export default async function RelatoriosPage({
       <section className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Atividades por mês (12m)</CardTitle>
+            <CardTitle className="text-base">{tr('monthlyChart')}</CardTitle>
           </CardHeader>
           <CardContent>
             {monthlySorted.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Sem dados.</p>
+              <p className="text-sm text-muted-foreground">{tr('noData')}</p>
             ) : (
               <div className="flex items-end gap-1.5 h-36">
                 {monthlySorted.map(([month, count]) => {
@@ -136,11 +136,11 @@ export default async function RelatoriosPage({
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Top locais (90d)</CardTitle>
+            <CardTitle className="text-base">{tr('topLocations')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {topLocations.length === 0 && (
-              <p className="text-sm text-muted-foreground">Sem dados.</p>
+              <p className="text-sm text-muted-foreground">{tr('noData')}</p>
             )}
             {topLocations.map(([name, count]) => {
               const max = topLocations[0][1];
@@ -167,8 +167,8 @@ export default async function RelatoriosPage({
       <section className="grid gap-4 sm:grid-cols-2">
         <Card className="surface-elevated">
           <CardHeader>
-            <CardTitle className="text-base">Tempo médio até assinatura</CardTitle>
-            <CardDescription>Do envio para assinatura até a confirmação do cliente</CardDescription>
+            <CardTitle className="text-base">{tr('avgTimeToSign')}</CardTitle>
+            <CardDescription>{tr('avgTimeToSignHelp')}</CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-4xl font-semibold font-mono tabular-nums">
@@ -176,7 +176,7 @@ export default async function RelatoriosPage({
               <span className="text-lg text-muted-foreground ml-1">h</span>
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Baseado em {ttsCount} atividade(s) assinada(s).
+              {tr('avgTimeToSignBase', { count: ttsCount })}
             </p>
           </CardContent>
         </Card>
@@ -185,21 +185,36 @@ export default async function RelatoriosPage({
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <FileText className="h-4 w-4 text-primary" />
-              Exportações
+              {tr('exports')}
             </CardTitle>
-            <CardDescription>Baixe a planilha completa das atividades do período</CardDescription>
+            <CardDescription>{tr('exportsHelp')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             <Button asChild variant="outline" size="sm">
               <a href="/api/relatorios/csv?days=90" download>
-                <Download className="h-4 w-4" /> CSV (90 dias)
+                <Download className="h-4 w-4" /> {tr('csvDays', { days: 90 })}
               </a>
             </Button>
             <Button asChild variant="outline" size="sm">
               <a href="/api/relatorios/csv?days=365" download>
-                <Download className="h-4 w-4" /> CSV (12 meses)
+                <Download className="h-4 w-4" /> {tr('csv12m')}
               </a>
             </Button>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileText className="h-4 w-4 text-primary" />
+              {tr('monthlyReport')}
+            </CardTitle>
+            <CardDescription>{tr('monthlyReportHelp')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <MonthlyPicker />
           </CardContent>
         </Card>
       </section>
