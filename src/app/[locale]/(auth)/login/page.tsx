@@ -1,7 +1,10 @@
+import { Suspense } from 'react';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { LoginForm } from './login-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { SopranoMark } from '@/components/brand/logo';
+
+export const dynamic = 'force-dynamic';
 
 export default async function LoginPage({
   params,
@@ -25,7 +28,9 @@ export default async function LoginPage({
         </div>
       </CardHeader>
       <CardContent>
-        <LoginForm />
+        <Suspense fallback={null}>
+          <LoginForm />
+        </Suspense>
         <p className="mt-6 text-xs text-muted-foreground text-center">
           {t('noAccount')}
         </p>
