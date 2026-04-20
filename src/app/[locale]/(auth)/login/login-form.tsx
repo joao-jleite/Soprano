@@ -31,8 +31,12 @@ export function LoginForm() {
       setLoading(false);
       return;
     }
-    const next = searchParams.get('next') ?? '/pt';
-    router.push(next);
+    // ATENÇÃO: router aqui é do next-intl e adiciona locale automaticamente.
+    // Use paths sem prefix de locale (ex: '/', '/atividades'). Nunca '/pt'.
+    const rawNext = searchParams.get('next') ?? '/';
+    // Se veio um next com locale prefix (/pt/..., /en/..., /es/...), remove.
+    const next = rawNext.replace(/^\/(pt|en|es)(?=\/|$)/, '') || '/';
+    router.push(next as any);
     router.refresh();
   }
 
