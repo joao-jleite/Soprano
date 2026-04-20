@@ -93,6 +93,69 @@ export async function createActivity(input: CreateActivityInput) {
   return activity.id;
 }
 
+const updateActivitySchema = createActivitySchema.extend({
+  id: z.string().uuid(),
+});
+
+export async function updateActivity(input: z.infer<typeof updateActivitySchema>) {
+  const parsed = updateActivitySchema.parse(input);
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  // só rascunho (e pelo próprio supervisor ou admin)
+  const { data: existing } = await supabase
+    .from('activities')
+    .select('status, supervisor_id')
+    .eq('id', parsed.id)
+    .single();
+  if (!existing) throw new Error('Atividade não encontrada');
+  if ((existing as any).status !== 'rascunho') throw new Error('Só rascunhos podem ser editados');
+
+  const { data: me } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+  if ((me as any)?.role !== 'admin' && (existing as any).supervisor_id !== user.id) {
+    throw new Error('Sem permissão');
+  }
+
+  const status = parsed.submit ? 'enviada' : 'rascunho';
+  const submittedAt = parsed.submit ? new Date().toISOString() : null;
+
+  const { error } = await supabase
+    .from('activities')
+    .update({
+      location_id: parsed.locationId,
+      activity_type_id: parsed.activityTypeId,
+      client_id: parsed.clientId ?? null,
+      description: parsed.description,
+      notes: parsed.notes ?? null,
+      started_at: parsed.startedAt,
+      ended_at: parsed.endedAt ?? null,
+      status,
+      submitted_at: submittedAt,
+    })
+    .eq('id', parsed.id);
+  if (error) throw error;
+
+  // participantes: replace all
+  await supabase.from('activity_participants').delete().eq('activity_id', parsed.id);
+  if (parsed.participants.length) {
+    await supabase.from('activity_participants').insert(
+      parsed.participants.map((p) => ({
+        activity_id: parsed.id,
+        name: p.name,
+        role: p.role ?? null,
+      })),
+    );
+  }
+
+  revalidatePath(`/atividades/${parsed.id}`);
+  revalidatePath('/atividades');
+  return parsed.id;
+}
+
 export async function submitActivityForSignature(activityId: string) {
   const supabase = await createClient();
   const { error } = await supabase

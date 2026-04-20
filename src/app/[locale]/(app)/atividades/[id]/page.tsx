@@ -7,8 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { SignActivityPanel } from './sign-panel';
+import { PhotoGallery } from '@/components/activity/photo-lightbox';
+import { Pencil, Copy } from 'lucide-react';
+import { Link } from '@/i18n/navigation';
+import { Button } from '@/components/ui/button';
 import { PdfDownloadButton } from '@/components/activity/pdf-download-button';
 import { ActivityDeleteButton } from '@/components/activity/activity-actions';
+import { CopyVerifyLink } from '@/components/activity/copy-verify-link';
 import { formatDateTime } from '@/lib/utils';
 
 export default async function ActivityDetailPage({
@@ -75,8 +80,30 @@ export default async function ActivityDetailPage({
             <StatusBadge status={act.status} />
             <span className="text-data">{typeLabel}</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            {act.status === 'assinada' && signature?.verification_code && (
+              <CopyVerifyLink code={signature.verification_code} />
+            )}
             <PdfDownloadButton activityId={act.id} />
+            {act.status === 'rascunho' &&
+              (profile?.role === 'admin' || act.supervisor_id === user.id) && (
+                <Button asChild variant="outline" size="sm">
+                  <Link href={`/atividades/${act.id}/editar`}>
+                    <Pencil className="h-4 w-4" />
+                    Editar
+                  </Link>
+                </Button>
+              )}
+            {(profile?.role === 'admin' || profile?.role === 'supervisor') && (
+              <Button asChild variant="outline" size="sm">
+                <Link
+                  href={`/atividades/nova?from=${act.id}`}
+                >
+                  <Copy className="h-4 w-4" />
+                  Duplicar
+                </Link>
+              </Button>
+            )}
             {(profile?.role === 'admin' ||
               (profile?.role === 'supervisor' && act.supervisor_id === user.id && act.status === 'rascunho')) && (
               <ActivityDeleteButton id={act.id} />
@@ -142,13 +169,7 @@ export default async function ActivityDetailPage({
             <CardTitle className="text-base">{t('activities.fields.photos')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {photosWithUrls.map((p: any) => (
-                <div key={p.id} className="relative aspect-square rounded-md overflow-hidden border border-border">
-                  <Image src={p.url} alt={p.caption ?? ''} fill className="object-cover" unoptimized />
-                </div>
-              ))}
-            </div>
+            <PhotoGallery photos={photosWithUrls as any} />
           </CardContent>
         </Card>
       )}

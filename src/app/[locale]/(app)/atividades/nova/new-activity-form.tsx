@@ -20,13 +20,28 @@ import {
 import { ExpandableSelect, type Option } from '@/components/activity/expandable-select';
 import { ParticipantsEditor, type Participant } from '@/components/activity/participants-editor';
 import { PhotoUpload, type UploadedPhoto } from '@/components/activity/photo-upload';
-import { createActivity, createActivityType, createLocation } from '@/app/actions/activities';
+import { createActivity, createActivityType, createLocation, updateActivity } from '@/app/actions/activities';
+
+export type InitialActivity = {
+  id: string;
+  locationId: string;
+  activityTypeId: string;
+  clientId: string | null;
+  description: string;
+  notes: string | null;
+  startedAt: string;
+  endedAt: string | null;
+  participants: { name: string; role: string | null }[];
+  photos: { storagePath: string }[];
+};
 
 type Props = {
   locations: { id: string; name: string; kind: string }[];
   types: { id: string; slug: string; label_pt: string; label_en: string; label_es: string }[];
   clients: { id: string; full_name: string }[];
   locale: string;
+  initial?: InitialActivity;
+  mode?: 'create' | 'edit';
 };
 
 const LOCATION_KINDS = [
@@ -38,11 +53,11 @@ const LOCATION_KINDS = [
   { value: 'outro', label: 'Outro' },
 ];
 
-export function NewActivityForm({ locations, types, clients, locale }: Props) {
+export function NewActivityForm({ locations, types, clients, locale, initial, mode = 'create' }: Props) {
   const t = useTranslations();
   const router = useRouter();
 
-  const draftIdRef = React.useRef(crypto.randomUUID());
+  const draftIdRef = React.useRef(initial?.id ?? crypto.randomUUID());
 
   const [locationOptions, setLocationOptions] = React.useState<Option[]>(
     locations.map((l) => ({
@@ -59,17 +74,25 @@ export function NewActivityForm({ locations, types, clients, locale }: Props) {
     })),
   );
 
-  const [locationId, setLocationId] = React.useState<string | null>(null);
-  const [typeId, setTypeId] = React.useState<string | null>(null);
-  const [clientId, setClientId] = React.useState<string | null>(null);
-  const [description, setDescription] = React.useState('');
-  const [notes, setNotes] = React.useState('');
+  const [locationId, setLocationId] = React.useState<string | null>(initial?.locationId ?? null);
+  const [typeId, setTypeId] = React.useState<string | null>(initial?.activityTypeId ?? null);
+  const [clientId, setClientId] = React.useState<string | null>(initial?.clientId ?? null);
+  const [description, setDescription] = React.useState(initial?.description ?? '');
+  const [notes, setNotes] = React.useState(initial?.notes ?? '');
   const [startedAt, setStartedAt] = React.useState(() =>
-    new Date().toISOString().slice(0, 16),
+    initial?.startedAt
+      ? new Date(initial.startedAt).toISOString().slice(0, 16)
+      : new Date().toISOString().slice(0, 16),
   );
-  const [endedAt, setEndedAt] = React.useState('');
-  const [participants, setParticipants] = React.useState<Participant[]>([]);
-  const [photos, setPhotos] = React.useState<UploadedPhoto[]>([]);
+  const [endedAt, setEndedAt] = React.useState(
+    initial?.endedAt ? new Date(initial.endedAt).toISOString().slice(0, 16) : '',
+  );
+  const [participants, setParticipants] = React.useState<Participant[]>(
+    (initial?.participants ?? []) as any,
+  );
+  const [photos, setPhotos] = React.useState<UploadedPhoto[]>(
+    (initial?.photos ?? []).map((p) => ({ storagePath: p.storagePath, url: '' })) as any,
+  );
 
   const [savingAs, setSavingAs] = React.useState<'draft' | 'submit' | null>(null);
 
@@ -103,7 +126,7 @@ export function NewActivityForm({ locations, types, clients, locale }: Props) {
     if (!locationId || !typeId || !description.trim()) return;
     setSavingAs(submitForSignature ? 'submit' : 'draft');
     try {
-      const id = await createActivity({
+      const payload = {
         locationId,
         activityTypeId: typeId,
         clientId: clientId,
@@ -114,7 +137,11 @@ export function NewActivityForm({ locations, types, clients, locale }: Props) {
         participants,
         photos: photos.map((p) => ({ storagePath: p.storagePath })),
         submit: submitForSignature,
-      });
+      };
+      const id =
+        mode === 'edit' && initial
+          ? await updateActivity({ ...payload, id: initial.id })
+          : await createActivity(payload);
       toast.success(submitForSignature ? 'Atividade enviada para assinatura' : 'Rascunho salvo');
       router.push(`/atividades/${id}`);
     } catch (e: any) {
