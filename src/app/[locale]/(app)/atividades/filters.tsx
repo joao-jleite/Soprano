@@ -2,7 +2,8 @@
 
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
+import * as React from 'react';
 import {
   Select,
   SelectContent,
@@ -38,8 +39,29 @@ export function ActivityFilters({ locations, types, localeKey }: Props) {
 
   const hasFilters = Array.from(sp.keys()).length > 0;
 
+  const [searchValue, setSearchValue] = React.useState(sp.get('q') ?? '');
+  React.useEffect(() => {
+    const current = sp.get('q') ?? '';
+    if (searchValue === current) return;
+    const t = setTimeout(() => update('q', searchValue || null), 350);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchValue]);
+
   return (
     <div className="flex flex-wrap items-end gap-2 p-3 rounded-lg border border-border bg-card/40">
+      <Filter label="Buscar" className="min-w-[220px] flex-1">
+        <div className="relative">
+          <Search className="h-4 w-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <Input
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            placeholder="Descrição, observações..."
+            className="pl-8"
+          />
+        </div>
+      </Filter>
+
       <Filter label={t('filterByLocation')} className="min-w-[180px]">
         <Select value={sp.get('location') ?? 'all'} onValueChange={(v) => update('location', v)}>
           <SelectTrigger>

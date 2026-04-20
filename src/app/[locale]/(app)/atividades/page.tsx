@@ -14,6 +14,7 @@ type SearchParams = Promise<{
   status?: string;
   from?: string;
   to?: string;
+  q?: string;
 }>;
 
 export default async function ActivitiesPage({
@@ -29,17 +30,34 @@ export default async function ActivitiesPage({
   const t = await getTranslations();
   const supabase = await createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: me } = user
+    ? await supabase.from('profiles').select('role').eq('id', user.id).single()
+    : { data: null };
+  const role = (me as any)?.role as 'admin' | 'supervisor' | 'cliente' | undefined;
+
   let q = supabase
     .from('activities')
     .select('id, description, status, started_at, locations(name, kind), activity_types(label_pt, label_en, label_es), profiles!activities_supervisor_id_fkey(full_name)')
     .order('started_at', { ascending: false })
     .limit(100);
 
+  // Cliente só vê atividades dele
+  if (role === 'cliente' && user) {
+    q = q.eq('client_id', user.id).neq('status', 'rascunho');
+  }
+
   if (sp.location) q = q.eq('location_id', sp.location);
   if (sp.type) q = q.eq('activity_type_id', sp.type);
   if (sp.status) q = q.eq('status', sp.status);
   if (sp.from) q = q.gte('started_at', sp.from);
   if (sp.to) q = q.lte('started_at', sp.to);
+  if (sp.q && sp.q.trim()) {
+    const term = sp.q.trim().replace(/[%,]/g, '');
+    q = q.or(`description.ilike.%${term}%,notes.ilike.%${term}%`);
+  }
 
   const [{ data: activities }, { data: locations }, { data: types }] = await Promise.all([
     q,

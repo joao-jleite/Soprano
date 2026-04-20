@@ -17,32 +17,53 @@ export default async function DashboardPage({
   const t = await getTranslations();
   const supabase = await createClient();
 
-  const [{ data: profile }, { count: monthCount }, { count: signedCount }, { data: pending }, { data: recent }] =
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: profile } = user
+    ? await supabase.from('profiles').select('full_name, role').eq('id', user.id).single()
+    : { data: null };
+  const role = (profile as any)?.role as 'admin' | 'supervisor' | 'cliente' | undefined;
+
+  const monthStart = new Date(
+    new Date().getFullYear(),
+    new Date().getMonth(),
+    1,
+  ).toISOString();
+
+  const applyScope = (qb: any) =>
+    role === 'cliente' && user ? qb.eq('client_id', user.id) : qb;
+
+  const [{ count: monthCount }, { count: signedCount }, { data: pending }, { data: recent }] =
     await Promise.all([
-      supabase.auth.getUser().then(async ({ data: { user } }) => {
-        if (!user) return { data: null };
-        return supabase.from('profiles').select('full_name, role').eq('id', user.id).single();
-      }),
-      supabase
-        .from('activities')
-        .select('*', { count: 'exact', head: true })
-        .gte('started_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
-      supabase
-        .from('activities')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'assinada')
-        .gte('started_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
-      supabase
-        .from('activities')
-        .select('id, description, started_at, locations(name), activity_types(label_pt)')
-        .eq('status', 'enviada')
-        .order('submitted_at', { ascending: false })
-        .limit(5),
-      supabase
-        .from('activities')
-        .select('id, description, status, started_at, locations(name), activity_types(label_pt)')
-        .order('updated_at', { ascending: false })
-        .limit(5),
+      applyScope(
+        supabase
+          .from('activities')
+          .select('*', { count: 'exact', head: true })
+          .gte('started_at', monthStart),
+      ),
+      applyScope(
+        supabase
+          .from('activities')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'assinada')
+          .gte('started_at', monthStart),
+      ),
+      applyScope(
+        supabase
+          .from('activities')
+          .select('id, description, started_at, locations(name), activity_types(label_pt)')
+          .eq('status', 'enviada')
+          .order('submitted_at', { ascending: false })
+          .limit(5),
+      ),
+      applyScope(
+        supabase
+          .from('activities')
+          .select('id, description, status, started_at, locations(name), activity_types(label_pt)')
+          .order('updated_at', { ascending: false })
+          .limit(5),
+      ),
     ]);
 
   const name = profile?.full_name?.split(' ')[0] ?? '';
