@@ -4,6 +4,7 @@ import { Sidebar } from '@/components/layout/sidebar';
 import { Topbar } from '@/components/layout/topbar';
 import { MobileNav } from '@/components/layout/mobile-nav';
 import { PageTransition } from '@/components/layout/page-transition';
+import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 
 export default async function AppLayout({
   children,
@@ -36,6 +37,7 @@ export default async function AppLayout({
         <Topbar fullName={profile.full_name} role={profile.role} />
         <main className="flex-1 pb-20 lg:pb-8">
           <div className="px-4 lg:px-8 py-6 lg:py-8 max-w-7xl">
+            <Breadcrumbs />
             <PageTransition>{children}</PageTransition>
           </div>
         </main>

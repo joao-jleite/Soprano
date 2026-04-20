@@ -3,7 +3,6 @@ import { FileText, Download, Activity as ActivityIcon, CheckCircle2, Clock, XCir
 import { createClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 
 export const dynamic = 'force-dynamic';
 
@@ -188,13 +187,19 @@ export default async function RelatoriosPage({
               <FileText className="h-4 w-4 text-primary" />
               Exportações
             </CardTitle>
-            <CardDescription>Em breve: CSV, consolidados mensais e por local</CardDescription>
+            <CardDescription>Baixe a planilha completa das atividades do período</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            <Button variant="outline" size="sm" disabled>
-              <Download className="h-4 w-4" /> CSV completo
+            <Button asChild variant="outline" size="sm">
+              <a href="/api/relatorios/csv?days=90" download>
+                <Download className="h-4 w-4" /> CSV (90 dias)
+              </a>
             </Button>
-            <Badge variant="secondary">Sprint seguinte</Badge>
+            <Button asChild variant="outline" size="sm">
+              <a href="/api/relatorios/csv?days=365" download>
+                <Download className="h-4 w-4" /> CSV (12 meses)
+              </a>
+            </Button>
           </CardContent>
         </Card>
       </section>

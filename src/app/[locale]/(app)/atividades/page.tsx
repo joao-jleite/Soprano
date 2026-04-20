@@ -40,7 +40,7 @@ export default async function ActivitiesPage({
 
   let q = supabase
     .from('activities')
-    .select('id, description, status, started_at, locations(name, kind), activity_types(label_pt, label_en, label_es), profiles!activities_supervisor_id_fkey(full_name)')
+    .select('id, description, status, started_at, reject_reason, locations(name, kind), activity_types(label_pt, label_en, label_es), profiles!activities_supervisor_id_fkey(full_name)')
     .is('deleted_at', null)
     .order('started_at', { ascending: false })
     .limit(100);
@@ -121,6 +121,11 @@ export default async function ActivitiesPage({
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {a.locations?.name} · {a.profiles?.full_name} · {formatDate(a.started_at, locale === 'pt' ? 'pt-BR' : locale)}
                     </p>
+                    {a.status === 'rejeitada' && a.reject_reason && (
+                      <p className="text-xs text-destructive mt-1 line-clamp-2">
+                        <span className="font-medium">Motivo:</span> {a.reject_reason}
+                      </p>
+                    )}
                   </div>
                 </CardContent>
               </Card>

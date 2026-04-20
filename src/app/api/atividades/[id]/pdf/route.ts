@@ -28,6 +28,7 @@ export async function GET(
       supervisor:profiles!activities_supervisor_id_fkey(full_name),
       client:profiles!activities_client_id_fkey(full_name),
       activity_participants(name, role),
+      activity_photos(id, storage_path, caption),
       signatures(*)
     `)
     .eq('id', id)
@@ -57,6 +58,26 @@ export async function GET(
     signatureImageDataUrl = `data:image/svg+xml;base64,${b64}`;
   }
 
+  // Baixa fotos e converte para data URLs (limitado para não estourar memória)
+  const rawPhotos: { id: string; storage_path: string; caption: string | null }[] =
+    (act.activity_photos ?? []).slice(0, 24);
+
+  const photos: { dataUrl: string; caption?: string | null }[] = [];
+  await Promise.all(
+    rawPhotos.map(async (p) => {
+      const { data, error } = await supabase.storage
+        .from('activity-photos')
+        .download(p.storage_path);
+      if (error || !data) return;
+      const buf = Buffer.from(await data.arrayBuffer());
+      const mime = data.type || 'image/jpeg';
+      photos.push({
+        dataUrl: `data:${mime};base64,${buf.toString('base64')}`,
+        caption: p.caption,
+      });
+    }),
+  );
+
   const doc = ActivityPdf({
     activity: {
       id: act.id,
@@ -84,6 +105,7 @@ export async function GET(
     signatureImageDataUrl,
     verifyUrl,
     generatedAt: new Date().toISOString(),
+    photos,
   });
 
   const stream = await renderToStream(doc as any);

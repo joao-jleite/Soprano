@@ -154,6 +154,29 @@ const styles = StyleSheet.create({
     borderTop: '1pt solid #e2e8f0',
     paddingTop: 6,
   },
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  photoCell: {
+    width: '48%',
+    marginBottom: 8,
+    border: '1pt solid #e2e8f0',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  photoImg: {
+    width: '100%',
+    height: 220,
+    objectFit: 'cover',
+  },
+  photoCaption: {
+    fontSize: 8,
+    color: '#334155',
+    padding: 6,
+    backgroundColor: '#f8fafc',
+  },
 });
 
 export type ActivityPdfProps = {
@@ -181,6 +204,7 @@ export type ActivityPdfProps = {
   signatureImageDataUrl?: string;
   verifyUrl?: string;
   generatedAt: string;
+  photos?: { dataUrl: string; caption?: string | null }[];
 };
 
 function fmt(iso: string) {
@@ -199,7 +223,14 @@ export function ActivityPdf({
   signatureImageDataUrl,
   verifyUrl,
   generatedAt,
+  photos,
 }: ActivityPdfProps) {
+  const photoPages: { dataUrl: string; caption?: string | null }[][] = [];
+  if (photos && photos.length) {
+    for (let i = 0; i < photos.length; i += 6) {
+      photoPages.push(photos.slice(i, i + 6));
+    }
+  }
   return (
     <Document
       title={`Soprano · Atividade ${activity.id.slice(0, 8)}`}
@@ -310,6 +341,41 @@ export function ActivityPdf({
           />
         </View>
       </Page>
+
+      {photoPages.map((pagePhotos, pageIdx) => (
+        <Page key={pageIdx} size="A4" style={styles.page}>
+          <View style={styles.headerRow}>
+            <View>
+              <Text style={styles.brand}>SOPRANO</Text>
+              <Text style={styles.brandSub}>
+                Fotos · Atividade {activity.id.slice(0, 8)}
+              </Text>
+            </View>
+            <View>
+              <Text style={styles.docId}>
+                Página de fotos {pageIdx + 1}/{photoPages.length}
+              </Text>
+            </View>
+          </View>
+
+          <Text style={styles.sectionTitle}>Registro fotográfico</Text>
+          <View style={styles.photoGrid}>
+            {pagePhotos.map((ph, i) => (
+              <View key={i} style={styles.photoCell} wrap={false}>
+                <Image src={ph.dataUrl} style={styles.photoImg} />
+                {ph.caption && <Text style={styles.photoCaption}>{ph.caption}</Text>}
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.footer} fixed>
+            <Text>Soprano · Registro de atividades — Zitrón Brasil</Text>
+            <Text
+              render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`}
+            />
+          </View>
+        </Page>
+      ))}
     </Document>
   );
 }
