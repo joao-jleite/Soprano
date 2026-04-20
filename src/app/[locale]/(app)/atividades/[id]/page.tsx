@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { SignActivityPanel } from './sign-panel';
 import { PdfDownloadButton } from '@/components/activity/pdf-download-button';
+import { ActivityDeleteButton } from '@/components/activity/activity-actions';
 import { formatDateTime } from '@/lib/utils';
 
 export default async function ActivityDetailPage({
@@ -74,7 +75,13 @@ export default async function ActivityDetailPage({
             <StatusBadge status={act.status} />
             <span className="text-data">{typeLabel}</span>
           </div>
-          <PdfDownloadButton activityId={act.id} />
+          <div className="flex items-center gap-2">
+            <PdfDownloadButton activityId={act.id} />
+            {(profile?.role === 'admin' ||
+              (profile?.role === 'supervisor' && act.supervisor_id === user.id && act.status === 'rascunho')) && (
+              <ActivityDeleteButton id={act.id} />
+            )}
+          </div>
         </div>
         <h1 className="text-3xl font-semibold tracking-tight">{act.description}</h1>
       </header>

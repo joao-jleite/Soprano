@@ -41,6 +41,7 @@ export default async function ActivitiesPage({
   let q = supabase
     .from('activities')
     .select('id, description, status, started_at, locations(name, kind), activity_types(label_pt, label_en, label_es), profiles!activities_supervisor_id_fkey(full_name)')
+    .is('deleted_at', null)
     .order('started_at', { ascending: false })
     .limit(100);
 
@@ -61,8 +62,8 @@ export default async function ActivitiesPage({
 
   const [{ data: activities }, { data: locations }, { data: types }] = await Promise.all([
     q,
-    supabase.from('locations').select('id, name, kind').eq('line', 'linha-6').order('sort_order'),
-    supabase.from('activity_types').select('id, slug, label_pt, label_en, label_es').order('label_pt'),
+    supabase.from('locations').select('id, name, kind').eq('line', 'linha-6').is('deleted_at', null).order('sort_order'),
+    supabase.from('activity_types').select('id, slug, label_pt, label_en, label_es').is('deleted_at', null).order('label_pt'),
   ]);
 
   const localeKey = (locale === 'en' ? 'label_en' : locale === 'es' ? 'label_es' : 'label_pt') as
