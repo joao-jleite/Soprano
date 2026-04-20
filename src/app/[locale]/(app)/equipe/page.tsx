@@ -1,8 +1,11 @@
 import { setRequestLocale } from 'next-intl/server';
+import { FileSearch, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { initials } from '@/lib/utils';
+import { Link } from '@/i18n/navigation';
+import { Button } from '@/components/ui/button';
+import { ProfileRow } from './profile-row';
+
+export const dynamic = 'force-dynamic';
 
 export default async function EquipePage({
   params,
@@ -13,43 +16,53 @@ export default async function EquipePage({
   setRequestLocale(locale);
   const supabase = await createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: me } = user
+    ? await supabase.from('profiles').select('role').eq('id', user.id).single()
+    : { data: null };
+  const isAdmin = (me as any)?.role === 'admin';
+
   const { data: profiles } = await supabase
     .from('profiles')
-    .select('id, full_name, email, role, company, phone')
+    .select('id, full_name, email, role, company')
+    .is('deleted_at', null)
     .order('role')
     .order('full_name');
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <header>
-        <h1 className="text-3xl font-semibold tracking-tight">Equipe</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Supervisores, administradores e clientes cadastrados no Soprano.
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Equipe</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Supervisores, administradores e clientes cadastrados no Soprano.
+            {isAdmin && ' Você pode editar nome, empresa e papel clicando no lápis.'}
+          </p>
+        </div>
+        {isAdmin && (
+          <div className="flex gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link href="/equipe/auditoria">
+                <FileSearch className="h-4 w-4" />
+                Auditoria
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/equipe/lixeira">
+                <Trash2 className="h-4 w-4" />
+                Lixeira
+              </Link>
+            </Button>
+          </div>
+        )}
       </header>
 
       <ul className="grid gap-3 sm:grid-cols-2">
-        {(profiles ?? []).map((p) => (
+        {(profiles ?? []).map((p: any) => (
           <li key={p.id}>
-            <Card>
-              <CardContent className="p-4 flex items-center gap-4">
-                <div className="h-12 w-12 rounded-full bg-primary/15 text-primary text-sm font-semibold border border-primary/25 flex items-center justify-center shrink-0">
-                  {initials(p.full_name)}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium truncate">{p.full_name}</p>
-                  <p className="text-xs text-muted-foreground truncate">{p.email}</p>
-                  {p.company && (
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 mt-1">
-                      {p.company}
-                    </p>
-                  )}
-                </div>
-                <Badge variant={p.role === 'admin' ? 'default' : p.role === 'cliente' ? 'accent' : 'secondary'}>
-                  {p.role}
-                </Badge>
-              </CardContent>
-            </Card>
+            <ProfileRow profile={p} editable={isAdmin} />
           </li>
         ))}
       </ul>
