@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import { motion } from 'framer-motion';
 import {
   Activity,
   Building2,
@@ -55,13 +56,21 @@ export function Sidebar({ role }: { role: Role }) {
             const Icon = item.icon;
             const active = pathname === item.href || pathname.startsWith(item.href + '/');
             return (
-              <li key={item.href}>
+              <li key={item.href} className="relative">
+                {active && (
+                  <motion.span
+                    layoutId="sidebar-active"
+                    className="absolute inset-0 rounded-md bg-primary/10 border-l-2 border-primary"
+                    transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                    aria-hidden
+                  />
+                )}
                 <Link
                   href={item.href}
                   className={cn(
-                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-all',
+                    'relative flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
                     active
-                      ? 'bg-primary/10 text-primary border-l-2 border-primary -ml-[2px] pl-[calc(0.75rem-2px)]'
+                      ? 'text-primary'
                       : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
                   )}
                 >
