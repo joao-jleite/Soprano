@@ -46,19 +46,20 @@ export default async function ActivityDetailPage({
     .single();
 
   if (!activity) notFound();
+  const act = activity as any;
 
   const localeKey = (locale === 'en' ? 'label_en' : locale === 'es' ? 'label_es' : 'label_pt') as any;
-  const typeLabel = (activity.activity_types as any)?.[localeKey];
+  const typeLabel = act.activity_types?.[localeKey];
 
-  const signature = (activity as any).signatures?.[0];
+  const signature = act.signatures?.[0];
   const canSign =
     profile?.role === 'cliente' &&
-    activity.client_id === user.id &&
-    activity.status === 'enviada' &&
+    act.client_id === user.id &&
+    act.status === 'enviada' &&
     !signature;
 
   const photosWithUrls = await Promise.all(
-    ((activity as any).activity_photos ?? []).map(async (p: any) => {
+    (act.activity_photos ?? []).map(async (p: any) => {
       const { data } = supabase.storage.from('activity-photos').getPublicUrl(p.storage_path);
       return { ...p, url: data.publicUrl };
     }),
@@ -68,34 +69,34 @@ export default async function ActivityDetailPage({
     <div className="max-w-4xl space-y-6">
       <header className="space-y-3">
         <div className="flex items-center gap-2">
-          <StatusBadge status={activity.status} />
+          <StatusBadge status={act.status} />
           <span className="text-data">{typeLabel}</span>
         </div>
-        <h1 className="text-3xl font-semibold tracking-tight">{activity.description}</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">{act.description}</h1>
       </header>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <InfoBlock icon={<MapPin className="h-4 w-4" />} label={t('activities.fields.location')}>
-          {(activity.locations as any)?.name}
+          {act.locations?.name}
         </InfoBlock>
         <InfoBlock icon={<Calendar className="h-4 w-4" />} label={t('activities.fields.startedAt')}>
-          {formatDateTime(activity.started_at, locale === 'pt' ? 'pt-BR' : locale)}
+          {formatDateTime(act.started_at, locale === 'pt' ? 'pt-BR' : locale)}
         </InfoBlock>
         <InfoBlock icon={<User className="h-4 w-4" />} label="Supervisor">
-          {(activity as any).supervisor?.full_name ?? '—'}
+          {act.supervisor?.full_name ?? '—'}
         </InfoBlock>
         <InfoBlock icon={<User className="h-4 w-4" />} label="Cliente">
-          {(activity as any).client?.full_name ?? '—'}
+          {act.client?.full_name ?? '—'}
         </InfoBlock>
       </section>
 
-      {activity.notes && (
+      {act.notes && (
         <Card>
-          <CardContent className="p-4 text-sm whitespace-pre-wrap">{activity.notes}</CardContent>
+          <CardContent className="p-4 text-sm whitespace-pre-wrap">{act.notes}</CardContent>
         </Card>
       )}
 
-      {(activity as any).activity_participants?.length > 0 && (
+      {act.activity_participants?.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -105,7 +106,7 @@ export default async function ActivityDetailPage({
           </CardHeader>
           <CardContent>
             <ul className="flex flex-wrap gap-2">
-              {(activity as any).activity_participants.map((p: any) => (
+              {act.activity_participants.map((p: any) => (
                 <li key={p.name}>
                   <Badge variant="secondary" className="px-3 py-1">
                     <span className="flex flex-col leading-tight">
@@ -151,10 +152,10 @@ export default async function ActivityDetailPage({
           {signature ? (
             <SignatureDisplay signature={signature} locale={locale} />
           ) : canSign ? (
-            <SignActivityPanel activityId={activity.id} />
+            <SignActivityPanel activityId={act.id} />
           ) : (
             <p className="text-sm text-muted-foreground">
-              {activity.status === 'rascunho'
+              {act.status === 'rascunho'
                 ? 'Esta atividade ainda é um rascunho. Envie para assinatura quando estiver pronta.'
                 : 'Aguardando ação do cliente designado.'}
             </p>
