@@ -27,14 +27,17 @@ export default async function AppLayout({
 
   if (!user) redirect({ href: '/login', locale });
 
+  // Busca profile (RLS pode filtrar soft-deleted, por isso .maybeSingle)
   let { data: profile } = await supabase
     .from('profiles')
     .select('full_name, role')
     .eq('id', user.id)
-    .single();
+    .is('deleted_at', null)
+    .maybeSingle();
 
-  // Sem profile? Auto-provisiona usando service role (bypassa RLS).
-  // Cobre: signup sem trigger, profile deletado, seed inicial, etc.
+  // Sem profile visível? Auto-provisiona via service role (bypassa RLS e
+  // consegue ver/editar rows soft-deletados).
+  let diagnostic = '';
   if (!profile) {
     const fallbackName =
       (user.user_metadata?.full_name as string | undefined) ??
@@ -45,41 +48,63 @@ export default async function AppLayout({
       : 'supervisor';
 
     const admin = createServiceClient();
-    if (admin) {
-      const { data: created } = await admin
+    if (!admin) {
+      diagnostic = 'SUPABASE_SERVICE_ROLE_KEY não configurado no Vercel';
+    } else {
+      // 1) Verifica se existe linha (mesmo soft-deleted)
+      const { data: existing, error: selErr } = await admin
         .from('profiles')
-        .upsert(
-          { id: user.id, full_name: fallbackName, role: defaultRole } as any,
-          { onConflict: 'id' },
-        )
-        .select('full_name, role')
-        .single();
-      if (created) profile = created;
+        .select('full_name, role, deleted_at')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (selErr) {
+        diagnostic = `SELECT falhou: ${selErr.message}`;
+      } else if (existing) {
+        // Existe — se tá soft-deleted, revive. Preserva nome/role originais.
+        if ((existing as any).deleted_at) {
+          const { data: revived, error: updErr } = await admin
+            .from('profiles')
+            .update({ deleted_at: null } as any)
+            .eq('id', user.id)
+            .select('full_name, role')
+            .single();
+          if (updErr) diagnostic = `UPDATE (revive) falhou: ${updErr.message}`;
+          else profile = revived;
+        } else {
+          // Existe e não tá deleted — RLS estava escondendo? Usa o que veio.
+          profile = { full_name: (existing as any).full_name, role: (existing as any).role };
+        }
+      } else {
+        // Não existe — cria do zero
+        const { data: created, error: insErr } = await admin
+          .from('profiles')
+          .insert({
+            id: user.id,
+            full_name: fallbackName,
+            role: defaultRole,
+          } as any)
+          .select('full_name, role')
+          .single();
+        if (insErr) diagnostic = `INSERT falhou: ${insErr.message}`;
+        else profile = created;
+      }
     }
 
-    // Se service role não disponível ou upsert falhou, tenta como o próprio user
-    if (!profile) {
-      const { data: created } = await supabase
-        .from('profiles')
-        .upsert(
-          { id: user.id, full_name: fallbackName, role: defaultRole } as any,
-          { onConflict: 'id' },
-        )
-        .select('full_name, role')
-        .single();
-      if (created) profile = created;
-    }
-
-    // Último recurso: tela de erro in-place (NÃO redirect — senão vira loop).
+    // Último recurso: tela de erro com diagnóstico (NÃO redirect — evita loop)
     if (!profile) {
       return (
         <div className="min-h-screen flex items-center justify-center p-6">
-          <div className="max-w-md space-y-4 text-center">
+          <div className="max-w-lg space-y-4 text-center">
             <h1 className="text-2xl font-semibold">Perfil não encontrado</h1>
             <p className="text-sm text-muted-foreground">
               Sua conta existe mas o sistema não conseguiu provisionar o perfil.
-              Verifique SUPABASE_SERVICE_ROLE_KEY e RLS da tabela profiles.
             </p>
+            {diagnostic && (
+              <p className="text-xs font-mono bg-destructive/10 border border-destructive/30 rounded px-3 py-2 text-destructive">
+                {diagnostic}
+              </p>
+            )}
             <p className="text-xs text-muted-foreground/70 font-mono">
               id: {user.id.slice(0, 8)} · {user.email}
             </p>
