@@ -268,10 +268,16 @@ export function NewActivityForm({ locations, types, clients, locale, initial, mo
           type="button"
           onClick={() => submit(true)}
           disabled={!canSave || !clientId || savingAs !== null}
+          title={!clientId ? t('placeholders.assignClientLater') : undefined}
         >
           {savingAs === 'submit' ? <Loader2 className="animate-spin" /> : <Send />}
           {t('actions.submit')}
         </Button>
+        {canSave && !clientId && (
+          <p className="w-full text-right text-xs text-muted-foreground -mt-1">
+            ↑ {t('fields.clientForSigning')} obrigatório para enviar
+          </p>
+        )}
       </div>
     </div>
   );

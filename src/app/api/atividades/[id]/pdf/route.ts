@@ -68,37 +68,21 @@ export async function GET(
     signatureImageDataUrl = `data:image/svg+xml;base64,${b64}`;
   }
 
-  // Baixa fotos e converte para data URLs (limitado para não estourar memória)
+  // Fotos: gera signed URLs (bucket privado) — react-pdf busca a imagem via HTTP durante render
   const rawPhotos: { id: string; storage_path: string; caption: string | null }[] =
     (act.activity_photos ?? []).slice(0, 24);
 
-  function mimeFromPath(path: string): string {
-    const ext = path.split('.').pop()?.toLowerCase();
-    if (ext === 'png') return 'image/png';
-    if (ext === 'webp') return 'image/webp';
-    if (ext === 'gif') return 'image/gif';
-    return 'image/jpeg';
-  }
-
-  const photos: { dataUrl: string; caption?: string | null }[] = [];
-  await Promise.all(
-    rawPhotos.map(async (p) => {
-      const { data, error } = await supabase.storage
-        .from('activity-photos')
-        .download(p.storage_path);
-      if (error || !data) return;
-      const buf = Buffer.from(await data.arrayBuffer());
-      if (!buf.length) return;
-      // Usar extensão do path para determinar MIME — data.type pode ser vazio
-      const mime = (data.type && data.type !== 'application/octet-stream')
-        ? data.type
-        : mimeFromPath(p.storage_path);
-      photos.push({
-        dataUrl: `data:${mime};base64,${buf.toString('base64')}`,
-        caption: p.caption,
-      });
-    }),
-  );
+  const photos: { dataUrl: string; caption?: string | null }[] = (
+    await Promise.all(
+      rawPhotos.map(async (p) => {
+        const { data } = await supabase.storage
+          .from('activity-photos')
+          .createSignedUrl(p.storage_path, 600); // 10 min — suficiente para render
+        if (!data?.signedUrl) return null;
+        return { dataUrl: data.signedUrl, caption: p.caption };
+      }),
+    )
+  ).filter((x): x is { dataUrl: string; caption: string | null } => x !== null);
 
   const doc = ActivityPdf({
     activity: {
