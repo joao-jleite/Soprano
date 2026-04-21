@@ -1,11 +1,43 @@
 import { NextResponse } from 'next/server';
-import { renderToStream } from '@react-pdf/renderer';
 import QRCode from 'qrcode';
 import { createClient } from '@/lib/supabase/server';
-import { ActivityPdf } from '@/lib/pdf/activity-pdf';
+import { buildActivityHtml } from '@/lib/pdf/activity-html';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+// Aumenta timeout para dar tempo ao Puppeteer iniciar
+export const maxDuration = 60;
+
+async function getBrowser() {
+  // Em produção (Vercel / Lambda) usa @sparticuz/chromium
+  // Em dev usa Chrome local do sistema
+  if (process.env.NODE_ENV === 'production' || process.env.USE_CHROMIUM === '1') {
+    const chromium = (await import('@sparticuz/chromium')).default;
+    const puppeteer = (await import('puppeteer-core')).default;
+    return puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless as boolean,
+    });
+  }
+
+  // Dev: usa Chrome do sistema
+  const puppeteer = (await import('puppeteer-core')).default;
+  const executablePath =
+    process.env.CHROME_PATH ??
+    (process.platform === 'darwin'
+      ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+      : process.platform === 'win32'
+        ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+        : '/usr/bin/google-chrome-stable');
+
+  return puppeteer.launch({
+    executablePath,
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  });
+}
 
 export async function GET(
   request: Request,
@@ -14,9 +46,7 @@ export async function GET(
   const { id } = await params;
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) return new NextResponse('Unauthorized', { status: 401 });
 
   const { data: activity } = await supabase
@@ -35,7 +65,7 @@ export async function GET(
   if (!activity) return new NextResponse('Not found', { status: 404 });
   const act = activity as any;
 
-  // Busca supervisor e cliente separadamente para evitar ambiguidade de FK
+  // Supervisor e cliente separados (evita ambiguidade FK)
   const [{ data: supervisorProfile }, { data: clientProfile }] = await Promise.all([
     act.supervisor_id
       ? supabase.from('profiles').select('full_name').eq('id', act.supervisor_id).maybeSingle()
@@ -44,8 +74,6 @@ export async function GET(
       ? supabase.from('profiles').select('full_name').eq('id', act.client_id).maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
-  act.supervisor = supervisorProfile;
-  act.client = clientProfile;
 
   const signature = act.signatures?.find((s: any) => !s.rejected) ?? null;
 
@@ -56,35 +84,27 @@ export async function GET(
 
   const qrDataUrl = verifyUrl
     ? await QRCode.toDataURL(verifyUrl, {
-        margin: 1,
-        width: 220,
+        margin: 1, width: 200,
         color: { dark: '#0959C8', light: '#ffffff' },
       })
     : undefined;
 
-  let signatureImageDataUrl: string | undefined;
-  if (signature?.svg_data) {
-    const b64 = Buffer.from(signature.svg_data, 'utf8').toString('base64');
-    signatureImageDataUrl = `data:image/svg+xml;base64,${b64}`;
-  }
-
-  // Fotos: gera signed URLs (bucket privado) — react-pdf busca a imagem via HTTP durante render
+  // Fotos: signed URLs (bucket privado)
   const rawPhotos: { id: string; storage_path: string; caption: string | null }[] =
-    (act.activity_photos ?? []).slice(0, 24);
+    (act.activity_photos ?? []).slice(0, 20);
 
-  const photos: { dataUrl: string; caption?: string | null }[] = (
-    await Promise.all(
-      rawPhotos.map(async (p) => {
-        const { data } = await supabase.storage
-          .from('activity-photos')
-          .createSignedUrl(p.storage_path, 600); // 10 min — suficiente para render
-        if (!data?.signedUrl) return null;
-        return { dataUrl: data.signedUrl, caption: p.caption };
-      }),
-    )
-  ).filter((x): x is { dataUrl: string; caption: string | null } => x !== null);
+  const photos = (await Promise.all(
+    rawPhotos.map(async (p) => {
+      const { data } = await supabase.storage
+        .from('activity-photos')
+        .createSignedUrl(p.storage_path, 600);
+      if (!data?.signedUrl) return null;
+      return { signedUrl: data.signedUrl, caption: p.caption };
+    }),
+  )).filter((x): x is { signedUrl: string; caption: string | null } => x !== null);
 
-  const doc = ActivityPdf({
+  // Monta HTML
+  const html = buildActivityHtml({
     activity: {
       id: act.id,
       description: act.description,
@@ -94,33 +114,43 @@ export async function GET(
       status: act.status,
       location_name: act.locations?.name,
       type_label: act.activity_types?.label_pt,
-      supervisor_name: act.supervisor?.full_name,
-      client_name: act.client?.full_name,
+      supervisor_name: (supervisorProfile as any)?.full_name,
+      client_name: (clientProfile as any)?.full_name,
       participants: act.activity_participants ?? [],
     },
     signature: signature
       ? {
           signer_name: signature.signer_name,
           signed_at: signature.signed_at,
-          svg_data: signature.svg_data,
           verification_code: signature.verification_code,
           ip_address: signature.ip_address,
+          svg_data: signature.svg_data,
         }
       : null,
     qrDataUrl,
-    signatureImageDataUrl,
     verifyUrl,
     generatedAt: new Date().toISOString(),
     photos,
   });
 
-  const stream = await renderToStream(doc as any);
-
-  return new NextResponse(stream as any, {
-    headers: {
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `inline; filename="soprano-${act.id.slice(0, 8)}.pdf"`,
-      'Cache-Control': 'no-store',
-    },
-  });
+  // Puppeteer → PDF
+  const browser = await getBrowser();
+  try {
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    const pdf = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '0', right: '0', bottom: '24pt', left: '0' },
+    });
+    return new NextResponse(pdf, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `inline; filename="soprano-${act.id.slice(0, 8)}.pdf"`,
+        'Cache-Control': 'no-store',
+      },
+    });
+  } finally {
+    await browser.close();
+  }
 }

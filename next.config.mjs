@@ -7,12 +7,14 @@ const nextConfig = {
   reactStrictMode: true,
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
+  // Puppeteer + Chromium devem ficar fora do bundle webpack
+  serverExternalPackages: ['puppeteer-core', '@sparticuz/chromium'],
   images: {
     remotePatterns: [
       {
         protocol: 'https',
         hostname: '*.supabase.co',
-        pathname: '/storage/v1/object/public/**',
+        pathname: '/storage/v1/object/**',
       },
     ],
   },
