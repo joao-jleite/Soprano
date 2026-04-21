@@ -2,17 +2,16 @@
 
 import * as React from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from '@/i18n/navigation';
 
 export function LoginForm() {
   const t = useTranslations('auth');
-  const router = useRouter();
+  const locale = useLocale();
   const searchParams = useSearchParams();
   const supabase = createClient();
 
@@ -31,13 +30,13 @@ export function LoginForm() {
       setLoading(false);
       return;
     }
-    // ATENÇÃO: router aqui é do next-intl e adiciona locale automaticamente.
-    // Use paths sem prefix de locale (ex: '/', '/atividades'). Nunca '/pt'.
+    // Hard redirect (não client-side nav) pra garantir que o browser mande
+    // a próxima request JÁ com o cookie de sessão setado pelo Supabase.
+    // router.push client-side dispara RSC antes do cookie propagar → loop de login.
     const rawNext = searchParams.get('next') ?? '/';
-    // Se veio um next com locale prefix (/pt/..., /en/..., /es/...), remove.
-    const next = rawNext.replace(/^\/(pt|en|es)(?=\/|$)/, '') || '/';
-    router.push(next as any);
-    router.refresh();
+    const stripped = rawNext.replace(/^\/(pt|en|es)(?=\/|$)/, '') || '/';
+    const target = stripped === '/' ? `/${locale}` : `/${locale}${stripped}`;
+    window.location.assign(target);
   }
 
   return (

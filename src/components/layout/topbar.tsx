@@ -1,13 +1,12 @@
 'use client';
 
 import { LogOut } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { LocaleSwitcher } from './locale-switcher';
 import { ThemeToggle } from './theme-toggle';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from '@/i18n/navigation';
 import { initials } from '@/lib/utils';
 
 type Props = {
@@ -17,13 +16,14 @@ type Props = {
 
 export function Topbar({ fullName, role }: Props) {
   const t = useTranslations();
-  const router = useRouter();
+  const locale = useLocale();
   const supabase = createClient();
 
   async function handleLogout() {
     await supabase.auth.signOut();
-    router.push('/login');
-    router.refresh();
+    // Hard redirect para garantir que o cookie de sessão expirado seja
+    // reconhecido pelo middleware no próximo request.
+    window.location.assign(`/${locale}/login`);
   }
 
   return (
