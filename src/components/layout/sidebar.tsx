@@ -1,6 +1,5 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   Activity,
@@ -13,7 +12,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Link } from '@/i18n/navigation';
+import { Link, usePathname } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
 import { SopranoWordmark, ZitronBadge } from '@/components/brand/logo';
 import type { Role } from '@/lib/supabase/database.types';

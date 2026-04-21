@@ -1,10 +1,9 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
 import { ChevronRight, Home } from 'lucide-react';
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
-import { Link } from '@/i18n/navigation';
+import { Link, usePathname } from '@/i18n/navigation';
 
 export function Breadcrumbs() {
   const pathname = usePathname();
@@ -40,9 +39,8 @@ export function Breadcrumbs() {
 
   if (!pathname) return null;
 
-  // Remove locale prefix (/pt, /en, /es) if presente
-  const stripped = pathname.replace(/^\/(pt|en|es)(?=\/|$)/, '');
-  const segments = stripped.split('/').filter(Boolean);
+  // usePathname do @/i18n/navigation já retorna o path sem prefixo de locale.
+  const segments = pathname.split('/').filter(Boolean);
 
   // Não mostra na raiz do app (dashboard)
   if (segments.length === 0) return null;

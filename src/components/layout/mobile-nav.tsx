@@ -1,9 +1,8 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
 import { Activity, Building2, Home, MessageSquareWarning, MoreHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Link } from '@/i18n/navigation';
+import { Link, usePathname } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
 
 const ITEMS = [
