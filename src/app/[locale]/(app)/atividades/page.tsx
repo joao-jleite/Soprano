@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { ActivityFilters } from './filters';
+import { ActivityDeleteButton } from '@/components/activity/activity-actions';
 import { formatDate } from '@/lib/utils';
 
 type SearchParams = Promise<{
@@ -131,32 +132,33 @@ export default async function ActivitiesPage({
       <ul className="space-y-2">
         {(activities ?? []).map((a: any) => (
           <li key={a.id}>
-            <Link
-              href={`/atividades/${a.id}`}
-              className="block group"
-            >
-              <Card className="transition-all group-hover:border-primary/40">
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <StatusBadge status={a.status} label={t(`activities.status.${a.status}`)} />
-                      <span className="text-xs text-muted-foreground">
-                        {a.activity_types?.[localeKey]}
-                      </span>
-                    </div>
-                    <p className="text-sm font-medium truncate">{a.description}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {a.locations?.name} · {supervisorMap[a.supervisor_id] ?? ''} · {formatDate(a.started_at, locale === 'pt' ? 'pt-BR' : locale)}
-                    </p>
-                    {a.status === 'rejeitada' && (
-                      <p className="text-xs text-destructive/70 mt-1">
-                        {t('activities.rejectReason')} — {t('activities.seeDetails')}
-                      </p>
-                    )}
+            <Card className="transition-all hover:border-primary/40">
+              <CardContent className="p-4 flex items-center gap-3">
+                {/* área clicável principal */}
+                <Link href={`/atividades/${a.id}`} className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <StatusBadge status={a.status} label={t(`activities.status.${a.status}`)} />
+                    <span className="text-xs text-muted-foreground">
+                      {a.activity_types?.[localeKey]}
+                    </span>
                   </div>
-                </CardContent>
-              </Card>
-            </Link>
+                  <p className="text-sm font-medium truncate">{a.description}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {a.locations?.name} · {supervisorMap[a.supervisor_id] ?? ''} · {formatDate(a.started_at, locale === 'pt' ? 'pt-BR' : locale)}
+                  </p>
+                  {a.status === 'rejeitada' && (
+                    <p className="text-xs text-destructive/70 mt-1">
+                      {t('activities.rejectReason')} — {t('activities.seeDetails')}
+                    </p>
+                  )}
+                </Link>
+
+                {/* botão excluir — só para admin ou supervisor dono */}
+                {(role === 'admin' || (role === 'supervisor' && a.supervisor_id === user?.id)) && (
+                  <ActivityDeleteButton id={a.id} />
+                )}
+              </CardContent>
+            </Card>
           </li>
         ))}
       </ul>

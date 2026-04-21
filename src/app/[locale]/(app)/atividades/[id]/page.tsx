@@ -118,8 +118,9 @@ export default async function ActivityDetailPage({
                 </Link>
               </Button>
             )}
+            {/* Admin deleta qualquer atividade. Supervisor deleta as suas (qualquer status). */}
             {(profile?.role === 'admin' ||
-              (profile?.role === 'supervisor' && act.supervisor_id === user.id && act.status === 'rascunho')) && (
+              (profile?.role === 'supervisor' && act.supervisor_id === user.id)) && (
               <ActivityDeleteButton id={act.id} />
             )}
           </div>

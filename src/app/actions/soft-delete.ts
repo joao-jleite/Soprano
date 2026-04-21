@@ -24,10 +24,26 @@ async function requireAuth() {
 
 export async function softDelete(arg: z.infer<typeof input>) {
   const { table, id } = input.parse(arg);
-  const { supabase, role } = await requireAuth();
+  const { supabase, user, role } = await requireAuth();
 
-  // Apenas admin pode mover locais/tipos/profiles; supervisor pode apagar própria atividade
-  if (table !== 'activities' && role !== 'admin') {
+  if (table === 'activities') {
+    if (role === 'admin') {
+      // Admin pode excluir qualquer atividade
+    } else if (role === 'supervisor') {
+      // Supervisor só pode excluir atividades que supervisionou
+      const { data: act } = await supabase
+        .from('activities')
+        .select('supervisor_id')
+        .eq('id', id)
+        .single();
+      if (!act || act.supervisor_id !== user.id) {
+        throw new Error('Você só pode excluir atividades que você supervisionou');
+      }
+    } else {
+      throw new Error('Sem permissão para excluir atividades');
+    }
+  } else if (role !== 'admin') {
+    // Locais, tipos, profiles: apenas admin
     throw new Error('Apenas admins podem excluir este recurso');
   }
 
@@ -38,6 +54,7 @@ export async function softDelete(arg: z.infer<typeof input>) {
   if (error) throw error;
 
   revalidatePath('/atividades');
+  revalidatePath(`/atividades/${id}`);
   revalidatePath('/locais');
   revalidatePath('/equipe');
   revalidatePath('/equipe/lixeira');
