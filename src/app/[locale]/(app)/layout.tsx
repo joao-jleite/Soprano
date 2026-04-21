@@ -1,10 +1,15 @@
 import { redirect } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Topbar } from '@/components/layout/topbar';
 import { MobileNav } from '@/components/layout/mobile-nav';
 import { PageTransition } from '@/components/layout/page-transition';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
+
+// Seed: emails que viram admin automaticamente se não tiverem profile.
+// João é dono do sistema — tem que cair logado como admin direto, sem travar.
+const SEED_ADMINS = ['joaovitor.leite@zitron.com'];
 
 export default async function AppLayout({
   children,
@@ -28,33 +33,52 @@ export default async function AppLayout({
     .eq('id', user.id)
     .single();
 
-  // Se o user tá autenticado mas não tem profile (edge case: signup sem trigger,
-  // RLS bloqueando, profile deletado), cria um default em vez de redirecionar
-  // pra /login — senão vira loop infinito com o middleware.
+  // Sem profile? Auto-provisiona usando service role (bypassa RLS).
+  // Cobre: signup sem trigger, profile deletado, seed inicial, etc.
   if (!profile) {
     const fallbackName =
       (user.user_metadata?.full_name as string | undefined) ??
       user.email?.split('@')[0] ??
       'Usuário';
-    const { data: created, error: upsertErr } = await supabase
-      .from('profiles')
-      .upsert(
-        { id: user.id, full_name: fallbackName, role: 'supervisor' } as any,
-        { onConflict: 'id' },
-      )
-      .select('full_name, role')
-      .single();
+    const defaultRole = SEED_ADMINS.includes(user.email?.toLowerCase() ?? '')
+      ? 'admin'
+      : 'supervisor';
 
-    if (upsertErr || !created) {
-      // Sem profile e sem conseguir criar — renderiza tela de erro IN-PLACE
-      // em vez de redirect, senão vira loop com o middleware.
+    const admin = createServiceClient();
+    if (admin) {
+      const { data: created } = await admin
+        .from('profiles')
+        .upsert(
+          { id: user.id, full_name: fallbackName, role: defaultRole } as any,
+          { onConflict: 'id' },
+        )
+        .select('full_name, role')
+        .single();
+      if (created) profile = created;
+    }
+
+    // Se service role não disponível ou upsert falhou, tenta como o próprio user
+    if (!profile) {
+      const { data: created } = await supabase
+        .from('profiles')
+        .upsert(
+          { id: user.id, full_name: fallbackName, role: defaultRole } as any,
+          { onConflict: 'id' },
+        )
+        .select('full_name, role')
+        .single();
+      if (created) profile = created;
+    }
+
+    // Último recurso: tela de erro in-place (NÃO redirect — senão vira loop).
+    if (!profile) {
       return (
         <div className="min-h-screen flex items-center justify-center p-6">
           <div className="max-w-md space-y-4 text-center">
             <h1 className="text-2xl font-semibold">Perfil não encontrado</h1>
             <p className="text-sm text-muted-foreground">
-              Sua conta existe mas não tem perfil configurado. Contate um administrador
-              da Zitrón Brasil para liberar seu acesso.
+              Sua conta existe mas o sistema não conseguiu provisionar o perfil.
+              Verifique SUPABASE_SERVICE_ROLE_KEY e RLS da tabela profiles.
             </p>
             <p className="text-xs text-muted-foreground/70 font-mono">
               id: {user.id.slice(0, 8)} · {user.email}
@@ -66,7 +90,6 @@ export default async function AppLayout({
         </div>
       );
     }
-    profile = created;
   }
 
   return (
