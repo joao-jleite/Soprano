@@ -38,11 +38,12 @@ export default async function ActivitiesPage({
     : { data: null };
   const role = (me as any)?.role as 'admin' | 'supervisor' | 'cliente' | undefined;
 
-  // Nota: usar profiles!supervisor_id em vez do nome do FK para compatibilidade
-  // máxima com diferentes versões do schema (evita erro "could not find relationship")
+  // Nota: evitar join profiles!supervisor_id — activities tem dois FKs para profiles
+  // (supervisor_id e client_id) e PostgREST pode falhar com ambiguidade silenciosa.
+  // Supervisor name não é crítico na listagem; buscar separado se necessário.
   let q = supabase
     .from('activities')
-    .select('id, description, status, started_at, reject_reason, locations(name, kind), activity_types(label_pt, label_en, label_es), profiles!supervisor_id(full_name)')
+    .select('id, description, status, started_at, reject_reason, supervisor_id, locations(name, kind), activity_types(label_pt, label_en, label_es)')
     .order('started_at', { ascending: false })
     .limit(100);
 
@@ -66,6 +67,17 @@ export default async function ActivitiesPage({
     supabase.from('locations').select('id, name, kind').eq('line', 'linha-6').order('sort_order'),
     supabase.from('activity_types').select('id, slug, label_pt, label_en, label_es').order('label_pt'),
   ]);
+
+  // Busca nomes dos supervisores separado para evitar ambiguidade de FK
+  const supervisorIds = [...new Set((activities ?? []).map((a: any) => a.supervisor_id).filter(Boolean))];
+  const supervisorMap: Record<string, string> = {};
+  if (supervisorIds.length) {
+    const { data: sups } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', supervisorIds);
+    (sups ?? []).forEach((s: any) => { supervisorMap[s.id] = s.full_name; });
+  }
 
   const localeKey = (locale === 'en' ? 'label_en' : locale === 'es' ? 'label_es' : 'label_pt') as
     | 'label_pt'
@@ -120,7 +132,7 @@ export default async function ActivitiesPage({
                     </div>
                     <p className="text-sm font-medium truncate">{a.description}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {a.locations?.name} · {(a.profiles as any)?.full_name} · {formatDate(a.started_at, locale === 'pt' ? 'pt-BR' : locale)}
+                      {a.locations?.name} · {supervisorMap[a.supervisor_id] ?? ''} · {formatDate(a.started_at, locale === 'pt' ? 'pt-BR' : locale)}
                     </p>
                     {a.status === 'rejeitada' && a.reject_reason && (
                       <p className="text-xs text-destructive mt-1 line-clamp-2">
