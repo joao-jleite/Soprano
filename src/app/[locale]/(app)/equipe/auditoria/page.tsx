@@ -1,4 +1,4 @@
-import { setRequestLocale } from 'next-intl/server';
+import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
@@ -29,6 +29,8 @@ export default async function AuditoriaPage({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
+  const t = await getTranslations('audit');
+  const tTeam = await getTranslations('team');
   const sp = await searchParams;
   const supabase = await createClient();
 
@@ -74,12 +76,12 @@ export default async function AuditoriaPage({
         <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link href="/equipe">
             <ChevronLeft className="h-4 w-4" />
-            Equipe
+            {tTeam('back')}
           </Link>
         </Button>
-        <h1 className="text-3xl font-semibold tracking-tight">Auditoria</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">{t('title')}</h1>
         <p className="text-sm text-muted-foreground">
-          Log completo de alterações no sistema. {total.toLocaleString('pt-BR')} evento(s) registrado(s).
+          {t('descriptionFull', { count: total.toLocaleString(locale === 'pt' ? 'pt-BR' : locale) })}
         </p>
       </header>
 
@@ -88,7 +90,7 @@ export default async function AuditoriaPage({
       {(!logs || logs.length === 0) && (
         <Card>
           <CardContent className="p-10 text-center text-sm text-muted-foreground">
-            Nenhum evento encontrado com esses filtros.
+            {t('emptyFiltered')}
           </CardContent>
         </Card>
       )}
@@ -111,13 +113,13 @@ export default async function AuditoriaPage({
                   </span>
                 </div>
                 <p className="text-sm">
-                  <span className="text-muted-foreground">por </span>
-                  <strong>{log.actor_email ?? 'sistema'}</strong>
+                  <span className="text-muted-foreground">{t('by')} </span>
+                  <strong>{log.actor_email ?? t('system')}</strong>
                 </p>
                 {log.diff && (
                   <details className="mt-3 group">
                     <summary className="text-xs text-primary cursor-pointer hover:underline">
-                      Ver diff
+                      {t('showDiff')}
                     </summary>
                     <pre className="mt-2 text-[10px] font-mono bg-muted/40 p-3 rounded overflow-auto max-h-80 border border-border">
                       {JSON.stringify(log.diff, null, 2)}
@@ -133,7 +135,7 @@ export default async function AuditoriaPage({
       {totalPages > 1 && (
         <div className="flex items-center justify-between gap-2 pt-2">
           <p className="text-xs text-muted-foreground">
-            Página {page + 1} de {totalPages}
+            {t('pageOf', { current: page + 1, total: totalPages })}
           </p>
           <div className="flex gap-2">
             <Button asChild variant="outline" size="sm" disabled={page === 0}>
@@ -145,7 +147,7 @@ export default async function AuditoriaPage({
                   page: String(Math.max(0, page - 1)),
                 }).toString()}`}
               >
-                Anterior
+                {t('previous')}
               </Link>
             </Button>
             <Button asChild variant="outline" size="sm" disabled={page + 1 >= totalPages}>
@@ -157,7 +159,7 @@ export default async function AuditoriaPage({
                   page: String(page + 1),
                 }).toString()}`}
               >
-                Próxima
+                {t('next')}
               </Link>
             </Button>
           </div>

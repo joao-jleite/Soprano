@@ -6,6 +6,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Role = 'admin' | 'supervisor' | 'cliente';
 export type LocationKind = 'estacao' | 'vse' | 'se' | 'escadaria' | 'patio' | 'outro';
 export type ActivityStatus = 'rascunho' | 'enviada' | 'assinada' | 'rejeitada';
+export type AuditAction = 'insert' | 'update' | 'delete' | 'soft_delete' | 'restore';
 
 export interface Database {
   public: {
@@ -22,18 +23,21 @@ export interface Database {
           preferred_locale: string;
           created_at: string;
           updated_at: string;
+          deleted_at: string | null;
         };
         Insert: {
           id: string;
           full_name: string;
           email: string;
-          role: Role;
+          role?: Role;
           avatar_url?: string | null;
           phone?: string | null;
           company?: string | null;
           preferred_locale?: string;
+          deleted_at?: string | null;
         };
-        Update: Partial<Database['public']['Tables']['profiles']['Insert']>;
+        Update: Partial<Omit<Database['public']['Tables']['profiles']['Row'], 'id'>>;
+        Relationships: [];
       };
       locations: {
         Row: {
@@ -47,6 +51,7 @@ export interface Database {
           lng: number | null;
           created_at: string;
           created_by: string | null;
+          deleted_at: string | null;
         };
         Insert: {
           id?: string;
@@ -58,8 +63,10 @@ export interface Database {
           lat?: number | null;
           lng?: number | null;
           created_by?: string | null;
+          deleted_at?: string | null;
         };
-        Update: Partial<Database['public']['Tables']['locations']['Insert']>;
+        Update: Partial<Omit<Database['public']['Tables']['locations']['Row'], 'id'>>;
+        Relationships: [];
       };
       activity_types: {
         Row: {
@@ -71,17 +78,20 @@ export interface Database {
           icon: string | null;
           created_at: string;
           created_by: string | null;
+          deleted_at: string | null;
         };
         Insert: {
           id?: string;
-          slug: string;
+          slug?: string;
           label_pt: string;
-          label_en: string;
-          label_es: string;
+          label_en?: string;
+          label_es?: string;
           icon?: string | null;
           created_by?: string | null;
+          deleted_at?: string | null;
         };
-        Update: Partial<Database['public']['Tables']['activity_types']['Insert']>;
+        Update: Partial<Omit<Database['public']['Tables']['activity_types']['Row'], 'id'>>;
+        Relationships: [];
       };
       activities: {
         Row: {
@@ -98,6 +108,7 @@ export interface Database {
           submitted_at: string | null;
           created_at: string;
           updated_at: string;
+          deleted_at: string | null;
         };
         Insert: {
           id?: string;
@@ -111,21 +122,63 @@ export interface Database {
           started_at: string;
           ended_at?: string | null;
           submitted_at?: string | null;
+          deleted_at?: string | null;
         };
-        Update: Partial<Database['public']['Tables']['activities']['Insert']>;
+        Update: Partial<Omit<Database['public']['Tables']['activities']['Row'], 'id'>>;
+        Relationships: [
+          {
+            foreignKeyName: 'activities_location_id_fkey';
+            columns: ['location_id'];
+            isOneToOne: false;
+            referencedRelation: 'locations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'activities_activity_type_id_fkey';
+            columns: ['activity_type_id'];
+            isOneToOne: false;
+            referencedRelation: 'activity_types';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'activities_supervisor_id_fkey';
+            columns: ['supervisor_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'activities_client_id_fkey';
+            columns: ['client_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       activity_participants: {
         Row: {
+          id: string;
           activity_id: string;
           name: string;
           role: string | null;
         };
         Insert: {
+          id?: string;
           activity_id: string;
           name: string;
           role?: string | null;
         };
-        Update: Partial<Database['public']['Tables']['activity_participants']['Insert']>;
+        Update: Partial<Omit<Database['public']['Tables']['activity_participants']['Row'], 'id'>>;
+        Relationships: [
+          {
+            foreignKeyName: 'activity_participants_activity_id_fkey';
+            columns: ['activity_id'];
+            isOneToOne: false;
+            referencedRelation: 'activities';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       activity_photos: {
         Row: {
@@ -147,7 +200,16 @@ export interface Database {
           lng?: number | null;
           taken_at?: string | null;
         };
-        Update: Partial<Database['public']['Tables']['activity_photos']['Insert']>;
+        Update: Partial<Omit<Database['public']['Tables']['activity_photos']['Row'], 'id'>>;
+        Relationships: [
+          {
+            foreignKeyName: 'activity_photos_activity_id_fkey';
+            columns: ['activity_id'];
+            isOneToOne: false;
+            referencedRelation: 'activities';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       signatures: {
         Row: {
@@ -175,10 +237,33 @@ export interface Database {
           rejected?: boolean;
           reject_reason?: string | null;
         };
-        Update: Partial<Database['public']['Tables']['signatures']['Insert']>;
+        Update: Partial<Omit<Database['public']['Tables']['signatures']['Row'], 'id'>>;
+        Relationships: [];
+      };
+      audit_log: {
+        Row: {
+          id: string;
+          table_name: string;
+          record_id: string | null;
+          action: AuditAction;
+          actor_id: string | null;
+          actor_email: string | null;
+          diff: Json | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          table_name: string;
+          record_id?: string | null;
+          action: AuditAction;
+          actor_id?: string | null;
+          actor_email?: string | null;
+          diff?: Json | null;
+        };
+        Update: Partial<Omit<Database['public']['Tables']['audit_log']['Row'], 'id'>>;
+        Relationships: [];
       };
       complaints: {
-        // Estrutura inicial — será refinada quando o usuário alinhar com a equipe.
         Row: {
           id: string;
           activity_id: string | null;
@@ -198,15 +283,28 @@ export interface Database {
           body: string;
           status?: string;
         };
-        Update: Partial<Database['public']['Tables']['complaints']['Insert']>;
+        Update: Partial<Omit<Database['public']['Tables']['complaints']['Row'], 'id'>>;
+        Relationships: [];
       };
     };
-    Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      verify_signature: {
+        Args: {
+          p_code: string;
+        };
+        Returns: Json;
+      };
+    };
     Enums: {
       role: Role;
       location_kind: LocationKind;
       activity_status: ActivityStatus;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
     };
   };
 }

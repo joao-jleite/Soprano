@@ -44,17 +44,9 @@ type Props = {
   mode?: 'create' | 'edit';
 };
 
-const LOCATION_KINDS = [
-  { value: 'estacao', label: 'Estação' },
-  { value: 'vse', label: 'VSE — Poço de ventilação' },
-  { value: 'se', label: 'SE — Saída de emergência' },
-  { value: 'escadaria', label: 'Escadaria' },
-  { value: 'patio', label: 'Pátio' },
-  { value: 'outro', label: 'Outro' },
-];
-
 export function NewActivityForm({ locations, types, clients, locale, initial, mode = 'create' }: Props) {
-  const t = useTranslations();
+  const t = useTranslations('activities');
+  const tLoc = useTranslations('locations');
   const router = useRouter();
 
   const draftIdRef = React.useRef(initial?.id ?? crypto.randomUUID());
@@ -63,7 +55,7 @@ export function NewActivityForm({ locations, types, clients, locale, initial, mo
     locations.map((l) => ({
       value: l.id,
       label: l.name,
-      sublabel: LOCATION_KINDS.find((k) => k.value === l.kind)?.label,
+      sublabel: tLoc(`kindsLong.${l.kind}` as any),
     })),
   );
   const [typeOptions, setTypeOptions] = React.useState<Option[]>(
@@ -99,12 +91,12 @@ export function NewActivityForm({ locations, types, clients, locale, initial, mo
   async function handleCreateLocation(name: string): Promise<Option> {
     try {
       const created = await createLocation(name, 'outro');
-      const opt: Option = { value: created.id, label: created.name, sublabel: 'Outro' };
+      const opt: Option = { value: created.id, label: created.name, sublabel: tLoc('kinds.outro') };
       setLocationOptions((prev) => [...prev, opt]);
-      toast.success(`Local criado: ${created.name}`);
+      toast.success(t('toasts.locationCreated', { name: created.name }));
       return opt;
     } catch (e: any) {
-      toast.error(e?.message ?? 'Erro ao criar local');
+      toast.error(e?.message ?? t('errors.createLocation'));
       throw e;
     }
   }
@@ -114,10 +106,10 @@ export function NewActivityForm({ locations, types, clients, locale, initial, mo
       const created = await createActivityType({ labelPt: name });
       const opt: Option = { value: created.id, label: created.label_pt };
       setTypeOptions((prev) => [...prev, opt]);
-      toast.success(`Tipo criado: ${created.label_pt}`);
+      toast.success(t('toasts.typeCreated', { name: created.label_pt }));
       return opt;
     } catch (e: any) {
-      toast.error(e?.message ?? 'Erro ao criar tipo');
+      toast.error(e?.message ?? t('errors.createType'));
       throw e;
     }
   }
@@ -142,10 +134,10 @@ export function NewActivityForm({ locations, types, clients, locale, initial, mo
         mode === 'edit' && initial
           ? await updateActivity({ ...payload, id: initial.id })
           : await createActivity(payload);
-      toast.success(submitForSignature ? 'Atividade enviada para assinatura' : 'Rascunho salvo');
+      toast.success(submitForSignature ? t('toasts.submittedForSignature') : t('toasts.draftSaved'));
       router.push(`/atividades/${id}`);
     } catch (e: any) {
-      toast.error(e?.message ?? 'Erro ao salvar atividade');
+      toast.error(e?.message ?? t('errors.saveActivity'));
     } finally {
       setSavingAs(null);
     }
@@ -157,36 +149,36 @@ export function NewActivityForm({ locations, types, clients, locale, initial, mo
     <div className="space-y-6">
       <Card className="surface-elevated">
         <CardHeader>
-          <CardTitle className="text-base">Onde e o quê</CardTitle>
+          <CardTitle className="text-base">{t('sections.whereWhat')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label={t('activities.fields.location')}>
+            <Field label={t('fields.location')}>
               <ExpandableSelect
                 options={locationOptions}
                 value={locationId}
                 onChange={setLocationId}
                 onCreate={handleCreateLocation}
-                placeholder={t('activities.placeholders.selectLocation')}
+                placeholder={t('placeholders.selectLocation')}
               />
             </Field>
 
-            <Field label={t('activities.fields.type')}>
+            <Field label={t('fields.type')}>
               <ExpandableSelect
                 options={typeOptions}
                 value={typeId}
                 onChange={setTypeId}
                 onCreate={handleCreateType}
-                placeholder={t('activities.placeholders.selectType')}
+                placeholder={t('placeholders.selectType')}
               />
             </Field>
           </div>
 
-          <Field label={t('activities.fields.description')}>
+          <Field label={t('fields.description')}>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder={t('activities.placeholders.description')}
+              placeholder={t('placeholders.description')}
               rows={3}
             />
           </Field>
@@ -195,17 +187,17 @@ export function NewActivityForm({ locations, types, clients, locale, initial, mo
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Quando</CardTitle>
+          <CardTitle className="text-base">{t('sections.when')}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
-          <Field label={t('activities.fields.startedAt')}>
+          <Field label={t('fields.startedAt')}>
             <Input
               type="datetime-local"
               value={startedAt}
               onChange={(e) => setStartedAt(e.target.value)}
             />
           </Field>
-          <Field label={t('activities.fields.endedAt')}>
+          <Field label={t('fields.endedAt')}>
             <Input
               type="datetime-local"
               value={endedAt}
@@ -217,7 +209,7 @@ export function NewActivityForm({ locations, types, clients, locale, initial, mo
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t('activities.fields.participants')}</CardTitle>
+          <CardTitle className="text-base">{t('fields.participants')}</CardTitle>
         </CardHeader>
         <CardContent>
           <ParticipantsEditor value={participants} onChange={setParticipants} />
@@ -226,7 +218,7 @@ export function NewActivityForm({ locations, types, clients, locale, initial, mo
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t('activities.fields.photos')}</CardTitle>
+          <CardTitle className="text-base">{t('fields.photos')}</CardTitle>
         </CardHeader>
         <CardContent>
           <PhotoUpload value={photos} onChange={setPhotos} draftId={draftIdRef.current} />
@@ -235,13 +227,13 @@ export function NewActivityForm({ locations, types, clients, locale, initial, mo
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Cliente e observações</CardTitle>
+          <CardTitle className="text-base">{t('sections.clientAndNotes')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Field label="Cliente (quem vai assinar)">
+          <Field label={t('fields.clientForSigning')}>
             <Select value={clientId ?? ''} onValueChange={(v) => setClientId(v || null)}>
               <SelectTrigger>
-                <SelectValue placeholder="Opcional — atribuir depois" />
+                <SelectValue placeholder={t('placeholders.assignClientLater')} />
               </SelectTrigger>
               <SelectContent>
                 {clients.map((c) => (
@@ -252,7 +244,7 @@ export function NewActivityForm({ locations, types, clients, locale, initial, mo
               </SelectContent>
             </Select>
           </Field>
-          <Field label={t('activities.fields.notes')}>
+          <Field label={t('fields.notes')}>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -270,7 +262,7 @@ export function NewActivityForm({ locations, types, clients, locale, initial, mo
           disabled={!canSave || savingAs !== null}
         >
           {savingAs === 'draft' ? <Loader2 className="animate-spin" /> : <Save />}
-          {t('activities.actions.save')}
+          {t('actions.save')}
         </Button>
         <Button
           type="button"
@@ -278,7 +270,7 @@ export function NewActivityForm({ locations, types, clients, locale, initial, mo
           disabled={!canSave || !clientId || savingAs !== null}
         >
           {savingAs === 'submit' ? <Loader2 className="animate-spin" /> : <Send />}
-          {t('activities.actions.submit')}
+          {t('actions.submit')}
         </Button>
       </div>
     </div>

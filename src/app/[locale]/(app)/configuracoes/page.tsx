@@ -30,23 +30,23 @@ export default async function ConfiguracoesPage({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Perfil</CardTitle>
-          <CardDescription>Informações visíveis para sua equipe e clientes.</CardDescription>
+          <CardTitle className="text-base">{t('settings.profile')}</CardTitle>
+          <CardDescription>{t('settings.profileDescription')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
-            <Label>Nome</Label>
+            <Label>{t('settings.name')}</Label>
             <Input defaultValue={profile?.full_name ?? ''} disabled />
           </div>
           <div className="space-y-1.5">
-            <Label>Email</Label>
+            <Label>{t('settings.email')}</Label>
             <Input defaultValue={profile?.email ?? ''} disabled />
           </div>
           <div className="space-y-1.5">
-            <Label>Função</Label>
+            <Label>{t('settings.role')}</Label>
             <div>
               <Badge variant={profile?.role === 'admin' ? 'default' : 'secondary'}>
-                {profile?.role}
+                {profile?.role ? t(`roles.${profile.role}`) : '—'}
               </Badge>
             </div>
           </div>

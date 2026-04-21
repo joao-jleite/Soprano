@@ -74,6 +74,11 @@
     "copied": "Copiado",
     "waitingClient": "Aguardando ação do cliente designado.",
     "draftNotice": "Esta atividade ainda é um rascunho. Envie para assinatura quando estiver pronta.",
+    "sections": {
+      "whereWhat": "Onde e o quê",
+      "when": "Quando",
+      "clientAndNotes": "Cliente e observações"
+    },
     "fields": {
       "location": "Local",
       "type": "Tipo de atividade",
@@ -84,13 +89,15 @@
       "endedAt": "Término",
       "notes": "Observações",
       "supervisor": "Supervisor",
-      "client": "Cliente"
+      "client": "Cliente",
+      "clientForSigning": "Cliente (quem vai assinar)"
     },
     "placeholders": {
       "description": "Descreva o que foi executado...",
       "selectLocation": "Selecione o local",
       "selectType": "Selecione o tipo",
-      "addNew": "+ Adicionar novo"
+      "addNew": "+ Adicionar novo",
+      "assignClientLater": "Opcional — atribuir depois"
     },
     "status": {
       "rascunho": "Rascunho",
@@ -105,6 +112,17 @@
       "delete": "Excluir",
       "sign": "Assinar",
       "download": "Baixar PDF"
+    },
+    "toasts": {
+      "locationCreated": "Local criado: {name}",
+      "typeCreated": "Tipo criado: {name}",
+      "submittedForSignature": "Atividade enviada para assinatura",
+      "draftSaved": "Rascunho salvo"
+    },
+    "errors": {
+      "createLocation": "Erro ao criar local",
+      "createType": "Erro ao criar tipo",
+      "saveActivity": "Erro ao salvar atividade"
     }
   },
   "expandableSelect": {
@@ -125,6 +143,18 @@
       "escadaria": "Escadaria",
       "patio": "Pátio",
       "outro": "Outro"
+    },
+    "kindsLong": {
+      "estacao": "Estação",
+      "vse": "VSE — Poço de ventilação",
+      "se": "SE — Saída de emergência",
+      "escadaria": "Escadaria",
+      "patio": "Pátio",
+      "outro": "Outro"
+    },
+    "delete": {
+      "title": "Excluir \"{name}\"?",
+      "description": "O local será movido para a lixeira. Atividades existentes continuam intactas, mas o local não aparece mais na criação de novas."
     }
   },
   "activityTypes": {
@@ -163,6 +193,11 @@
     "next": "Próxima",
     "close": "Fechar"
   },
+  "participants": {
+    "name": "Nome",
+    "roleOptional": "Função (opcional)",
+    "removeLabel": "Remover"
+  },
   "team": {
     "title": "Equipe",
     "description": "Supervisores, administradores e clientes cadastrados no Soprano.",
@@ -183,16 +218,22 @@
     "roleClient": "Cliente (só assina)",
     "roleAdmin": "Admin (tudo)",
     "profileUpdated": "Perfil atualizado",
-    "profileUpdateError": "Erro ao atualizar"
+    "profileUpdateError": "Erro ao atualizar",
+    "profileNamePlaceholder": "Nome completo",
+    "profileCompanyPlaceholder": "Empresa",
+    "back": "Equipe"
   },
   "audit": {
     "title": "Auditoria",
     "description": "Histórico de alterações sensíveis (últimas 50).",
+    "descriptionFull": "Log completo de alterações no sistema. {count} evento(s) registrado(s).",
     "filters": {
       "table": "Tabela",
       "action": "Ação",
-      "actor": "Email do ator",
-      "all": "Todas"
+      "actor": "Ator (email)",
+      "actorPlaceholder": "buscar por email...",
+      "all": "Todas",
+      "clear": "Limpar"
     },
     "actions": {
       "insert": "Criado",
@@ -202,13 +243,18 @@
       "restore": "Restaurado"
     },
     "empty": "Nenhum registro encontrado.",
+    "emptyFiltered": "Nenhum evento encontrado com esses filtros.",
     "previous": "Anterior",
-    "next": "Próximo",
-    "showDiff": "Ver diff"
+    "next": "Próxima",
+    "showDiff": "Ver diff",
+    "by": "por",
+    "system": "sistema",
+    "pageOf": "Página {current} de {total}"
   },
   "trash": {
     "title": "Lixeira",
     "description": "Itens removidos nos últimos 30 dias. Restaure ou destrua permanentemente.",
+    "descriptionFull": "Registros excluídos. Você pode restaurar ou excluir em definitivo.",
     "tabs": {
       "activities": "Atividades",
       "locations": "Locais",
@@ -217,10 +263,17 @@
     "restore": "Restaurar",
     "destroy": "Destruir",
     "empty": "Nada na lixeira.",
+    "emptyShort": "Nada por aqui.",
     "restored": "Restaurado",
     "destroyed": "Destruído permanentemente",
     "confirmDestroy": "Destruir permanentemente?",
-    "confirmDestroyHelp": "Esta ação não pode ser desfeita."
+    "confirmDestroyHelp": "Esta ação não pode ser desfeita.",
+    "hardDeleteTitle": "Excluir em definitivo?",
+    "hardDeleteDescription": "Esta ação NÃO pode ser desfeita. O registro será removido permanentemente do banco.",
+    "hardDeleteLabel": "Destruir",
+    "restoreError": "Erro",
+    "deletedAt": "excluída em",
+    "deletedAtMasc": "excluído em"
   },
   "reports": {
     "title": "Relatórios",
@@ -242,6 +295,26 @@
     "monthlyReport": "Relatório mensal consolidado",
     "monthlyReportHelp": "PDF com KPIs do mês + tabela de todas as atividades + agrupamento por local. Ideal para enviar ao LinhaUni/Acciona.",
     "downloadPdf": "Baixar PDF"
+  },
+  "settings": {
+    "profile": "Perfil",
+    "profileDescription": "Informações visíveis para sua equipe e clientes.",
+    "name": "Nome",
+    "email": "Email",
+    "role": "Função"
+  },
+  "complaints": {
+    "subtitle": "Canal de reclamos entre equipe e cliente.",
+    "inProgressTitle": "Módulo em definição",
+    "inProgressBody": "A estrutura do módulo de reclamos está sendo alinhada internamente com a equipe. O banco de dados já está preparado para receber reclamos vinculados a atividades e locais, assim que o fluxo for definido.",
+    "nextUpdate": "Próxima atualização"
+  },
+  "confirmDelete": {
+    "title": "Confirmar exclusão",
+    "description": "Essa ação pode ser desfeita pela lixeira (admin).",
+    "triggerLabel": "Excluir",
+    "success": "Excluído",
+    "error": "Erro ao excluir"
   },
   "common": {
     "save": "Salvar",

@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { X, Plus } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +15,7 @@ type Props = {
 };
 
 export function ParticipantsEditor({ value, onChange }: Props) {
+  const t = useTranslations('participants');
   const [name, setName] = React.useState('');
   const [role, setRole] = React.useState('');
 
@@ -51,7 +53,7 @@ export function ParticipantsEditor({ value, onChange }: Props) {
                     type="button"
                     onClick={() => remove(p)}
                     className="rounded-full hover:bg-destructive/20 p-0.5 text-muted-foreground hover:text-destructive transition-colors"
-                    aria-label="Remover"
+                    aria-label={t('removeLabel')}
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -66,7 +68,7 @@ export function ParticipantsEditor({ value, onChange }: Props) {
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Nome"
+          placeholder={t('name')}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
@@ -77,7 +79,7 @@ export function ParticipantsEditor({ value, onChange }: Props) {
         <Input
           value={role}
           onChange={(e) => setRole(e.target.value)}
-          placeholder="Função (opcional)"
+          placeholder={t('roleOptional')}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();

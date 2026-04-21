@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { toast } from 'sonner';
 import { Check, Pencil, X, Loader2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,8 @@ type Profile = {
 };
 
 export function ProfileRow({ profile, editable }: { profile: Profile; editable: boolean }) {
+  const t = useTranslations('team');
+  const tr = useTranslations('roles');
   const [editing, setEditing] = React.useState(false);
   const [fullName, setFullName] = React.useState(profile.full_name);
   const [company, setCompany] = React.useState(profile.company ?? '');
@@ -41,10 +44,10 @@ export function ProfileRow({ profile, editable }: { profile: Profile; editable: 
         company: company || null,
         role,
       });
-      toast.success('Perfil atualizado');
+      toast.success(t('profileUpdated'));
       setEditing(false);
     } catch (e: any) {
-      toast.error(e?.message ?? 'Erro ao atualizar');
+      toast.error(e?.message ?? t('profileUpdateError'));
     } finally {
       setSaving(false);
     }
@@ -70,13 +73,13 @@ export function ProfileRow({ profile, editable }: { profile: Profile; editable: 
               <Input
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="Nome completo"
+                placeholder={t('profileNamePlaceholder')}
                 className="h-8 text-sm"
               />
               <Input
                 value={company}
                 onChange={(e) => setCompany(e.target.value)}
-                placeholder="Empresa"
+                placeholder={t('profileCompanyPlaceholder')}
                 className="h-8 text-xs"
               />
             </>
@@ -100,9 +103,9 @@ export function ProfileRow({ profile, editable }: { profile: Profile; editable: 
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="admin">admin</SelectItem>
-                <SelectItem value="supervisor">supervisor</SelectItem>
-                <SelectItem value="cliente">cliente</SelectItem>
+                <SelectItem value="admin">{tr('admin')}</SelectItem>
+                <SelectItem value="supervisor">{tr('supervisor')}</SelectItem>
+                <SelectItem value="cliente">{tr('cliente')}</SelectItem>
               </SelectContent>
             </Select>
             <div className="flex gap-1">
@@ -117,7 +120,7 @@ export function ProfileRow({ profile, editable }: { profile: Profile; editable: 
         ) : (
           <div className="flex items-center gap-2">
             <Badge variant={profile.role === 'admin' ? 'default' : profile.role === 'cliente' ? 'accent' : 'secondary'}>
-              {profile.role}
+              {tr(profile.role)}
             </Badge>
             {editable && (
               <Button size="icon" variant="ghost" onClick={() => setEditing(true)} className="h-7 w-7">
