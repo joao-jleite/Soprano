@@ -75,10 +75,13 @@ export default async function ActivityDetailPage({
     act.status === 'enviada' &&
     !signature;
 
+  // Bucket é privado → usar signed URLs (expiram em 1h)
   const photosWithUrls = await Promise.all(
     (act.activity_photos ?? []).map(async (p: any) => {
-      const { data } = supabase.storage.from('activity-photos').getPublicUrl(p.storage_path);
-      return { ...p, url: data.publicUrl };
+      const { data } = await supabase.storage
+        .from('activity-photos')
+        .createSignedUrl(p.storage_path, 3600);
+      return { ...p, url: data?.signedUrl ?? '' };
     }),
   );
 
