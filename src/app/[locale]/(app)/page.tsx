@@ -7,6 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Link } from '@/i18n/navigation';
 import { formatDateTime } from '@/lib/utils';
 
+// Força renderização dinâmica — evita que Vercel faça cache estático de uma
+// versão "com erro" (ex: 404 de deploy antigo) no CDN
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function DashboardPage({
   params,
 }: {

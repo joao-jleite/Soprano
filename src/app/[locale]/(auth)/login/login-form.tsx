@@ -7,13 +7,12 @@ import { AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { createClient } from '@/lib/supabase/client';
+import { loginAction } from '@/app/actions/auth';
 
 export function LoginForm() {
   const t = useTranslations('auth');
   const locale = useLocale();
   const searchParams = useSearchParams();
-  const supabase = createClient();
 
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -24,19 +23,31 @@ export function LoginForm() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
+
+    const fd = new FormData();
+    fd.set('email', email);
+    fd.set('password', password);
+    fd.set('next', searchParams.get('next') ?? '/');
+    fd.set('locale', locale);
+
+    // Server action lança NEXT_REDIRECT em caso de sucesso — não retorna normalmente.
+    // Se retornar { ok: false } é porque as credenciais falharam.
+    try {
+      const result = await loginAction(fd);
+      if (result && !result.ok) {
+        setError(result.error ?? t('invalidCredentials'));
+        setLoading(false);
+      }
+    } catch (err) {
+      // NEXT_REDIRECT é re-thrown pelo React para efetivar o redirect.
+      // Outros erros caem aqui.
+      if (err && typeof err === 'object' && 'digest' in err) {
+        // É o redirect — deixa propagar (não faz nada)
+        throw err;
+      }
       setError(t('invalidCredentials'));
       setLoading(false);
-      return;
     }
-    // Hard redirect (não client-side nav) pra garantir que o browser mande
-    // a próxima request JÁ com o cookie de sessão setado pelo Supabase.
-    // router.push client-side dispara RSC antes do cookie propagar → loop de login.
-    const rawNext = searchParams.get('next') ?? '/';
-    const stripped = rawNext.replace(/^\/(pt|en|es)(?=\/|$)/, '') || '/';
-    const target = stripped === '/' ? `/${locale}` : `/${locale}${stripped}`;
-    window.location.assign(target);
   }
 
   return (
