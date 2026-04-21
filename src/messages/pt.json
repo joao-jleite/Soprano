@@ -222,7 +222,9 @@
     "profileUpdateError": "Erro ao atualizar",
     "profileNamePlaceholder": "Nome completo",
     "profileCompanyPlaceholder": "Empresa",
-    "back": "Equipe"
+    "back": "Equipe",
+    "empty": "Nenhum usuário cadastrado ainda.",
+    "emptyHint": "Use o botão \"Convidar\" para adicionar supervisores e clientes."
   },
   "audit": {
     "title": "Auditoria",

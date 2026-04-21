@@ -26,7 +26,7 @@ export default async function EquipePage({
     : { data: null };
   const isAdmin = (me as any)?.role === 'admin';
 
-  const { data: profiles } = await supabase
+  const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
     .select('id, full_name, email, role, company')
     .is('deleted_at', null)
@@ -61,6 +61,21 @@ export default async function EquipePage({
           </div>
         )}
       </header>
+
+      {profilesError && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-xs font-mono text-destructive">
+          DB error: {profilesError.message} · code: {profilesError.code}
+        </div>
+      )}
+
+      {!profilesError && (!profiles || profiles.length === 0) && (
+        <div className="rounded-md border border-dashed border-border p-10 text-center">
+          <p className="text-sm text-muted-foreground">{t('empty')}</p>
+          {isAdmin && (
+            <p className="text-xs text-muted-foreground/60 mt-1">{t('emptyHint')}</p>
+          )}
+        </div>
+      )}
 
       <ul className="grid gap-3 sm:grid-cols-2">
         {(profiles ?? []).map((p: any) => (
