@@ -1,8 +1,7 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
-import { notFound } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { Link } from '@/i18n/navigation';
+import { redirect, Link } from '@/i18n/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -40,7 +39,7 @@ export default async function AuditoriaPage({
   const { data: me } = user
     ? await supabase.from('profiles').select('role').eq('id', user.id).single()
     : { data: null };
-  if ((me as any)?.role !== 'admin') notFound();
+  if ((me as any)?.role !== 'admin') redirect({ href: '/equipe', locale });
 
   const page = Math.max(0, parseInt(sp.page ?? '0', 10) || 0);
   const from = page * PAGE_SIZE;

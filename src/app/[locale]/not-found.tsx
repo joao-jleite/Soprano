@@ -1,8 +1,14 @@
+'use client';
+
+import { usePathname } from 'next/navigation';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { SopranoMark } from '@/components/brand/logo';
 
 export default function NotFound() {
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const pathname = usePathname();
+
   return (
     <div className="min-h-screen flex items-center justify-center px-6">
       <div className="text-center space-y-6 max-w-md">
@@ -13,6 +19,11 @@ export default function NotFound() {
           <p className="text-sm text-muted-foreground">
             O endereço que você tentou acessar não existe ou você não tem permissão para vê-lo.
           </p>
+          {pathname && (
+            <p className="text-xs font-mono bg-muted rounded px-2 py-1 text-muted-foreground break-all">
+              {pathname}
+            </p>
+          )}
         </div>
         <Button asChild>
           <Link href="/">Voltar ao painel</Link>

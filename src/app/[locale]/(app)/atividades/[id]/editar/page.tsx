@@ -40,10 +40,12 @@ export default async function EditActivityPage({
   if (!activity) notFound();
   const act = activity as any;
 
-  if (act.status !== 'rascunho') notFound(); // só rascunho edita
+  // Apenas rascunhos editáveis — redireciona para detalhe se já foi enviada/assinada
+  if (act.status !== 'rascunho') redirect({ href: `/atividades/${id}`, locale });
 
   const { data: me } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-  if ((me as any)?.role !== 'admin' && act.supervisor_id !== user.id) notFound();
+  // Sem permissão → detalhe da atividade (não 404)
+  if ((me as any)?.role !== 'admin' && act.supervisor_id !== user.id) redirect({ href: `/atividades/${id}`, locale });
 
   const initial: InitialActivity = {
     id: act.id,

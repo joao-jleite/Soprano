@@ -1,8 +1,7 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
-import { notFound } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { Link } from '@/i18n/navigation';
+import { redirect, Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -28,7 +27,7 @@ export default async function LixeiraPage({
   const { data: me } = user
     ? await supabase.from('profiles').select('role').eq('id', user.id).single()
     : { data: null };
-  if ((me as any)?.role !== 'admin') notFound();
+  if ((me as any)?.role !== 'admin') redirect({ href: '/equipe', locale });
 
   const [{ data: acts }, { data: locs }, { data: types }] = await Promise.all([
     supabase
