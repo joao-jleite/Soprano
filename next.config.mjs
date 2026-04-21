@@ -8,7 +8,7 @@ const nextConfig = {
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
   // Puppeteer + Chromium devem ficar fora do bundle webpack
-  serverExternalPackages: ['puppeteer-core', '@sparticuz/chromium'],
+  serverExternalPackages: ['puppeteer-core', '@sparticuz/chromium-min'],
   images: {
     remotePatterns: [
       {
