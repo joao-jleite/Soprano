@@ -1,104 +1,209 @@
 'use client';
 
-/**
- * Diagrama esquemático da Linha 6 — Laranja.
- * Mostra estações, VSEs e SEs ao longo da linha.
- * Quando NEXT_PUBLIC_MAPBOX_TOKEN for configurado, substituir por mapa interativo.
- */
-
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
+import { Link } from '@/i18n/navigation';
+import { cn } from '@/lib/utils';
 
 type Stop = { id: string; name: string; kind: string; sort_order: number };
 
-const KIND_CONFIG: Record<string, { dot: string; label: string; size: string }> = {
-  estacao:   { dot: 'bg-orange-500 border-2 border-background ring-2 ring-primary/30', label: 'text-muted-foreground', size: 'h-3.5 w-3.5' },
-  vse:       { dot: 'bg-primary border-2 border-background',                            label: 'text-primary/70',        size: 'h-2.5 w-2.5' },
-  se:        { dot: 'bg-amber-400 border-2 border-background',                          label: 'text-amber-500/70',      size: 'h-2.5 w-2.5' },
-  escadaria: { dot: 'bg-muted-foreground/40 border border-background',                  label: 'text-muted-foreground/50', size: 'h-2 w-2' },
-  patio:     { dot: 'bg-muted-foreground/40 border border-background',                  label: 'text-muted-foreground/50', size: 'h-2 w-2' },
-  outro:     { dot: 'bg-muted-foreground/40 border border-background',                  label: 'text-muted-foreground/50', size: 'h-2 w-2' },
-};
+// Altura total do diagrama em px
+const H = 240;
+// Centro da linha laranja
+const LINE_Y = 110;
 
 export function Linha6Map({ stops }: { stops: Stop[] }) {
-  // Ordena todos os pontos pelo sort_order
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+
   const sorted = useMemo(
     () => [...stops].sort((a, b) => a.sort_order - b.sort_order),
     [stops],
   );
 
-  const stations = useMemo(() => sorted.filter((s) => s.kind === 'estacao'), [sorted]);
-  const vses     = useMemo(() => sorted.filter((s) => s.kind === 'vse'), [sorted]);
-  const ses      = useMemo(() => sorted.filter((s) => s.kind === 'se'), [sorted]);
+  const minOrder = sorted[0]?.sort_order ?? 0;
+  const maxOrder = sorted[sorted.length - 1]?.sort_order ?? 100;
+  const range = Math.max(maxOrder - minOrder, 1);
+
+  // Posição horizontal (%) dentro de 4%–96% para dar margem nas bordas
+  const getX = (order: number) => `${((order - minOrder) / range) * 90 + 5}%`;
+
+  const stations = sorted.filter((s) =>
+    ['estacao', 'patio'].includes(s.kind),
+  );
+  const vses = sorted.filter((s) => s.kind === 'vse');
+  const ses = sorted.filter((s) => s.kind === 'se');
 
   return (
-    <div className="relative w-full overflow-hidden rounded-lg border border-border bg-card/40 p-5">
-      <div className="absolute top-3 right-4 flex items-center gap-3 text-[9px] font-mono uppercase tracking-wider text-muted-foreground/70">
-        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-orange-500 inline-block" />Estação</span>
-        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-primary inline-block" />VSE</span>
-        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-400 inline-block" />SE</span>
+    <div className="w-full rounded-xl border border-border bg-card/50 overflow-hidden">
+      {/* Legenda */}
+      <div className="flex items-center gap-5 px-5 pt-4 pb-2 justify-end">
+        <LegendDot color="bg-orange-500" label="Estação" />
+        <LegendDot color="bg-primary" label="VSE" />
+        <LegendDot color="bg-amber-400" label="SE" />
       </div>
 
-      {/* Linha principal — estações */}
-      <div className="relative mt-8 pb-2">
-        <div className="absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-gradient-to-r from-orange-500 via-amber-400 to-orange-500 opacity-80" />
-        <ul className="relative flex justify-between">
-          {stations.map((s, i) => (
-            <li key={s.id} className="flex flex-col items-center group cursor-default">
-              <div
-                className={`${KIND_CONFIG.estacao.size} rounded-full ${KIND_CONFIG.estacao.dot} transition-transform group-hover:scale-150`}
-                title={s.name}
-              />
-              <span className="mt-2 text-[8px] font-mono text-center max-w-[64px] leading-tight text-muted-foreground group-hover:text-foreground transition-colors">
-                {s.name}
-              </span>
-            </li>
-          ))}
-        </ul>
+      {/* Diagrama com scroll horizontal em telas pequenas */}
+      <div className="overflow-x-auto px-2 pb-4">
+        <div
+          className="relative min-w-[860px]"
+          style={{ height: `${H}px` }}
+        >
+          {/* ─── Linha laranja ─── */}
+          <div
+            className="absolute left-0 right-0 h-[5px] rounded-full shadow-[0_0_16px_rgba(249,115,22,0.5)]"
+            style={{
+              top: LINE_Y - 2,
+              background: 'linear-gradient(90deg, #ea580c 0%, #fb923c 40%, #fbbf24 70%, #ea580c 100%)',
+            }}
+          />
+
+          {/* ─── VSEs: tick + dot acima da linha ─── */}
+          {vses.map((vse) => {
+            const isHov = hoveredId === vse.id;
+            const shortName = vse.name.replace(/^VSE\s*/i, '');
+            return (
+              <Link
+                key={vse.id}
+                href={`/atividades?location=${vse.id}`}
+                className="absolute group"
+                style={{ left: getX(vse.sort_order), top: LINE_Y - 46, transform: 'translateX(-50%)' }}
+                onMouseEnter={() => setHoveredId(vse.id)}
+                onMouseLeave={() => setHoveredId(null)}
+                title={vse.name}
+              >
+                {/* Label on hover */}
+                <div
+                  className={cn(
+                    'absolute bottom-full mb-1 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded text-[9px] font-mono whitespace-nowrap bg-popover border border-border shadow-md text-foreground transition-all duration-150 pointer-events-none',
+                    isHov ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1',
+                  )}
+                >
+                  {vse.name}
+                </div>
+                {/* Dot */}
+                <div
+                  className={cn(
+                    'h-2.5 w-2.5 rounded-full bg-primary border border-background transition-transform duration-150 mx-auto',
+                    isHov ? 'scale-150' : 'scale-100',
+                  )}
+                />
+                {/* Tick */}
+                <div className={cn(
+                  'w-px mx-auto bg-primary/40 transition-colors duration-150',
+                  isHov ? 'bg-primary' : '',
+                )}
+                  style={{ height: 40 }}
+                />
+              </Link>
+            );
+          })}
+
+          {/* ─── SEs: dot + tick abaixo da linha ─── */}
+          {ses.map((se) => {
+            const isHov = hoveredId === se.id;
+            return (
+              <Link
+                key={se.id}
+                href={`/atividades?location=${se.id}`}
+                className="absolute group flex flex-col items-center"
+                style={{ left: getX(se.sort_order), top: LINE_Y + 8, transform: 'translateX(-50%)' }}
+                onMouseEnter={() => setHoveredId(se.id)}
+                onMouseLeave={() => setHoveredId(null)}
+                title={se.name}
+              >
+                {/* Tick */}
+                <div
+                  className={cn('w-px bg-amber-400/40 transition-colors duration-150', isHov ? 'bg-amber-400' : '')}
+                  style={{ height: 28 }}
+                />
+                {/* Dot */}
+                <div
+                  className={cn(
+                    'h-2.5 w-2.5 rounded-full bg-amber-400 border border-background transition-transform duration-150',
+                    isHov ? 'scale-150' : 'scale-100',
+                  )}
+                />
+                {/* Label on hover */}
+                <div
+                  className={cn(
+                    'mt-1 px-1.5 py-0.5 rounded text-[9px] font-mono whitespace-nowrap bg-popover border border-border shadow-md text-foreground transition-all duration-150 pointer-events-none',
+                    isHov ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1',
+                  )}
+                >
+                  {se.name}
+                </div>
+              </Link>
+            );
+          })}
+
+          {/* ─── Estações ─── */}
+          {stations.map((s, i) => {
+            const isHov = hoveredId === s.id;
+            const isTerminal = i === 0 || i === stations.length - 1;
+            const labelAbove = i % 2 === 0;
+
+            return (
+              <Link
+                key={s.id}
+                href={`/atividades?location=${s.id}`}
+                className="absolute group flex flex-col items-center"
+                style={{
+                  left: getX(s.sort_order),
+                  top: LINE_Y - 10,
+                  transform: 'translateX(-50%)',
+                  zIndex: 10,
+                }}
+                onMouseEnter={() => setHoveredId(s.id)}
+                onMouseLeave={() => setHoveredId(null)}
+              >
+                {/* Círculo da estação */}
+                <div
+                  className={cn(
+                    'rounded-full border-2 border-background transition-all duration-150',
+                    isTerminal
+                      ? 'h-6 w-6 bg-orange-500 shadow-[0_0_12px_rgba(249,115,22,0.6)]'
+                      : 'h-[18px] w-[18px] bg-orange-400',
+                    isHov
+                      ? 'scale-125 shadow-[0_0_16px_rgba(249,115,22,0.8)]'
+                      : isTerminal
+                      ? 'scale-100'
+                      : 'scale-100',
+                  )}
+                />
+
+                {/* Label — alterna acima/abaixo */}
+                <span
+                  className={cn(
+                    'absolute text-center text-[9px] font-medium leading-tight w-[72px] transition-colors duration-150',
+                    labelAbove
+                      ? 'bottom-[calc(100%+10px)]'
+                      : 'top-[calc(100%+10px)]',
+                    isHov ? 'text-orange-400' : 'text-muted-foreground',
+                    isTerminal && 'font-semibold text-foreground',
+                  )}
+                >
+                  {s.name}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
       </div>
 
-      {/* VSE — poços de ventilação */}
-      {vses.length > 0 && (
-        <div className="mt-5 border-t border-border/50 pt-3">
-          <p className="text-[9px] uppercase tracking-wider text-primary/60 mb-2 font-mono">
-            VSE — Poços de ventilação ({vses.length})
-          </p>
-          <ul className="flex flex-wrap gap-2">
-            {vses.map((s) => (
-              <li key={s.id} className="flex items-center gap-1.5 group cursor-default">
-                <div className={`${KIND_CONFIG.vse.size} rounded-full ${KIND_CONFIG.vse.dot} shrink-0`} title={s.name} />
-                <span className="text-[9px] font-mono text-primary/70 group-hover:text-primary transition-colors truncate max-w-[120px]">
-                  {s.name}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* SE — saídas de emergência */}
-      {ses.length > 0 && (
-        <div className="mt-3 border-t border-border/50 pt-3">
-          <p className="text-[9px] uppercase tracking-wider text-amber-500/60 mb-2 font-mono">
-            SE — Saídas de emergência ({ses.length})
-          </p>
-          <ul className="flex flex-wrap gap-2">
-            {ses.map((s) => (
-              <li key={s.id} className="flex items-center gap-1.5 group cursor-default">
-                <div className={`${KIND_CONFIG.se.size} rounded-full ${KIND_CONFIG.se.dot} shrink-0`} title={s.name} />
-                <span className="text-[9px] font-mono text-amber-500/70 group-hover:text-amber-500 transition-colors truncate max-w-[120px]">
-                  {s.name}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <div className="mt-4 flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground">
+      {/* Rodapé */}
+      <div className="flex items-center justify-between px-6 py-3 border-t border-border/50 text-[10px] font-mono uppercase tracking-widest text-muted-foreground/50">
         <span>Brasilândia</span>
-        <span className="font-mono">Linha 6 · Laranja</span>
+        <span>Linha 6 · Laranja · {stations.length} estações</span>
         <span>São Joaquim</span>
       </div>
     </div>
+  );
+}
+
+function LegendDot({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+      <span className={cn('inline-block h-2.5 w-2.5 rounded-full', color)} />
+      {label}
+    </span>
   );
 }
