@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { Calendar, MapPin, User, Users } from 'lucide-react';
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
+import { redirect } from '@/i18n/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -29,7 +30,7 @@ export default async function ActivityDetailPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) notFound();
+  if (!user) redirect({ href: '/login', locale });
 
   const { data: profile } = await supabase
     .from('profiles')

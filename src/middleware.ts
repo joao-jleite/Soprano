@@ -17,6 +17,10 @@ export async function middleware(request: NextRequest) {
   const { response: supaResponse, user } = await updateSession(request);
   const pathname = request.nextUrl.pathname;
 
+  // Extrai locale da URL para propagar header que o next-intl lê
+  const localeMatch = pathname.match(/^\/(pt|en|es)(?=\/|$)/);
+  const locale = localeMatch ? localeMatch[1] : 'pt';
+
   // Root → locale default (com ou sem auth)
   if (pathname === '/') {
     const url = request.nextUrl.clone();
@@ -43,6 +47,8 @@ export async function middleware(request: NextRequest) {
     return redirectWithCookies(url, supaResponse);
   }
 
+  // Propaga locale para o next-intl (lido por requestLocale em getRequestConfig)
+  supaResponse.headers.set('x-next-intl-locale', locale);
   return supaResponse;
 }
 
