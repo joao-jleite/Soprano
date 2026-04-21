@@ -3,6 +3,16 @@ import { updateSession } from '@/lib/supabase/middleware';
 
 const PUBLIC_ROUTES = ['/login', '/verify'];
 
+// Propaga cookies do supaResponse (refresh tokens etc) para qualquer redirect
+// que a gente faça no middleware — senão a sessão é perdida e vira loop.
+function redirectWithCookies(url: URL, supaResponse: NextResponse) {
+  const res = NextResponse.redirect(url);
+  supaResponse.cookies.getAll().forEach((c) => {
+    res.cookies.set(c.name, c.value, c);
+  });
+  return res;
+}
+
 export async function middleware(request: NextRequest) {
   const { response: supaResponse, user } = await updateSession(request);
   const pathname = request.nextUrl.pathname;
@@ -11,7 +21,7 @@ export async function middleware(request: NextRequest) {
   if (pathname === '/') {
     const url = request.nextUrl.clone();
     url.pathname = user ? '/pt' : '/pt/login';
-    return NextResponse.redirect(url);
+    return redirectWithCookies(url, supaResponse);
   }
 
   const pathWithoutLocale = pathname.replace(/^\/(pt|en|es)(?=\/|$)/, '') || '/';
@@ -22,7 +32,7 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = '/pt/login';
     url.searchParams.set('next', pathname);
-    return NextResponse.redirect(url);
+    return redirectWithCookies(url, supaResponse);
   }
 
   // Autenticado caindo em /login (mas /verify é acessível sempre)
@@ -30,7 +40,7 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = '/pt';
     url.searchParams.delete('next');
-    return NextResponse.redirect(url);
+    return redirectWithCookies(url, supaResponse);
   }
 
   return supaResponse;
