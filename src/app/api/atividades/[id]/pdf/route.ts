@@ -72,6 +72,14 @@ export async function GET(
   const rawPhotos: { id: string; storage_path: string; caption: string | null }[] =
     (act.activity_photos ?? []).slice(0, 24);
 
+  function mimeFromPath(path: string): string {
+    const ext = path.split('.').pop()?.toLowerCase();
+    if (ext === 'png') return 'image/png';
+    if (ext === 'webp') return 'image/webp';
+    if (ext === 'gif') return 'image/gif';
+    return 'image/jpeg';
+  }
+
   const photos: { dataUrl: string; caption?: string | null }[] = [];
   await Promise.all(
     rawPhotos.map(async (p) => {
@@ -80,7 +88,11 @@ export async function GET(
         .download(p.storage_path);
       if (error || !data) return;
       const buf = Buffer.from(await data.arrayBuffer());
-      const mime = data.type || 'image/jpeg';
+      if (!buf.length) return;
+      // Usar extensão do path para determinar MIME — data.type pode ser vazio
+      const mime = (data.type && data.type !== 'application/octet-stream')
+        ? data.type
+        : mimeFromPath(p.storage_path);
       photos.push({
         dataUrl: `data:${mime};base64,${buf.toString('base64')}`,
         caption: p.caption,
