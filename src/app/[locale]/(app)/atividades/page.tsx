@@ -62,11 +62,15 @@ export default async function ActivitiesPage({
     q = q.or(`description.ilike.%${term}%,notes.ilike.%${term}%`);
   }
 
-  const [{ data: activities }, { data: locations }, { data: types }] = await Promise.all([
+  const [{ data: activities, error: activitiesError }, { data: locations }, { data: types }] = await Promise.all([
     q,
     supabase.from('locations').select('id, name, kind').eq('line', 'linha-6').order('sort_order'),
     supabase.from('activity_types').select('id, slug, label_pt, label_en, label_es').order('label_pt'),
   ]);
+
+  if (activitiesError) {
+    console.error('[atividades] query error:', JSON.stringify(activitiesError));
+  }
 
   // Busca nomes dos supervisores separado para evitar ambiguidade de FK
   const supervisorIds = [...new Set((activities ?? []).map((a: any) => a.supervisor_id).filter(Boolean))];
@@ -102,6 +106,16 @@ export default async function ActivitiesPage({
       </header>
 
       <ActivityFilters locations={locations ?? []} types={types ?? []} localeKey={localeKey} />
+
+      {activitiesError && role !== 'cliente' && (
+        <Card className="border-destructive/50">
+          <CardContent className="p-4">
+            <p className="text-xs font-mono text-destructive">
+              DB error: {activitiesError.message} · code: {activitiesError.code}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {(!activities || activities.length === 0) && (
         <Card>
