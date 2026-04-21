@@ -43,7 +43,7 @@ export default async function ActivitiesPage({
   // Supervisor name não é crítico na listagem; buscar separado se necessário.
   let q = supabase
     .from('activities')
-    .select('id, description, status, started_at, reject_reason, supervisor_id, locations(name, kind), activity_types(label_pt, label_en, label_es)')
+    .select('id, description, status, started_at, supervisor_id, locations(name, kind), activity_types(label_pt, label_en, label_es)')
     .order('started_at', { ascending: false })
     .limit(100);
 
@@ -148,10 +148,9 @@ export default async function ActivitiesPage({
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {a.locations?.name} · {supervisorMap[a.supervisor_id] ?? ''} · {formatDate(a.started_at, locale === 'pt' ? 'pt-BR' : locale)}
                     </p>
-                    {a.status === 'rejeitada' && a.reject_reason && (
-                      <p className="text-xs text-destructive mt-1 line-clamp-2">
-                        <span className="font-medium">{t('activities.rejectReason')}:</span>{' '}
-                        {a.reject_reason}
+                    {a.status === 'rejeitada' && (
+                      <p className="text-xs text-destructive/70 mt-1">
+                        {t('activities.rejectReason')} — {t('activities.seeDetails')}
                       </p>
                     )}
                   </div>
