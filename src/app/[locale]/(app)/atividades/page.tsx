@@ -38,10 +38,11 @@ export default async function ActivitiesPage({
     : { data: null };
   const role = (me as any)?.role as 'admin' | 'supervisor' | 'cliente' | undefined;
 
+  // Nota: usar profiles!supervisor_id em vez do nome do FK para compatibilidade
+  // máxima com diferentes versões do schema (evita erro "could not find relationship")
   let q = supabase
     .from('activities')
-    .select('id, description, status, started_at, reject_reason, locations(name, kind), activity_types(label_pt, label_en, label_es), profiles!activities_supervisor_id_fkey(full_name)')
-    .is('deleted_at', null)
+    .select('id, description, status, started_at, reject_reason, locations(name, kind), activity_types(label_pt, label_en, label_es), profiles!supervisor_id(full_name)')
     .order('started_at', { ascending: false })
     .limit(100);
 
@@ -62,8 +63,8 @@ export default async function ActivitiesPage({
 
   const [{ data: activities }, { data: locations }, { data: types }] = await Promise.all([
     q,
-    supabase.from('locations').select('id, name, kind').eq('line', 'linha-6').is('deleted_at', null).order('sort_order'),
-    supabase.from('activity_types').select('id, slug, label_pt, label_en, label_es').is('deleted_at', null).order('label_pt'),
+    supabase.from('locations').select('id, name, kind').eq('line', 'linha-6').order('sort_order'),
+    supabase.from('activity_types').select('id, slug, label_pt, label_en, label_es').order('label_pt'),
   ]);
 
   const localeKey = (locale === 'en' ? 'label_en' : locale === 'es' ? 'label_es' : 'label_pt') as
@@ -119,7 +120,7 @@ export default async function ActivitiesPage({
                     </div>
                     <p className="text-sm font-medium truncate">{a.description}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {a.locations?.name} · {a.profiles?.full_name} · {formatDate(a.started_at, locale === 'pt' ? 'pt-BR' : locale)}
+                      {a.locations?.name} · {(a.profiles as any)?.full_name} · {formatDate(a.started_at, locale === 'pt' ? 'pt-BR' : locale)}
                     </p>
                     {a.status === 'rejeitada' && a.reject_reason && (
                       <p className="text-xs text-destructive mt-1 line-clamp-2">

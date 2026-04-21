@@ -25,8 +25,6 @@ export async function GET(
       *,
       locations(name),
       activity_types(label_pt),
-      supervisor:profiles!activities_supervisor_id_fkey(full_name),
-      client:profiles!activities_client_id_fkey(full_name),
       activity_participants(name, role),
       activity_photos(id, storage_path, caption),
       signatures(*)
@@ -36,6 +34,18 @@ export async function GET(
 
   if (!activity) return new NextResponse('Not found', { status: 404 });
   const act = activity as any;
+
+  // Busca supervisor e cliente separadamente para evitar ambiguidade de FK
+  const [{ data: supervisorProfile }, { data: clientProfile }] = await Promise.all([
+    act.supervisor_id
+      ? supabase.from('profiles').select('full_name').eq('id', act.supervisor_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    act.client_id
+      ? supabase.from('profiles').select('full_name').eq('id', act.client_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+  act.supervisor = supervisorProfile;
+  act.client = clientProfile;
 
   const signature = act.signatures?.find((s: any) => !s.rejected) ?? null;
 

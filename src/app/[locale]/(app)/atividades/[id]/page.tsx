@@ -43,8 +43,6 @@ export default async function ActivityDetailPage({
       *,
       locations(name, kind),
       activity_types(label_pt, label_en, label_es),
-      supervisor:profiles!activities_supervisor_id_fkey(full_name),
-      client:profiles!activities_client_id_fkey(full_name),
       activity_participants(name, role),
       activity_photos(id, storage_path, caption),
       signatures(*)
@@ -54,6 +52,18 @@ export default async function ActivityDetailPage({
 
   if (!activity) notFound();
   const act = activity as any;
+
+  // Busca supervisor e cliente separadamente para evitar ambiguidade de FK
+  const [{ data: supervisorProfile }, { data: clientProfile }] = await Promise.all([
+    act.supervisor_id
+      ? supabase.from('profiles').select('full_name').eq('id', act.supervisor_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    act.client_id
+      ? supabase.from('profiles').select('full_name').eq('id', act.client_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+  act.supervisor = supervisorProfile;
+  act.client = clientProfile;
 
   const localeKey = (locale === 'en' ? 'label_en' : locale === 'es' ? 'label_es' : 'label_pt') as any;
   const typeLabel = act.activity_types?.[localeKey];
