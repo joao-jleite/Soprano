@@ -32,6 +32,17 @@ export function Linha6Map({ stops }: { stops: Stop[] }) {
   const vses = sorted.filter((s) => s.kind === 'vse');
   const ses = sorted.filter((s) => s.kind === 'se');
 
+  if (stops.length === 0) {
+    return (
+      <div className="w-full rounded-xl border border-dashed border-border bg-card/30 px-6 py-10 text-center">
+        <p className="text-sm text-muted-foreground">Nenhum local cadastrado para esta linha.</p>
+        <p className="text-xs text-muted-foreground/50 mt-1 font-mono">
+          Verifique se o seed da Linha 6 foi aplicado no banco de dados.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full rounded-xl border border-border bg-card/50 overflow-hidden">
       {/* Legenda */}

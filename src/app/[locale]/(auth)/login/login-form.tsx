@@ -30,21 +30,19 @@ export function LoginForm() {
     fd.set('next', searchParams.get('next') ?? '/');
     fd.set('locale', locale);
 
-    // Server action lança NEXT_REDIRECT em caso de sucesso — não retorna normalmente.
-    // Se retornar { ok: false } é porque as credenciais falharam.
+    // O Server Action seta os cookies de sessão no servidor e retorna o href
+    // de destino. Usamos window.location.href para garantir uma navegação
+    // full-page limpa (sem risco de double-locale-prefix do router client-side).
     try {
       const result = await loginAction(fd);
-      if (result && !result.ok) {
+      if (result.ok && result.href) {
+        window.location.href = result.href;
+        // não limpa loading — a página vai recarregar
+      } else {
         setError(result.error ?? t('invalidCredentials'));
         setLoading(false);
       }
-    } catch (err) {
-      // NEXT_REDIRECT é re-thrown pelo React para efetivar o redirect.
-      // Outros erros caem aqui.
-      if (err && typeof err === 'object' && 'digest' in err) {
-        // É o redirect — deixa propagar (não faz nada)
-        throw err;
-      }
+    } catch {
       setError(t('invalidCredentials'));
       setLoading(false);
     }

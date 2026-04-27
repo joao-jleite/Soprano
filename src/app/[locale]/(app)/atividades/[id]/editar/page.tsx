@@ -60,7 +60,14 @@ export default async function EditActivityPage({
       name: p.name,
       role: p.role,
     })),
-    photos: (act.activity_photos ?? []).map((p: any) => ({ storagePath: p.storage_path })),
+    photos: await Promise.all(
+      (act.activity_photos ?? []).map(async (p: any) => {
+        const { data } = await supabase.storage
+          .from('activity-photos')
+          .createSignedUrl(p.storage_path, 3600);
+        return { storagePath: p.storage_path, url: data?.signedUrl ?? '' };
+      }),
+    ),
   };
 
   return (

@@ -37,13 +37,16 @@ export function PhotoUpload({ activityId, draftId, value, onChange }: Props) {
         const ext = file.name.split('.').pop() ?? 'jpg';
         const path = `${folder}/${crypto.randomUUID()}.${ext}`;
 
-        const { error } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('activity-photos')
           .upload(path, file, { contentType: file.type, upsert: false });
-        if (error) throw error;
+        if (uploadError) throw uploadError;
 
-        const { data: urlData } = supabase.storage.from('activity-photos').getPublicUrl(path);
-        uploaded.push({ storagePath: path, url: urlData.publicUrl });
+        // Bucket é privado — usar signed URL (1h) para preview no form
+        const { data: signData } = await supabase.storage
+          .from('activity-photos')
+          .createSignedUrl(path, 3600);
+        uploaded.push({ storagePath: path, url: signData?.signedUrl ?? '' });
       }
       onChange([...value, ...uploaded]);
     } finally {

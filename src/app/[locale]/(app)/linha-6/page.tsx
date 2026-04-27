@@ -25,10 +25,11 @@ export default async function Linha6Page({
   const t = await getTranslations('linha6');
   const supabase = await createClient();
 
-  const { data: locations } = await supabase
+  const { data: locations, error: locError } = await supabase
     .from('locations')
     .select('id, name, kind, sort_order')
     .eq('line', 'linha-6')
+    .is('deleted_at', null)
     .order('sort_order', { ascending: true });
 
   const grouped = (locations ?? []).reduce<Record<string, typeof locations>>((acc, l) => {
@@ -44,6 +45,12 @@ export default async function Linha6Page({
         <h1 className="text-3xl lg:text-4xl font-semibold tracking-tight">{t('title')}</h1>
         <p className="text-muted-foreground max-w-3xl">{t('subtitle')}</p>
       </header>
+
+      {locError && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-xs font-mono text-destructive">
+          Erro ao carregar locais: {locError.message} · code: {locError.code}
+        </div>
+      )}
 
       <Linha6Map stops={(locations ?? []) as any} />
 

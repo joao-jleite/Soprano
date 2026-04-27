@@ -32,7 +32,7 @@ export type InitialActivity = {
   startedAt: string;
   endedAt: string | null;
   participants: { name: string; role: string | null }[];
-  photos: { storagePath: string }[];
+  photos: { storagePath: string; url?: string }[];
 };
 
 type Props = {
@@ -83,7 +83,7 @@ export function NewActivityForm({ locations, types, clients, locale, initial, mo
     (initial?.participants ?? []) as any,
   );
   const [photos, setPhotos] = React.useState<UploadedPhoto[]>(
-    (initial?.photos ?? []).map((p) => ({ storagePath: p.storagePath, url: '' })) as any,
+    (initial?.photos ?? []).map((p) => ({ storagePath: p.storagePath, url: p.url ?? '' })),
   );
 
   const [savingAs, setSavingAs] = React.useState<'draft' | 'submit' | null>(null);
