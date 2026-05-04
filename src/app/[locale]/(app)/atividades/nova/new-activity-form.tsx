@@ -73,11 +73,11 @@ export function NewActivityForm({ locations, types, clients, locale, initial, mo
   const [notes, setNotes] = React.useState(initial?.notes ?? '');
   const [startedAt, setStartedAt] = React.useState(() =>
     initial?.startedAt
-      ? new Date(initial.startedAt).toISOString().slice(0, 16)
-      : new Date().toISOString().slice(0, 16),
+      ? new Date(initial.startedAt).toISOString().slice(0, 10)
+      : new Date().toISOString().slice(0, 10),
   );
   const [endedAt, setEndedAt] = React.useState(
-    initial?.endedAt ? new Date(initial.endedAt).toISOString().slice(0, 16) : '',
+    initial?.endedAt ? new Date(initial.endedAt).toISOString().slice(0, 10) : '',
   );
   const [participants, setParticipants] = React.useState<Participant[]>(
     (initial?.participants ?? []) as any,
@@ -124,8 +124,8 @@ export function NewActivityForm({ locations, types, clients, locale, initial, mo
         clientId: clientId,
         description,
         notes: notes || undefined,
-        startedAt: new Date(startedAt).toISOString(),
-        endedAt: endedAt ? new Date(endedAt).toISOString() : null,
+        startedAt: new Date(startedAt + 'T12:00:00').toISOString(),
+        endedAt: endedAt ? new Date(endedAt + 'T12:00:00').toISOString() : null,
         participants,
         photos: photos.map((p) => ({ storagePath: p.storagePath })),
         submit: submitForSignature,
@@ -192,14 +192,14 @@ export function NewActivityForm({ locations, types, clients, locale, initial, mo
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <Field label={t('fields.startedAt')}>
             <Input
-              type="datetime-local"
+              type="date"
               value={startedAt}
               onChange={(e) => setStartedAt(e.target.value)}
             />
           </Field>
           <Field label={t('fields.endedAt')}>
             <Input
-              type="datetime-local"
+              type="date"
               value={endedAt}
               onChange={(e) => setEndedAt(e.target.value)}
             />

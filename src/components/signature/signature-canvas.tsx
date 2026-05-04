@@ -9,7 +9,6 @@ import { cn } from '@/lib/utils';
 
 type Props = {
   onConfirm: (svg: string) => void | Promise<void>;
-  onReject?: (reason: string) => void | Promise<void>;
   disabled?: boolean;
   className?: string;
 };
@@ -40,30 +39,58 @@ export function SignatureCanvas({ onConfirm, disabled, className }: Props) {
 
   return (
     <div className={cn('space-y-3', className)}>
-      <div className="relative rounded-md border border-border bg-card overflow-hidden">
-        <div className="absolute top-3 left-3 text-data pointer-events-none">
-          {t('draw')}
+      {/* Área de assinatura */}
+      <div className="relative rounded-xl border-2 border-dashed border-border bg-card overflow-hidden transition-colors focus-within:border-primary/50">
+        {/* Watermark hint */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
+          <p className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground/20 font-medium">
+            Assine aqui
+          </p>
         </div>
+
         <SignaturePadLib
           ref={padRef}
           canvasProps={{
-            className: 'w-full h-[240px] touch-none',
+            className: 'w-full touch-none',
+            style: { height: 200 },
           }}
           backgroundColor="transparent"
-          penColor="#f5f5f7"
+          penColor="currentColor"
           onEnd={() => setEmpty(false)}
         />
-        <div className="absolute bottom-0 left-4 right-4 h-px bg-border pointer-events-none" />
+
+        {/* Linha de base */}
+        <div className="absolute bottom-10 left-8 right-8 h-px bg-border pointer-events-none" />
+
+        {/* Label "x" no início da linha de base */}
+        <span className="absolute bottom-[30px] left-8 text-xs text-muted-foreground/40 pointer-events-none select-none leading-none">
+          ×
+        </span>
       </div>
 
-      <div className="flex flex-wrap gap-2 justify-end">
-        <Button type="button" variant="ghost" onClick={clear} disabled={empty || submitting}>
-          <Eraser />
+      {/* Ações */}
+      <div className="flex items-center justify-between gap-3">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={clear}
+          disabled={empty || submitting || disabled}
+          className="text-muted-foreground"
+        >
+          <Eraser className="h-3.5 w-3.5" />
           {t('clear')}
         </Button>
-        <Button type="button" onClick={confirm} disabled={empty || submitting || disabled}>
-          <Check />
-          {t('confirm')}
+
+        <Button
+          type="button"
+          size="default"
+          onClick={confirm}
+          disabled={empty || submitting || disabled}
+          className="px-8"
+        >
+          <Check className="h-4 w-4" />
+          {submitting ? 'Assinando...' : t('confirm')}
         </Button>
       </div>
     </div>

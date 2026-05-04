@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { PdfDownloadButton } from '@/components/activity/pdf-download-button';
 import { ActivityDeleteButton } from '@/components/activity/activity-actions';
 import { CopyVerifyLink } from '@/components/activity/copy-verify-link';
-import { formatDateTime } from '@/lib/utils';
+import { formatDate, formatDateTime } from '@/lib/utils';
 
 export default async function ActivityDetailPage({
   params,
@@ -133,7 +133,7 @@ export default async function ActivityDetailPage({
           {act.locations?.name}
         </InfoBlock>
         <InfoBlock icon={<Calendar className="h-4 w-4" />} label={t('activities.fields.startedAt')}>
-          {formatDateTime(act.started_at, locale === 'pt' ? 'pt-BR' : locale)}
+          {formatDate(act.started_at, locale === 'pt' ? 'pt-BR' : locale)}
         </InfoBlock>
         <InfoBlock icon={<User className="h-4 w-4" />} label={t('activities.fields.supervisor')}>
           {act.supervisor?.full_name ?? '—'}
@@ -191,24 +191,63 @@ export default async function ActivityDetailPage({
 
       <Separator />
 
-      <Card className={signature ? 'surface-elevated border-primary/30' : ''}>
-        <CardHeader>
-          <CardTitle className="text-base">{t('signature.title')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {signature ? (
+      {/* ── Bloco de assinatura ── */}
+      {signature ? (
+        /* Assinatura já registrada */
+        <Card className="surface-elevated border-primary/30">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-full bg-green-500/10 flex items-center justify-center">
+                <svg className="h-4 w-4 text-green-500" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              </div>
+              <div>
+                <CardTitle className="text-base">{t('signature.title')}</CardTitle>
+                <p className="text-xs text-muted-foreground mt-0.5">Documento verificado e autenticado</p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
             <SignatureDisplay signature={signature} locale={locale} />
-          ) : canSign ? (
-            <SignActivityPanel activityId={act.id} />
-          ) : (
+          </CardContent>
+        </Card>
+      ) : canSign ? (
+        /* Aguardando assinatura do cliente — destaque máximo */
+        <Card className="border-primary/40 shadow-lg shadow-primary/5">
+          <CardHeader className="pb-2 border-b border-border/50">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <svg className="h-5 w-5 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
+              </div>
+              <div>
+                <CardTitle className="text-base">{t('signature.title')}</CardTitle>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Revise os dados acima e assine para confirmar a atividade
+                </p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-5">
+            <SignActivityPanel
+              activityId={act.id}
+              signerName={act.client?.full_name ?? undefined}
+            />
+          </CardContent>
+        </Card>
+      ) : (
+        /* Sem ação disponível */
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{t('signature.title')}</CardTitle>
+          </CardHeader>
+          <CardContent>
             <p className="text-sm text-muted-foreground">
               {act.status === 'rascunho'
                 ? t('activities.draftNotice')
                 : t('activities.waitingClient')}
             </p>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
@@ -236,20 +275,32 @@ function InfoBlock({
 }
 
 function SignatureDisplay({ signature, locale }: { signature: any; locale: string }) {
+  const loc = locale === 'pt' ? 'pt-BR' : locale;
   return (
-    <div className="space-y-3">
-      <div className="rounded-md border border-border bg-card p-4">
+    <div className="space-y-4">
+      {/* Assinatura SVG */}
+      <div className="relative rounded-xl border border-border bg-muted/20 p-4 overflow-hidden">
         <div
-          className="w-full max-h-[160px] flex items-center justify-center"
+          className="w-full max-h-[160px] flex items-center justify-center invert-0 dark:invert opacity-90"
           dangerouslySetInnerHTML={{ __html: signature.svg_data }}
         />
+        <div className="absolute bottom-3 left-6 right-6 h-px bg-border/60" />
       </div>
-      <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground">
-        <span>
-          <strong className="text-foreground">{signature.signer_name}</strong>
-        </span>
-        <span>{formatDateTime(signature.signed_at, locale === 'pt' ? 'pt-BR' : locale)}</span>
-        <span className="font-mono">Cód. {signature.verification_code}</span>
+
+      {/* Meta da assinatura */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="rounded-lg border border-border bg-card/50 px-3 py-2">
+          <p className="text-[9px] uppercase tracking-widest text-muted-foreground mb-0.5">Assinado por</p>
+          <p className="text-sm font-semibold truncate">{signature.signer_name}</p>
+        </div>
+        <div className="rounded-lg border border-border bg-card/50 px-3 py-2">
+          <p className="text-[9px] uppercase tracking-widest text-muted-foreground mb-0.5">Data</p>
+          <p className="text-sm font-medium">{formatDateTime(signature.signed_at, loc)}</p>
+        </div>
+        <div className="rounded-lg border border-border bg-card/50 px-3 py-2">
+          <p className="text-[9px] uppercase tracking-widest text-muted-foreground mb-0.5">Código</p>
+          <p className="text-sm font-mono text-primary">{signature.verification_code}</p>
+        </div>
       </div>
     </div>
   );

@@ -25,11 +25,12 @@ export default async function Linha6Page({
   const t = await getTranslations('linha6');
   const supabase = await createClient();
 
+  // Mapa mostra TODA infraestrutura da linha — sem filtro deleted_at
+  // (estações são infraestrutura permanente, não conteúdo criado pelo usuário)
   const { data: locations, error: locError } = await supabase
     .from('locations')
     .select('id, name, kind, sort_order')
     .eq('line', 'linha-6')
-    .is('deleted_at', null)
     .order('sort_order', { ascending: true });
 
   const grouped = (locations ?? []).reduce<Record<string, typeof locations>>((acc, l) => {
