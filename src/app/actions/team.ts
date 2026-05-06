@@ -71,10 +71,15 @@ export async function inviteUser(input: z.infer<typeof inviteSchema>) {
   }
 
   // URL de redirecionamento após o usuário definir a senha
+  // Prioridade: NEXT_PUBLIC_APP_URL (produção) > VERCEL_URL (auto-injetado pelo Vercel) > cabeçalho origin
   const h = await headers();
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  const vercelUrl = process.env.VERCEL_URL; // formato: "myapp.vercel.app" (sem protocolo)
   const origin =
-    process.env.NEXT_PUBLIC_APP_URL ??
-    (h.get('origin') || `https://${h.get('host') ?? 'localhost:3000'}`);
+    (appUrl && !appUrl.includes('localhost') ? appUrl : null) ??
+    (vercelUrl ? `https://${vercelUrl}` : null) ??
+    h.get('origin') ??
+    `https://${h.get('host') ?? 'localhost:3000'}`;
   const redirectTo = `${origin}/pt/login`;
 
   // Envia o convite — Supabase manda email com link mágico
