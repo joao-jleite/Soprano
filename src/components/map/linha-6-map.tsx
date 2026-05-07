@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Link } from '@/i18n/navigation';
+import NextLink from 'next/link';
 import { cn } from '@/lib/utils';
 
 type Stop = { id: string; name: string; kind: string; sort_order: number };
@@ -11,7 +11,7 @@ const H = 240;
 // Centro da linha laranja
 const LINE_Y = 110;
 
-export function Linha6Map({ stops }: { stops: Stop[] }) {
+export function Linha6Map({ stops, locale = 'pt' }: { stops: Stop[]; locale?: string }) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const sorted = useMemo(
@@ -23,14 +23,14 @@ export function Linha6Map({ stops }: { stops: Stop[] }) {
   const maxOrder = sorted[sorted.length - 1]?.sort_order ?? 100;
   const range = Math.max(maxOrder - minOrder, 1);
 
-  // Posição horizontal (%) dentro de 4%–96% para dar margem nas bordas
-  const getX = (order: number) => `${((order - minOrder) / range) * 90 + 5}%`;
+  // Posição horizontal (%) dentro de 5%–95% para dar margem nas bordas
+  const getX = (order: number) => `${((order - minOrder) / range) * 88 + 6}%`;
 
-  const stations = sorted.filter((s) =>
-    ['estacao', 'patio'].includes(s.kind),
-  );
+  const stations = sorted.filter((s) => ['estacao', 'patio'].includes(s.kind));
   const vses = sorted.filter((s) => s.kind === 'vse');
   const ses = sorted.filter((s) => s.kind === 'se');
+
+  const href = (id: string) => `/${locale}/atividades?location=${id}`;
 
   if (stops.length === 0) {
     return (
@@ -44,7 +44,7 @@ export function Linha6Map({ stops }: { stops: Stop[] }) {
   }
 
   return (
-    <div className="w-full rounded-xl border border-border bg-card/50 overflow-hidden">
+    <div className="w-full rounded-xl border border-border bg-card/50">
       {/* Legenda */}
       <div className="flex items-center gap-5 px-5 pt-4 pb-2 justify-end">
         <LegendDot color="bg-orange-500" label="Estação" />
@@ -70,11 +70,10 @@ export function Linha6Map({ stops }: { stops: Stop[] }) {
           {/* ─── VSEs: tick + dot acima da linha ─── */}
           {vses.map((vse) => {
             const isHov = hoveredId === vse.id;
-            const shortName = vse.name.replace(/^VSE\s*/i, '');
             return (
-              <Link
+              <NextLink
                 key={vse.id}
-                href={`/atividades?location=${vse.id}`}
+                href={href(vse.id)}
                 className="absolute group"
                 style={{ left: getX(vse.sort_order), top: LINE_Y - 46, transform: 'translateX(-50%)' }}
                 onMouseEnter={() => setHoveredId(vse.id)}
@@ -84,7 +83,7 @@ export function Linha6Map({ stops }: { stops: Stop[] }) {
                 {/* Label on hover */}
                 <div
                   className={cn(
-                    'absolute bottom-full mb-1 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded text-[9px] font-mono whitespace-nowrap bg-popover border border-border shadow-md text-foreground transition-all duration-150 pointer-events-none',
+                    'absolute bottom-full mb-1 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded text-[9px] font-mono whitespace-nowrap bg-popover border border-border shadow-md text-foreground transition-all duration-150 pointer-events-none z-20',
                     isHov ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1',
                   )}
                 >
@@ -98,13 +97,11 @@ export function Linha6Map({ stops }: { stops: Stop[] }) {
                   )}
                 />
                 {/* Tick */}
-                <div className={cn(
-                  'w-px mx-auto bg-primary/40 transition-colors duration-150',
-                  isHov ? 'bg-primary' : '',
-                )}
+                <div
+                  className={cn('w-px mx-auto bg-primary/40 transition-colors duration-150', isHov ? 'bg-primary' : '')}
                   style={{ height: 40 }}
                 />
-              </Link>
+              </NextLink>
             );
           })}
 
@@ -112,9 +109,9 @@ export function Linha6Map({ stops }: { stops: Stop[] }) {
           {ses.map((se) => {
             const isHov = hoveredId === se.id;
             return (
-              <Link
+              <NextLink
                 key={se.id}
-                href={`/atividades?location=${se.id}`}
+                href={href(se.id)}
                 className="absolute group flex flex-col items-center"
                 style={{ left: getX(se.sort_order), top: LINE_Y + 8, transform: 'translateX(-50%)' }}
                 onMouseEnter={() => setHoveredId(se.id)}
@@ -142,7 +139,7 @@ export function Linha6Map({ stops }: { stops: Stop[] }) {
                 >
                   {se.name}
                 </div>
-              </Link>
+              </NextLink>
             );
           })}
 
@@ -153,9 +150,9 @@ export function Linha6Map({ stops }: { stops: Stop[] }) {
             const labelAbove = i % 2 === 0;
 
             return (
-              <Link
+              <NextLink
                 key={s.id}
-                href={`/atividades?location=${s.id}`}
+                href={href(s.id)}
                 className="absolute group flex flex-col items-center"
                 style={{
                   left: getX(s.sort_order),
@@ -173,11 +170,7 @@ export function Linha6Map({ stops }: { stops: Stop[] }) {
                     isTerminal
                       ? 'h-6 w-6 bg-orange-500 shadow-[0_0_12px_rgba(249,115,22,0.6)]'
                       : 'h-[18px] w-[18px] bg-orange-400',
-                    isHov
-                      ? 'scale-125 shadow-[0_0_16px_rgba(249,115,22,0.8)]'
-                      : isTerminal
-                      ? 'scale-100'
-                      : 'scale-100',
+                    isHov ? 'scale-125 shadow-[0_0_16px_rgba(249,115,22,0.8)]' : 'scale-100',
                   )}
                 />
 
@@ -185,16 +178,14 @@ export function Linha6Map({ stops }: { stops: Stop[] }) {
                 <span
                   className={cn(
                     'absolute text-center text-[9px] font-medium leading-tight w-[72px] transition-colors duration-150',
-                    labelAbove
-                      ? 'bottom-[calc(100%+10px)]'
-                      : 'top-[calc(100%+10px)]',
+                    labelAbove ? 'bottom-[calc(100%+10px)]' : 'top-[calc(100%+10px)]',
                     isHov ? 'text-orange-400' : 'text-muted-foreground',
                     isTerminal && 'font-semibold text-foreground',
                   )}
                 >
                   {s.name}
                 </span>
-              </Link>
+              </NextLink>
             );
           })}
         </div>
@@ -203,7 +194,7 @@ export function Linha6Map({ stops }: { stops: Stop[] }) {
       {/* Rodapé */}
       <div className="flex items-center justify-between px-6 py-3 border-t border-border/50 text-[10px] font-mono uppercase tracking-widest text-muted-foreground/50">
         <span>Brasilândia</span>
-        <span>Linha 6 · Laranja · {stations.length} estações</span>
+        <span>Linha 6 · Laranja · {stations.filter(s => s.kind === 'estacao').length} estações</span>
         <span>São Joaquim</span>
       </div>
     </div>
