@@ -1,29 +1,18 @@
-'use client';
-
-import { useState, useMemo } from 'react';
 import NextLink from 'next/link';
 import { cn } from '@/lib/utils';
 
 type Stop = { id: string; name: string; kind: string; sort_order: number };
 
-// Altura total do diagrama em px
 const H = 240;
-// Centro da linha laranja
 const LINE_Y = 110;
 
 export function Linha6Map({ stops, locale = 'pt' }: { stops: Stop[]; locale?: string }) {
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
-
-  const sorted = useMemo(
-    () => [...stops].sort((a, b) => a.sort_order - b.sort_order),
-    [stops],
-  );
+  const sorted = [...stops].sort((a, b) => a.sort_order - b.sort_order);
 
   const minOrder = sorted[0]?.sort_order ?? 0;
   const maxOrder = sorted[sorted.length - 1]?.sort_order ?? 100;
   const range = Math.max(maxOrder - minOrder, 1);
 
-  // Posição horizontal (%) dentro de 5%–95% para dar margem nas bordas
   const getX = (order: number) => `${((order - minOrder) / range) * 88 + 6}%`;
 
   const stations = sorted.filter((s) => ['estacao', 'patio'].includes(s.kind));
@@ -52,135 +41,89 @@ export function Linha6Map({ stops, locale = 'pt' }: { stops: Stop[]; locale?: st
         <LegendDot color="bg-amber-400" label="SE" />
       </div>
 
-      {/* Diagrama com scroll horizontal em telas pequenas */}
+      {/* Diagrama */}
       <div className="overflow-x-auto px-2 pb-4">
-        <div
-          className="relative min-w-[860px]"
-          style={{ height: `${H}px` }}
-        >
-          {/* ─── Linha laranja ─── */}
+        <div className="relative min-w-[860px]" style={{ height: `${H}px` }}>
+
+          {/* Linha laranja */}
           <div
-            className="absolute left-0 right-0 h-[5px] rounded-full shadow-[0_0_16px_rgba(249,115,22,0.5)]"
+            className="absolute left-0 right-0 h-[5px] rounded-full"
             style={{
               top: LINE_Y - 2,
               background: 'linear-gradient(90deg, #ea580c 0%, #fb923c 40%, #fbbf24 70%, #ea580c 100%)',
+              boxShadow: '0 0 16px rgba(249,115,22,0.5)',
             }}
           />
 
-          {/* ─── VSEs: tick + dot acima da linha ─── */}
-          {vses.map((vse) => {
-            const isHov = hoveredId === vse.id;
-            return (
-              <NextLink
-                key={vse.id}
-                href={href(vse.id)}
-                className="absolute group"
-                style={{ left: getX(vse.sort_order), top: LINE_Y - 46, transform: 'translateX(-50%)' }}
-                onMouseEnter={() => setHoveredId(vse.id)}
-                onMouseLeave={() => setHoveredId(null)}
-                title={vse.name}
-              >
-                {/* Label on hover */}
-                <div
-                  className={cn(
-                    'absolute bottom-full mb-1 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded text-[9px] font-mono whitespace-nowrap bg-popover border border-border shadow-md text-foreground transition-all duration-150 pointer-events-none z-20',
-                    isHov ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1',
-                  )}
-                >
-                  {vse.name}
-                </div>
-                {/* Dot */}
-                <div
-                  className={cn(
-                    'h-2.5 w-2.5 rounded-full bg-primary border border-background transition-transform duration-150 mx-auto',
-                    isHov ? 'scale-150' : 'scale-100',
-                  )}
-                />
-                {/* Tick */}
-                <div
-                  className={cn('w-px mx-auto bg-primary/40 transition-colors duration-150', isHov ? 'bg-primary' : '')}
-                  style={{ height: 40 }}
-                />
-              </NextLink>
-            );
-          })}
+          {/* VSEs — acima da linha */}
+          {vses.map((vse) => (
+            <NextLink
+              key={vse.id}
+              href={href(vse.id)}
+              className="absolute group flex flex-col items-center"
+              style={{ left: getX(vse.sort_order), top: LINE_Y - 46, transform: 'translateX(-50%)' }}
+              title={vse.name}
+            >
+              {/* Tooltip */}
+              <span className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded text-[9px] font-mono whitespace-nowrap bg-popover border border-border shadow-md text-foreground opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
+                {vse.name}
+              </span>
+              {/* Dot */}
+              <span className="h-2.5 w-2.5 rounded-full bg-primary border-2 border-background group-hover:scale-150 transition-transform block" />
+              {/* Tick */}
+              <span className="w-px bg-primary/40 group-hover:bg-primary transition-colors block" style={{ height: 40 }} />
+            </NextLink>
+          ))}
 
-          {/* ─── SEs: dot + tick abaixo da linha ─── */}
-          {ses.map((se) => {
-            const isHov = hoveredId === se.id;
-            return (
-              <NextLink
-                key={se.id}
-                href={href(se.id)}
-                className="absolute group flex flex-col items-center"
-                style={{ left: getX(se.sort_order), top: LINE_Y + 8, transform: 'translateX(-50%)' }}
-                onMouseEnter={() => setHoveredId(se.id)}
-                onMouseLeave={() => setHoveredId(null)}
-                title={se.name}
-              >
-                {/* Tick */}
-                <div
-                  className={cn('w-px bg-amber-400/40 transition-colors duration-150', isHov ? 'bg-amber-400' : '')}
-                  style={{ height: 28 }}
-                />
-                {/* Dot */}
-                <div
-                  className={cn(
-                    'h-2.5 w-2.5 rounded-full bg-amber-400 border border-background transition-transform duration-150',
-                    isHov ? 'scale-150' : 'scale-100',
-                  )}
-                />
-                {/* Label on hover */}
-                <div
-                  className={cn(
-                    'mt-1 px-1.5 py-0.5 rounded text-[9px] font-mono whitespace-nowrap bg-popover border border-border shadow-md text-foreground transition-all duration-150 pointer-events-none',
-                    isHov ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1',
-                  )}
-                >
-                  {se.name}
-                </div>
-              </NextLink>
-            );
-          })}
+          {/* SEs — abaixo da linha */}
+          {ses.map((se) => (
+            <NextLink
+              key={se.id}
+              href={href(se.id)}
+              className="absolute group flex flex-col items-center"
+              style={{ left: getX(se.sort_order), top: LINE_Y + 8, transform: 'translateX(-50%)' }}
+              title={se.name}
+            >
+              {/* Tick */}
+              <span className="w-px bg-amber-400/40 group-hover:bg-amber-400 transition-colors block" style={{ height: 28 }} />
+              {/* Dot */}
+              <span className="h-2.5 w-2.5 rounded-full bg-amber-400 border-2 border-background group-hover:scale-150 transition-transform block" />
+              {/* Tooltip */}
+              <span className="mt-1 px-1.5 py-0.5 rounded text-[9px] font-mono whitespace-nowrap bg-popover border border-border shadow-md text-foreground opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                {se.name}
+              </span>
+            </NextLink>
+          ))}
 
-          {/* ─── Estações ─── */}
+          {/* Estações */}
           {stations.map((s, i) => {
-            const isHov = hoveredId === s.id;
             const isTerminal = i === 0 || i === stations.length - 1;
             const labelAbove = i % 2 === 0;
-
             return (
               <NextLink
                 key={s.id}
                 href={href(s.id)}
                 className="absolute group flex flex-col items-center"
-                style={{
-                  left: getX(s.sort_order),
-                  top: LINE_Y - 10,
-                  transform: 'translateX(-50%)',
-                  zIndex: 10,
-                }}
-                onMouseEnter={() => setHoveredId(s.id)}
-                onMouseLeave={() => setHoveredId(null)}
+                style={{ left: getX(s.sort_order), top: LINE_Y - 10, transform: 'translateX(-50%)', zIndex: 10 }}
               >
-                {/* Círculo da estação */}
-                <div
-                  className={cn(
-                    'rounded-full border-2 border-background transition-all duration-150',
-                    isTerminal
-                      ? 'h-6 w-6 bg-orange-500 shadow-[0_0_12px_rgba(249,115,22,0.6)]'
-                      : 'h-[18px] w-[18px] bg-orange-400',
-                    isHov ? 'scale-125 shadow-[0_0_16px_rgba(249,115,22,0.8)]' : 'scale-100',
-                  )}
-                />
-
-                {/* Label — alterna acima/abaixo */}
+                {/* Círculo */}
                 <span
                   className={cn(
-                    'absolute text-center text-[9px] font-medium leading-tight w-[72px] transition-colors duration-150',
+                    'rounded-full border-2 border-background group-hover:scale-125 transition-transform block',
+                    isTerminal
+                      ? 'h-6 w-6 bg-orange-500'
+                      : 'h-[18px] w-[18px] bg-orange-400',
+                  )}
+                  style={isTerminal ? { boxShadow: '0 0 12px rgba(249,115,22,0.6)' } : undefined}
+                />
+                {/* Label */}
+                <span
+                  className={cn(
+                    'absolute text-center text-[9px] leading-tight w-[72px] group-hover:text-orange-400 transition-colors',
                     labelAbove ? 'bottom-[calc(100%+10px)]' : 'top-[calc(100%+10px)]',
-                    isHov ? 'text-orange-400' : 'text-muted-foreground',
-                    isTerminal && 'font-semibold text-foreground',
+                    isTerminal
+                      ? 'font-semibold text-foreground'
+                      : 'font-medium text-muted-foreground',
                   )}
                 >
                   {s.name}
@@ -194,7 +137,7 @@ export function Linha6Map({ stops, locale = 'pt' }: { stops: Stop[]; locale?: st
       {/* Rodapé */}
       <div className="flex items-center justify-between px-6 py-3 border-t border-border/50 text-[10px] font-mono uppercase tracking-widest text-muted-foreground/50">
         <span>Brasilândia</span>
-        <span>Linha 6 · Laranja · {stations.filter(s => s.kind === 'estacao').length} estações</span>
+        <span>Linha 6 · Laranja · {stations.filter((s) => s.kind === 'estacao').length} estações</span>
         <span>São Joaquim</span>
       </div>
     </div>
