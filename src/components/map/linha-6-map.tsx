@@ -1,10 +1,10 @@
 /**
- * Linha6Map — Diagrama esquemático da Linha 6 Laranja (SVG server component)
+ * Linha6Map — Diagrama esquemático "espinha de peixe" (fishbone metro style)
  *
- * Estações: rótulo inclinado acima da linha.
- * VSEs / SEs: rótulo VERTICAL abaixo da linha — ocupa ~7px de largura,
- * eliminando a colisão de texto mesmo com pontos próximos.
+ * Estações / Pátio : rótulo diagonal −48° acima da linha  (nasce do ponto → sobe à direita)
+ * VSEs / SEs       : rótulo diagonal +48° abaixo da linha (nasce do ponto → desce à direita)
  *
+ * Inspirado no padrão visual CPTM / Metro de São Paulo (Linha Uni, etc.).
  * Inline-styles intencionais: renderização independente de purge/CSS vars.
  */
 
@@ -72,19 +72,33 @@ export function Linha6Map({ stops, locale = 'pt' }: { stops: Stop[]; locale?: st
   const lastEst  = estacoes[estacoes.length - 1];
   const subItems = sorted.filter(s => s.kind === 'vse' || s.kind === 'se');
 
-  // ── Geometria (dinâmica conforme nº de locais) ─────────────────────────────
-  const MX       = 100;                                   // margem lateral
-  const LINE_Y   = 205;                                   // y da linha
-  const PER_UNIT = 42;                                    // px por passo de ordem
-  const UW       = Math.max(1500, range * PER_UNIT);      // largura útil
-  const W        = UW + MX * 2;
-  const maxSubLen = subItems.length
-    ? Math.max(...subItems.map(s => s.name.length))
-    : 12;
-  const H = Math.ceil(LINE_Y + 16 + maxSubLen * 5.4 + 24); // altura ajustada ao texto
+  // ── Geometria ──────────────────────────────────────────────────────────────
+  const ANGLE    = 48;                               // graus de inclinação fishbone
+  const SIN_A    = Math.sin(ANGLE * Math.PI / 180);
+  const COS_A    = Math.cos(ANGLE * Math.PI / 180);
 
-  const cx = (order: number) => MX + ((order - minOrder) / range) * UW;
-  const href = (id: string) => `/${locale}/atividades?location=${id}`;
+  const FONT_ST  = 11;   // fontSize estações
+  const FONT_SUB = 9;    // fontSize VSE/SE
+  const CHAR_W   = 0.62; // largura aprox por char (fração do fontSize)
+
+  // Espaço vertical necessário acima da linha para rótulos de estações
+  const maxStLen  = stations.length  ? Math.max(...stations.map(s  => s.name.length)) : 8;
+  const maxSubLen = subItems.length  ? Math.max(...subItems.map(s  => s.name.length)) : 8;
+
+  const ABOVE = Math.ceil(maxStLen  * FONT_ST  * CHAR_W * SIN_A) + 55;
+  const BELOW = Math.ceil(maxSubLen * FONT_SUB * CHAR_W * SIN_A) + 35;
+
+  const LINE_Y   = ABOVE;
+  const PER_UNIT = 44;                               // px por passo de sort_order
+  const UW       = Math.max(1500, range * PER_UNIT); // largura útil
+  const MX_L     = 80;                               // margem esquerda fixa
+  // margem direita: acomoda o overhang horizontal dos rótulos do último ponto
+  const MX_R     = MX_L + Math.ceil(maxStLen * FONT_ST * CHAR_W * COS_A) + 20;
+  const W        = MX_L + UW + MX_R;
+  const H        = LINE_Y + BELOW + 20;
+
+  const cx   = (order: number) => MX_L + ((order - minOrder) / range) * UW;
+  const href = (id: string)    => `/${locale}/atividades?location=${id}`;
 
   return (
     <div style={cardStyle}>
@@ -121,38 +135,42 @@ export function Linha6Map({ stops, locale = 'pt' }: { stops: Stop[]; locale?: st
 
           {/* Linha laranja */}
           <line
-            x1={MX} y1={LINE_Y} x2={W - MX} y2={LINE_Y}
+            x1={MX_L} y1={LINE_Y}
+            x2={MX_L + UW} y2={LINE_Y}
             stroke="url(#lg6)"
             strokeWidth="8"
             strokeLinecap="round"
             filter="drop-shadow(0 0 12px rgba(249,115,22,0.45))"
           />
 
-          {/* ── VSEs e SEs — rótulo vertical abaixo da linha ─────────────── */}
+          {/* ── VSEs e SEs — rótulo diagonal abaixo +48° ─────────────────── */}
           {subItems.map(item => {
-            const isVse   = item.kind === 'vse';
-            const dot     = isVse ? '#3b82f6' : '#fbbf24';
-            const txt     = isVse ? '#93c5fd' : '#fcd34d';
-            const x       = cx(item.sort_order);
-            const textY   = LINE_Y + 14;        // início do texto vertical
-            const tx      = x - 3;              // centraliza coluna sob o ponto
+            const isVse  = item.kind === 'vse';
+            const dot    = isVse ? '#3b82f6' : '#fbbf24';
+            const txt    = isVse ? '#93c5fd' : '#fcd34d';
+            const x      = cx(item.sort_order);
+            const tickY  = LINE_Y + 16;  // fim do conector / pivot do texto
 
             return (
               <a key={item.id} href={href(item.id)}>
-                {/* conector curto */}
+                {/* conector (tick) */}
                 <line
-                  x1={x} y1={LINE_Y + 6}
-                  x2={x} y2={textY - 2}
-                  stroke={dot} strokeWidth="1.5" strokeOpacity="0.45"
+                  x1={x} y1={LINE_Y + 5}
+                  x2={x} y2={tickY - 1}
+                  stroke={dot}
+                  strokeWidth="1.5"
+                  strokeOpacity="0.5"
                 />
                 {/* ponto */}
-                <circle cx={x} cy={LINE_Y} r={5} fill={dot} />
-                {/* rótulo vertical (rotação 90° = leitura de cima p/ baixo) */}
+                <circle cx={x} cy={LINE_Y} r={4.5} fill={dot} />
+                {/* rótulo diagonal: nasce do pivot, vai para baixo-direita */}
                 <text
-                  x={tx} y={textY}
-                  transform={`rotate(90 ${tx} ${textY})`}
+                  x={x}
+                  y={tickY}
+                  transform={`rotate(${ANGLE} ${x} ${tickY})`}
                   textAnchor="start"
-                  fontSize="9"
+                  dominantBaseline="hanging"
+                  fontSize={FONT_SUB}
                   fill={txt}
                   fontFamily="'Geist Mono','GeistMono',ui-monospace,monospace"
                 >
@@ -162,18 +180,29 @@ export function Linha6Map({ stops, locale = 'pt' }: { stops: Stop[]; locale?: st
             );
           })}
 
-          {/* ── Estações e Pátio — rótulo inclinado acima ─────────────────── */}
+          {/* ── Estações e Pátio — rótulo diagonal acima −48° ────────────── */}
           {stations.map(s => {
             const x          = cx(s.sort_order);
             const isPatio    = s.kind === 'patio';
             const isTerminal = s.id === firstEst?.id || s.id === lastEst?.id;
-            const r          = isPatio ? 15 : isTerminal ? 13 : 9;
-            const ty         = LINE_Y - r - 12;
-            const fontSize   = isPatio || isTerminal ? 12.5 : 11;
+            const r          = isPatio ? 14 : isTerminal ? 12 : 8;
+            const tickY      = LINE_Y - r - 10;   // fim do conector / pivot do texto
+            const fontSize   = isPatio || isTerminal ? 12 : 11;
             const fontW      = isPatio || isTerminal ? '600' : '500';
+            const connColor  = isPatio || isTerminal ? '#ea580c' : '#4b5a72';
 
             return (
               <a key={s.id} href={href(s.id)}>
+                {/* conector (tick) */}
+                <line
+                  x1={x} y1={LINE_Y - r}
+                  x2={x} y2={tickY + 2}
+                  stroke={connColor}
+                  strokeWidth="1.5"
+                  strokeOpacity="0.55"
+                />
+
+                {/* símbolo na linha */}
                 {isPatio ? (
                   <>
                     <circle cx={x} cy={LINE_Y} r={r}     fill="none" stroke="#ea580c" strokeWidth="2.5" />
@@ -181,7 +210,7 @@ export function Linha6Map({ stops, locale = 'pt' }: { stops: Stop[]; locale?: st
                     <text
                       x={x} y={LINE_Y + 4}
                       textAnchor="middle"
-                      fontSize="8" fontWeight="700"
+                      fontSize="7" fontWeight="700"
                       fill="#ea580c"
                       fontFamily="'Geist Sans',ui-sans-serif,sans-serif"
                     >M</text>
@@ -195,15 +224,20 @@ export function Linha6Map({ stops, locale = 'pt' }: { stops: Stop[]; locale?: st
                         ? 'drop-shadow(0 0 8px rgba(234,88,12,0.7))'
                         : 'drop-shadow(0 0 4px rgba(251,146,60,0.35))'}
                     />
-                    <circle cx={x} cy={LINE_Y} r={r - 4} fill="#0c1018" fillOpacity="0.25" />
+                    <circle cx={x} cy={LINE_Y} r={r - 3.5} fill="#0c1018" fillOpacity="0.22" />
                   </>
                 )}
+
+                {/* rótulo diagonal: nasce do pivot, vai para cima-direita */}
                 <text
-                  x={x} y={ty}
-                  transform={`rotate(-55 ${x} ${ty})`}
+                  x={x}
+                  y={tickY}
+                  transform={`rotate(-${ANGLE} ${x} ${tickY})`}
+                  textAnchor="start"
+                  dominantBaseline="auto"
                   fontSize={fontSize}
                   fontWeight={fontW}
-                  fill={isPatio ? '#fb923c' : '#f1f5f9'}
+                  fill={isPatio ? '#fb923c' : isTerminal ? '#fdba74' : '#f1f5f9'}
                   fontFamily="'Geist Sans',ui-sans-serif,system-ui,sans-serif"
                 >
                   {s.name}
