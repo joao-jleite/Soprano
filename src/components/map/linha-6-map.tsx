@@ -1,69 +1,79 @@
 /**
- * Linha6Map — Diagrama esquemático Linha 6 Laranja
+ * Linha6Map — Premium Metro Schematic
+ * Inspired by: Linear · Apple · Tokyo Metro · Vercel
  *
- * Estilo Metro SP / CPTM oficial:
- *  • Estações  → círculo branco com borda laranja (sem glow, sem fill sólido)
- *  • Terminais → círculo branco, borda mais grossa
- *  • Pátio     → duplo anel
- *  • VSE / SE  → tick perpendicular colorido (sem dot sobre a linha)
- *  • Labels    → 45°, monospace para VSE, sans para estações
+ * Architecture:
+ *  - Stations:  evenly spaced, labels HORIZONTAL alternating 2 heights above the line
+ *  - VSE / SE:  positioned proportionally between stations, vertical labels below
+ *  - Zero 45° angles — everything horizontal or vertical
+ *  - Mathematical grid alignment throughout
  */
 
 type Stop = { id: string; name: string; kind: string; sort_order: number };
 
-// ── Geometria ─────────────────────────────────────────────────────────────────
-const DEG  = 45;
-const RAD  = DEG * (Math.PI / 180);
-const SIN  = Math.sin(RAD);
-const COS  = Math.cos(RAD);
+// ── Design tokens ─────────────────────────────────────────────────────────────
+const T = {
+  bg:        '#060b17',          // near-black navy
+  bgCard:    '#070d1b',
+  border:    '#0f1f3a',
+  line:      '#f97316',          // orange-500 — clean, single color
+  lineGlow:  'rgba(249,115,22,0.18)',
 
-// Profundidade do pivot (label VSE/SE): 2 níveis alternados
-const DEPTHS  = [10, 24] as const;
-const D_MAX   = DEPTHS[1];
+  stFill:    '#ffffff',          // station dot fill
+  stStroke:  '#f97316',          // station dot border
+  tmStroke:  '#ea580c',          // terminal dot border (darker)
+  tmFill:    '#ea580c',          // terminal filled
 
-// Pivot das estações: fixo acima da linha
-const ST_PIV  = 20;   // px acima do centro da linha
+  stLabel:   '#cbd5e1',          // station name — slate-300
+  tmLabel:   '#ffffff',          // terminal name — white
+  ptLabel:   '#f97316',          // pátio label — orange
+  tick:      '#1e3a5f',          // connector tick — barely visible
 
-// Tamanhos
-const FS_ST   = 10.5;  // font estações
-const FS_SUB  =  8;    // font VSE / SE
-const CW      = 0.60;  // char-width ratio
+  vseDot:    '#3b82f6',          // blue-500
+  vseTxt:    '#7ca9f5',          // blue label — lighter
+  seDot:     '#f59e0b',          // amber-400
+  seTxt:     '#e8a93a',          // amber label
 
-// ── Paleta ────────────────────────────────────────────────────────────────────
-const BG      = '#0c1018';
-const ORANGE  = '#fb923c';
-const ORANGE2 = '#ea580c';
-const WHITE   = '#ffffff';
-const MONO    = "'Geist Mono','GeistMono',ui-monospace,monospace";
-const SANS    = "'Geist Sans',ui-sans-serif,system-ui,sans-serif";
+  muted:     '#334155',          // footer / legend text
+  mutedMid:  '#4b6a8a',          // secondary label text
+  mono:      "'Geist Mono','GeistMono',ui-monospace,monospace",
+  sans:      "'Geist Sans',ui-sans-serif,system-ui,-apple-system,sans-serif",
+} as const;
 
-// ── Styles ────────────────────────────────────────────────────────────────────
-const card: React.CSSProperties = {
-  background: BG,
-  borderRadius: '0.75rem',
-  border: '1px solid #1e2535',
-  overflow: 'hidden',
-  width: '100%',
+// ── Layout constants ──────────────────────────────────────────────────────────
+const LINE_Y   = 100;             // y of the main line
+const LEVEL_A  = LINE_Y - 62;    // station label — high row  (even index)
+const LEVEL_B  = LINE_Y - 34;    // station label — low row   (odd index)
+const VSE_Y0   = LINE_Y + 14;    // start of vertical VSE/SE labels
+const FS_ST    = 10;             // station font size
+const FS_TERM  = 11;             // terminal font size
+const FS_SUB   = 7.5;            // VSE/SE font size
+
+// ── Card styles ───────────────────────────────────────────────────────────────
+const cardStyle: React.CSSProperties = {
+  background:   T.bgCard,
+  borderRadius: '0.875rem',
+  border:       `1px solid ${T.border}`,
+  overflow:     'hidden',
+  width:        '100%',
 };
-const hdr: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
+const headerStyle: React.CSSProperties = {
+  display:        'flex',
+  alignItems:     'center',
   justifyContent: 'space-between',
-  padding: '0.875rem 1.25rem 0.5rem',
+  padding:        '1rem 1.5rem 0.625rem',
+  borderBottom:   `1px solid ${T.border}`,
 };
-const monoXs: React.CSSProperties = {
-  fontFamily: MONO,
-  fontSize: '0.575rem',
-  textTransform: 'uppercase',
-  letterSpacing: '0.17em',
-};
-const ftr: React.CSSProperties = {
-  ...monoXs,
-  color: '#334155',
-  display: 'flex',
+const footerStyle: React.CSSProperties = {
+  display:        'flex',
   justifyContent: 'space-between',
-  padding: '0.6rem 1.5rem',
-  borderTop: '1px solid #1a2030',
+  padding:        '0.625rem 1.5rem',
+  borderTop:      `1px solid ${T.border}`,
+  fontFamily:     T.mono,
+  fontSize:       '0.55rem',
+  textTransform:  'uppercase',
+  letterSpacing:  '0.2em',
+  color:          T.muted,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -72,140 +82,157 @@ export function Linha6Map({ stops, locale = 'pt' }: { stops: Stop[]; locale?: st
 
   if (!stops || stops.length === 0) {
     return (
-      <div style={{ ...card, padding: '2.5rem', textAlign: 'center' }}>
-        <p style={{ color: '#475569', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+      <div style={{ ...cardStyle, padding: '3rem', textAlign: 'center' }}>
+        <p style={{ color: T.mutedMid, fontSize: '0.875rem', margin: 0 }}>
           Nenhum local cadastrado para esta linha.
-        </p>
-        <p style={{ color: '#334155', fontSize: '0.7rem', fontFamily: MONO }}>
-          Verifique se o seed foi aplicado.
         </p>
       </div>
     );
   }
 
-  // ── Classificação ──────────────────────────────────────────────────────────
-  const sorted   = [...stops].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
-  const estacoes = sorted.filter(s => s.kind === 'estacao');
-  const stations = sorted.filter(s => s.kind === 'estacao' || s.kind === 'patio');
-  const subItems = sorted.filter(s => s.kind === 'vse' || s.kind === 'se');
+  // ── 1. Classify ────────────────────────────────────────────────────────────
+  const sorted     = [...stops].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+  const stItems    = sorted.filter(s => s.kind === 'estacao' || s.kind === 'patio');
+  const subItems   = sorted.filter(s => s.kind === 'vse' || s.kind === 'se');
+  const estacoes   = sorted.filter(s => s.kind === 'estacao');
+  const firstEst   = estacoes[0];
+  const lastEst    = estacoes[estacoes.length - 1];
 
-  const firstEst = estacoes[0];
-  const lastEst  = estacoes[estacoes.length - 1];
+  // ── 2. Station positions (even spacing) ────────────────────────────────────
+  const N_ST    = stItems.length;
+  const ST_GAP  = Math.max(96, Math.min(140, 1600 / Math.max(N_ST - 1, 1)));
+  const posMap  = new Map<string, number>();
 
-  // ── Espaçamento uniforme por índice ───────────────────────────────────────
-  const N   = sorted.length;
-  const GAP = Math.max(36, Math.min(52, 1700 / Math.max(N - 1, 1)));
-  const UW  = (N - 1) * GAP;
+  stItems.forEach((s, i) => posMap.set(s.id, i * ST_GAP));
 
-  const posMap = new Map<string, number>();
-  sorted.forEach((s, i) => posMap.set(s.id, i * GAP));
-  const px = (id: string) => posMap.get(id) ?? 0;
-
-  // ── Profundidade alternada VSE/SE ─────────────────────────────────────────
-  let subN = 0;
-  const depthMap = new Map<string, number>();
-  sorted.forEach(s => {
-    if (s.kind === 'vse' || s.kind === 'se') {
-      depthMap.set(s.id, DEPTHS[subN % DEPTHS.length]);
-      subN++;
-    }
+  // ── 3. VSE/SE: proportional between adjacent stations ─────────────────────
+  subItems.forEach(s => {
+    const prev = stItems.filter(st => st.sort_order < s.sort_order).at(-1);
+    const next = stItems.find(st => st.sort_order > s.sort_order);
+    const x0   = prev ? (posMap.get(prev.id) ?? 0) : -(ST_GAP / 2);
+    const x1   = next ? (posMap.get(next.id) ?? x0 + ST_GAP) : x0 + ST_GAP;
+    const sMin = prev?.sort_order ?? (s.sort_order - 10);
+    const sMax = next?.sort_order ?? (s.sort_order + 10);
+    const t    = sMax > sMin ? (s.sort_order - sMin) / (sMax - sMin) : 0.5;
+    posMap.set(s.id, x0 + t * (x1 - x0));
   });
 
-  // ── Dimensões ─────────────────────────────────────────────────────────────
-  const maxStLen  = stations.length  ? Math.max(...stations.map(s  => s.name.length)) : 8;
-  const maxSubLen = subItems.length  ? Math.max(...subItems.map(s  => s.name.length)) : 8;
+  // ── 4. Station label alternating level ────────────────────────────────────
+  const stLevel = new Map<string, number>();
+  stItems.forEach((s, i) => stLevel.set(s.id, i % 2 === 0 ? LEVEL_A : LEVEL_B));
 
-  const ABOVE  = Math.ceil(maxStLen  * FS_ST  * CW * SIN) + ST_PIV + 22;
-  const BELOW  = Math.ceil(maxSubLen * FS_SUB * CW * SIN) + D_MAX + 16;
+  // ── 5. SVG dimensions ─────────────────────────────────────────────────────
+  const allX    = [...posMap.values()];
+  const minX    = Math.min(...allX);
+  const maxX    = Math.max(...allX);
 
-  const LINE_Y = ABOVE;
-  const MX_L   = 70;
-  const MX_R   = 70 + Math.ceil(maxStLen * FS_ST * CW * COS);
+  const maxSubN = subItems.length ? Math.max(...subItems.map(s => s.name.length)) : 16;
+  const BELOW   = Math.ceil(maxSubN * FS_SUB * 0.62) + 16; // vertical text height
+
+  const maxStN  = stItems.length  ? Math.max(...stItems.map(s  => s.name.length)) : 12;
+  const LABEL_HALF = Math.ceil(maxStN * FS_TERM * 0.58 / 2); // half label width
+
+  const MX_L   = LABEL_HALF + 16;
+  const MX_R   = LABEL_HALF + 32;
+  const UW     = maxX - minX;
   const W      = MX_L + UW + MX_R;
-  const H      = LINE_Y + BELOW + 12;
+  const H      = LINE_Y + BELOW + 16;
 
-  const X    = (id: string) => MX_L + px(id);
+  const X    = (id: string) => MX_L + (posMap.get(id) ?? 0) - minX;
   const href = (id: string) => `/${locale}/atividades?location=${id}`;
 
   return (
-    <div style={card}>
+    <div style={cardStyle}>
 
-      {/* Cabeçalho */}
-      <div style={hdr}>
-        <span style={{ ...monoXs, color: '#475569' }}>
-          Diagrama Esquemático · {stops.length} locais
-        </span>
-        <div style={{ display: 'flex', gap: '1.1rem' }}>
-          <Chip color={ORANGE}   label="Estação" />
-          <Chip color="#3b82f6"  label="VSE"     />
-          <Chip color="#f59e0b"  label="SE"      />
+      {/* ── Header ──────────────────────────────────────────────────────── */}
+      <div style={headerStyle}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          <span style={{
+            fontFamily: T.sans, fontSize: '0.7rem', fontWeight: '600',
+            color: '#e2e8f0', letterSpacing: '0.04em',
+          }}>
+            Linha 6 — Laranja
+          </span>
+          <span style={{
+            fontFamily: T.mono, fontSize: '0.52rem', textTransform: 'uppercase',
+            letterSpacing: '0.18em', color: T.muted,
+          }}>
+            Diagrama Esquemático · {stops.length} locais
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+          <Legend color={T.stStroke}  label="Estação" mono={T.mono} />
+          <Legend color={T.vseDot}    label="VSE"     mono={T.mono} />
+          <Legend color={T.seDot}     label="SE"      mono={T.mono} />
         </div>
       </div>
 
-      {/* SVG */}
-      <div style={{ overflowX: 'auto', padding: '0 6px 14px' }}>
+      {/* ── SVG ─────────────────────────────────────────────────────────── */}
+      <div style={{ overflowX: 'auto', padding: '0 4px 4px' }}>
         <svg
           width={W} height={H}
           viewBox={`0 0 ${W} ${H}`}
           style={{ display: 'block', minWidth: W }}
           aria-label="Diagrama esquemático Linha 6 Laranja"
         >
-          <rect width={W} height={H} fill={BG} />
+          {/* background */}
+          <rect width={W} height={H} fill={T.bg} />
 
-          <defs>
-            <linearGradient id="lg6" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%"   stopColor="#92400e" />
-              <stop offset="30%"  stopColor="#c2410c" />
-              <stop offset="60%"  stopColor="#ea580c" />
-              <stop offset="100%" stopColor="#92400e" />
-            </linearGradient>
-          </defs>
+          {/* ── Very subtle horizontal grid lines ─────────────────────── */}
+          {[LEVEL_A, LEVEL_B].map(y => (
+            <line key={y}
+              x1={0} y1={y} x2={W} y2={y}
+              stroke={T.border} strokeWidth="0.5" strokeOpacity="0.5"
+              strokeDasharray="2 6"
+            />
+          ))}
 
-          {/* ── Linha laranja ──────────────────────────────────────────── */}
+          {/* ── Main line ─────────────────────────────────────────────── */}
+          {/* glow layer */}
           <line
-            x1={MX_L}       y1={LINE_Y}
-            x2={MX_L + UW}  y2={LINE_Y}
-            stroke="url(#lg6)"
-            strokeWidth="6"
+            x1={X(stItems[0]?.id ?? '')} y1={LINE_Y}
+            x2={X(stItems[N_ST - 1]?.id ?? '')} y2={LINE_Y}
+            stroke={T.lineGlow}
+            strokeWidth="14"
+            strokeLinecap="round"
+          />
+          {/* solid line */}
+          <line
+            x1={X(stItems[0]?.id ?? '')} y1={LINE_Y}
+            x2={X(stItems[N_ST - 1]?.id ?? '')} y2={LINE_Y}
+            stroke={T.line}
+            strokeWidth="3.5"
             strokeLinecap="round"
           />
 
-          {/* ── VSE / SE: tick perpendicular + rótulo 45° abaixo ───────── */}
+          {/* ── VSE / SE — tick + vertical label below ────────────────── */}
           {subItems.map(item => {
             const isVse  = item.kind === 'vse';
-            const color  = isVse ? '#60a5fa' : '#fbbf24';
+            const dotC   = isVse ? T.vseDot : T.seDot;
+            const txtC   = isVse ? T.vseTxt : T.seTxt;
             const x      = X(item.id);
-            const d      = depthMap.get(item.id) ?? DEPTHS[0];
-            const pivY   = LINE_Y + d;
 
             return (
               <a key={item.id} href={href(item.id)}>
-                {/* tick perpendicular à linha */}
+                {/* micro tick on line */}
                 <line
-                  x1={x} y1={LINE_Y + 3}
-                  x2={x} y2={pivY}
-                  stroke={color}
-                  strokeWidth="1.5"
-                  strokeOpacity="0.55"
+                  x1={x} y1={LINE_Y + 2}
+                  x2={x} y2={VSE_Y0 - 2}
+                  stroke={dotC}
+                  strokeWidth="1"
+                  strokeOpacity="0.5"
                 />
-                {/* cabeça do tick (pequeno traço horizontal) */}
-                <line
-                  x1={x - 3} y1={LINE_Y + 3}
-                  x2={x + 3} y2={LINE_Y + 3}
-                  stroke={color}
-                  strokeWidth="1.5"
-                  strokeOpacity="0.55"
-                />
-                {/* rótulo */}
+                {/* vertical label: rotate 90° so text goes downward */}
                 <text
-                  x={x} y={pivY + 1}
-                  transform={`rotate(${DEG} ${x} ${pivY + 1})`}
+                  x={x}
+                  y={VSE_Y0}
+                  transform={`rotate(90 ${x} ${VSE_Y0})`}
                   textAnchor="start"
-                  dominantBaseline="hanging"
+                  dominantBaseline="middle"
                   fontSize={FS_SUB}
-                  fill={color}
-                  fillOpacity="0.85"
-                  fontFamily={MONO}
+                  fill={txtC}
+                  fillOpacity="0.8"
+                  fontFamily={T.mono}
                 >
                   {item.name}
                 </text>
@@ -213,81 +240,94 @@ export function Linha6Map({ stops, locale = 'pt' }: { stops: Stop[]; locale?: st
             );
           })}
 
-          {/* ── Estações / Pátio: marcador + rótulo −45° acima ────────── */}
-          {stations.map(s => {
+          {/* ── Stations — dot + horizontal label above ───────────────── */}
+          {stItems.map(s => {
             const x          = X(s.id);
             const isPatio    = s.kind === 'patio';
             const isTerminal = s.id === firstEst?.id || s.id === lastEst?.id;
+            const levelY     = stLevel.get(s.id) ?? LEVEL_A;
 
-            // raios
-            const r      = isPatio ? 11 : isTerminal ? 8 : 5;
-            const pivY   = LINE_Y - ST_PIV;
-
-            // visual do marcador
-            const strokeC = isPatio ? ORANGE2 : isTerminal ? ORANGE2 : ORANGE;
-            const strokeW = isPatio ? 2.5 : isTerminal ? 2.5 : 2;
+            // dot sizing
+            const r        = isPatio ? 10 : isTerminal ? 8 : 5.5;
+            const fillC    = isPatio  ? T.bg
+                           : isTerminal ? T.tmFill
+                           : T.stFill;
+            const strokeC  = isPatio  ? T.tmStroke
+                           : isTerminal ? T.tmStroke
+                           : T.stStroke;
+            const strokeW  = isPatio || isTerminal ? 2.5 : 1.5;
 
             // label
-            const fSize  = isPatio || isTerminal ? 11 : FS_ST;
-            const fW     = isPatio || isTerminal ? '600' : '400';
-            const lColor = isPatio  ? ORANGE
-                         : isTerminal ? WHITE
-                         : '#e2e8f0';
+            const fSize    = isTerminal ? FS_TERM : FS_ST;
+            const fWeight  = isPatio || isTerminal ? '600' : '400';
+            const lColor   = isPatio  ? T.ptLabel
+                           : isTerminal ? T.tmLabel
+                           : T.stLabel;
 
             return (
               <a key={s.id} href={href(s.id)}>
-                {/* tick conector da linha ao pivot */}
+
+                {/* connector tick: dot top → label level */}
                 <line
-                  x1={x} y1={LINE_Y - r}
-                  x2={x} y2={pivY}
-                  stroke={strokeC}
-                  strokeWidth="1"
-                  strokeOpacity="0.4"
+                  x1={x} y1={LINE_Y - r - 1}
+                  x2={x} y2={levelY + 2}
+                  stroke={T.tick}
+                  strokeWidth="0.75"
                 />
 
-                {/* marcador ───────────────────────────────────────────── */}
+                {/* horizontal guide at label level */}
+                <line
+                  x1={x - 4} y1={levelY}
+                  x2={x + 4} y2={levelY}
+                  stroke={strokeC}
+                  strokeWidth="1"
+                  strokeOpacity="0.6"
+                />
+
+                {/* station dot */}
                 {isPatio ? (
-                  // Pátio: duplo anel vazio
                   <>
-                    <circle cx={x} cy={LINE_Y} r={r}     fill={BG}  stroke={ORANGE2} strokeWidth="2.5" />
-                    <circle cx={x} cy={LINE_Y} r={r - 5} fill={BG}  stroke={ORANGE2} strokeWidth="1.5" />
-                    <text
-                      x={x} y={LINE_Y + 4.5}
-                      textAnchor="middle" fontSize="6.5" fontWeight="700"
-                      fill={ORANGE2} fontFamily={SANS}
-                    >M</text>
+                    <circle cx={x} cy={LINE_Y} r={r}     fill={T.bg}  stroke={strokeC} strokeWidth="2.5" />
+                    <circle cx={x} cy={LINE_Y} r={r - 5} fill={strokeC} />
                   </>
                 ) : (
-                  // Estação: círculo branco com borda laranja — estilo metro oficial
-                  <circle
-                    cx={x} cy={LINE_Y} r={r}
-                    fill={WHITE}
-                    stroke={strokeC}
-                    strokeWidth={strokeW}
-                  />
+                  <circle cx={x} cy={LINE_Y} r={r} fill={fillC} stroke={strokeC} strokeWidth={strokeW} />
                 )}
 
-                {/* rótulo inclinado −45° */}
+                {/* station label — horizontal, centered on dot */}
                 <text
-                  x={x} y={pivY}
-                  transform={`rotate(-${DEG} ${x} ${pivY})`}
-                  textAnchor="start"
+                  x={x}
+                  y={levelY - 4}
+                  textAnchor="middle"
                   dominantBaseline="auto"
                   fontSize={fSize}
-                  fontWeight={fW}
+                  fontWeight={fWeight}
                   fill={lColor}
-                  fontFamily={SANS}
+                  fontFamily={T.sans}
                 >
                   {s.name}
                 </text>
+
               </a>
             );
           })}
+
+          {/* ── Terminal end caps ─────────────────────────────────────── */}
+          {[stItems[0], stItems[N_ST - 1]].filter(Boolean).map(s => {
+            const x = X(s.id);
+            return (
+              <circle key={`cap-${s.id}`}
+                cx={x} cy={LINE_Y} r={3}
+                fill={T.line}
+              />
+            );
+          })}
+
         </svg>
       </div>
 
-      {/* Rodapé */}
-      <div style={ftr}>
+      {/* ── Footer ──────────────────────────────────────────────────────── */}
+      <div style={footerStyle}>
         <span>Brasilândia</span>
         <span>Linha 6 · Laranja · {estacoes.length} estações</span>
         <span>São Joaquim</span>
@@ -296,15 +336,17 @@ export function Linha6Map({ stops, locale = 'pt' }: { stops: Stop[]; locale?: st
   );
 }
 
-function Chip({ color, label }: { color: string; label: string }) {
+// ── Legend chip ───────────────────────────────────────────────────────────────
+function Legend({ color, label, mono }: { color: string; label: string; mono: string }) {
   return (
     <span style={{
-      display: 'flex', alignItems: 'center', gap: '5px',
-      fontFamily: MONO, fontSize: '0.575rem',
-      textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b',
+      display: 'flex', alignItems: 'center', gap: '6px',
+      fontFamily: mono, fontSize: '0.52rem',
+      textTransform: 'uppercase', letterSpacing: '0.16em',
+      color: '#475569',
     }}>
       <span style={{
-        display: 'inline-block', width: 7, height: 7,
+        display: 'inline-block', width: 6, height: 6,
         borderRadius: '50%', background: color,
       }} />
       {label}
