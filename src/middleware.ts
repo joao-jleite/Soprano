@@ -21,34 +21,14 @@ export async function middleware(request: NextRequest) {
   const localeMatch = pathname.match(/^\/(pt|en|es)(?=\/|$)/);
   const locale = localeMatch ? localeMatch[1] : 'pt';
 
-  // Root → locale default (com ou sem auth)
+  // Root → /pt direto (apresentação: sem auth)
   if (pathname === '/') {
     const url = request.nextUrl.clone();
-    // Supabase redireciona recovery/invite para a raiz com ?code= — repassar ao callback
     if (url.searchParams.get('code')) {
       url.pathname = '/api/auth/callback';
       return redirectWithCookies(url, supaResponse);
     }
-    url.pathname = user ? '/pt' : '/pt/login';
-    return redirectWithCookies(url, supaResponse);
-  }
-
-  const pathWithoutLocale = pathname.replace(/^\/(pt|en|es)(?=\/|$)/, '') || '/';
-  const isPublic = PUBLIC_ROUTES.some((p) => pathWithoutLocale.startsWith(p));
-
-  // Não autenticado tentando acessar área privada
-  if (!isPublic && !user) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/pt/login';
-    url.searchParams.set('next', pathname);
-    return redirectWithCookies(url, supaResponse);
-  }
-
-  // Autenticado caindo em /login (mas /verify é acessível sempre)
-  if (isPublic && user && pathWithoutLocale.startsWith('/login')) {
-    const url = request.nextUrl.clone();
     url.pathname = '/pt';
-    url.searchParams.delete('next');
     return redirectWithCookies(url, supaResponse);
   }
 
