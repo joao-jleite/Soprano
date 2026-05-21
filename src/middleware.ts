@@ -24,6 +24,11 @@ export async function middleware(request: NextRequest) {
   // Root → locale default (com ou sem auth)
   if (pathname === '/') {
     const url = request.nextUrl.clone();
+    // Supabase redireciona recovery/invite para a raiz com ?code= — repassar ao callback
+    if (url.searchParams.get('code')) {
+      url.pathname = '/api/auth/callback';
+      return redirectWithCookies(url, supaResponse);
+    }
     url.pathname = user ? '/pt' : '/pt/login';
     return redirectWithCookies(url, supaResponse);
   }
