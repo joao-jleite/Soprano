@@ -30,6 +30,14 @@ export async function loginAction(
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
+    console.error('[loginAction] Supabase error:', error.status, error.message);
+    const msg = error.message?.toLowerCase() ?? '';
+    if (msg.includes('rate') || error.status === 429) {
+      return { ok: false, error: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' };
+    }
+    if (msg.includes('email not confirmed')) {
+      return { ok: false, error: 'Email não confirmado. Verifique sua caixa de entrada.' };
+    }
     return { ok: false, error: 'Email ou senha inválidos' };
   }
 
