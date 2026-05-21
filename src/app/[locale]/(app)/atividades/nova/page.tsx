@@ -18,9 +18,9 @@ export default async function NewActivityPage({
   const supabase = await createClient();
 
   const [{ data: locations }, { data: types }, { data: clients }] = await Promise.all([
-    supabase.from('locations').select('id, name, kind').eq('line', 'linha-6').order('sort_order'),
-    supabase.from('activity_types').select('id, slug, label_pt, label_en, label_es').order('label_pt'),
-    supabase.from('profiles').select('id, full_name').eq('role', 'cliente').order('full_name'),
+    supabase.from('locations').select('id, name, kind').eq('line', 'linha-6').is('deleted_at', null).order('sort_order'),
+    supabase.from('activity_types').select('id, slug, label_pt, label_en, label_es').is('deleted_at', null).order('label_pt'),
+    supabase.from('profiles').select('id, full_name').eq('role', 'cliente').is('deleted_at', null).order('full_name'),
   ]);
 
   // Duplicar a partir de outra atividade
