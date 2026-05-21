@@ -80,7 +80,8 @@ export async function inviteUser(input: z.infer<typeof inviteSchema>) {
     (vercelUrl ? `https://${vercelUrl}` : null) ??
     h.get('origin') ??
     `https://${h.get('host') ?? 'localhost:3000'}`;
-  const redirectTo = `${origin}/pt/login`;
+  // Callback que troca o code PKCE por sessão e redireciona para /nova-senha
+  const redirectTo = `${origin}/api/auth/callback?next=/pt/nova-senha`;
 
   // Envia o convite — Supabase manda email com link mágico
   const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(
