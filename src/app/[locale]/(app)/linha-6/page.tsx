@@ -53,8 +53,6 @@ export default async function Linha6Page({
         </div>
       )}
 
-      {/* DEBUG: inline map test */}
-      <div style={{ background: '#ea580c', height: 8, borderRadius: 4 }} />
       <Linha6Map stops={(locations ?? []) as any} locale={locale} />
 
       <section className="grid gap-4 sm:grid-cols-3">
