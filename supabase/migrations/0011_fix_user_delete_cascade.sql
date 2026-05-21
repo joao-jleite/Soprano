@@ -57,17 +57,16 @@ alter table signatures
 
 -- ── audit_log ─────────────────────────────────────────────────────────────────
 -- O log histórico deve ser preservado mesmo após a saída do usuário.
+-- Nota: a coluna é actor_id (referencia auth.users diretamente, não profiles).
+-- Já tem ON DELETE SET NULL definido em 0004 — só garantimos aqui.
 
 alter table audit_log
-  drop constraint if exists audit_log_author_id_fkey;
+  drop constraint if exists audit_log_actor_id_fkey;
 
 alter table audit_log
-  alter column author_id drop not null;
-
-alter table audit_log
-  add constraint audit_log_author_id_fkey
-  foreign key (author_id)
-  references profiles(id)
+  add constraint audit_log_actor_id_fkey
+  foreign key (actor_id)
+  references auth.users(id)
   on delete set null;
 
 -- ── Confirma ─────────────────────────────────────────────────────────────────
@@ -76,5 +75,5 @@ alter table audit_log
 --   2. profiles cascade → activities.supervisor_id  SET NULL
 --   3. profiles cascade → activities.client_id      SET NULL
 --   4. profiles cascade → signatures.signer_id      SET NULL
---   5. profiles cascade → audit_log.author_id       SET NULL
+--   5. audit_log.actor_id                           SET NULL (FK → auth.users)
 -- Toda a história de atividades e assinaturas é preservada.
