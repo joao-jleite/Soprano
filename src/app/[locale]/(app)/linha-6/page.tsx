@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Link } from '@/i18n/navigation';
 import { Linha6Map } from '@/components/map/linha-6-map';
 
+export const dynamic = 'force-dynamic';
+
 const KIND_META: Record<string, { label: string; icon: React.ComponentType<{ className?: string }>; tone: string }> = {
   estacao: { label: 'Estação', icon: Building2, tone: 'text-primary' },
   vse: { label: 'VSE', icon: Wind, tone: 'text-accent' },

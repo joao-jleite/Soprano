@@ -1,24 +1,70 @@
-import { cn } from '@/lib/utils';
+/**
+ * Linha6Map — Diagrama esquemático da Linha 6 Laranja (SVG server component)
+ *
+ * Usa inline-styles intencionalmente para garantir renderização independente
+ * de purge ou resolução de variáveis CSS no servidor.
+ */
 
 type Stop = { id: string; name: string; kind: string; sort_order: number };
 
-// ── dimensões do SVG ──────────────────────────────────────────────────────────
-const W        = 1800;   // largura total
-const H        = 440;    // altura total
-const LINE_Y   = 178;    // y da linha laranja
-const MX       = 72;     // margem esquerda / direita
-const UW       = W - MX * 2; // largura útil
+// ── Dimensões do canvas ───────────────────────────────────────────────────────
+const W      = 1800;    // largura total do SVG
+const H      = 460;     // altura total
+const LINE_Y = 200;     // y da linha laranja (espaço generoso acima para rótulos)
+const MX     = 80;      // margem esquerda / direita
+const UW     = W - MX * 2; // largura útil
 
-// ── rotação dos rótulos ───────────────────────────────────────────────────────
-// acima da linha → gira anti-horário (estações)
-const rotUp   = (x: number, y: number) => `rotate(-65 ${x} ${y})`;
-// abaixo da linha → gira horário (VSE / SE)
-const rotDown = (x: number, y: number) => `rotate(65 ${x} ${y})`;
+// ── Rotações ─────────────────────────────────────────────────────────────────
+const rotUp   = (x: number, y: number) => `rotate(-60 ${x} ${y})`;
+const rotDown = (x: number, y: number) => `rotate(60 ${x} ${y})`;
 
-// ── posição X a partir do sort_order ─────────────────────────────────────────
-function makeGetX(min: number, range: number) {
-  return (order: number) => MX + ((order - min) / range) * UW;
+// ── Posição X ────────────────────────────────────────────────────────────────
+function posX(order: number, min: number, range: number): number {
+  return MX + ((order - min) / range) * UW;
 }
+
+// ── Estilos fixos (inline para garantir visibilidade independente de Tailwind) ─
+const cardStyle: React.CSSProperties = {
+  background: '#0c1018',
+  borderRadius: '0.75rem',
+  border: '1px solid #1e2535',
+  overflow: 'hidden',
+  width: '100%',
+};
+
+const headerStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: '0.875rem 1.25rem 0.5rem',
+};
+
+const labelStyle: React.CSSProperties = {
+  fontFamily: "'Geist Mono', 'GeistMono', ui-monospace, monospace",
+  fontSize: '0.6rem',
+  textTransform: 'uppercase',
+  letterSpacing: '0.18em',
+  color: '#475569',
+};
+
+const legendWrapStyle: React.CSSProperties = {
+  display: 'flex',
+  gap: '1.25rem',
+};
+
+const footerStyle: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  padding: '0.625rem 1.5rem',
+  borderTop: '1px solid #1a2030',
+  fontFamily: "'Geist Mono', 'GeistMono', ui-monospace, monospace",
+  fontSize: '0.6rem',
+  textTransform: 'uppercase',
+  letterSpacing: '0.18em',
+  color: '#2d3f56',
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export function Linha6Map({
   stops,
@@ -27,44 +73,52 @@ export function Linha6Map({
   stops: Stop[];
   locale?: string;
 }) {
-  if (stops.length === 0) {
+  // Estado vazio — banco sem seed aplicado
+  if (!stops || stops.length === 0) {
     return (
-      <div className="w-full rounded-xl border border-dashed border-border bg-card/30 px-6 py-10 text-center">
-        <p className="text-sm text-muted-foreground">Nenhum local cadastrado para esta linha.</p>
-        <p className="text-xs text-muted-foreground/50 mt-1 font-mono">
+      <div style={{ ...cardStyle, padding: '2.5rem', textAlign: 'center' }}>
+        <p style={{ color: '#475569', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+          Nenhum local cadastrado para esta linha.
+        </p>
+        <p style={{ color: '#2d3f56', fontSize: '0.7rem', fontFamily: 'monospace' }}>
           Verifique se o seed da Linha 6 foi aplicado no banco de dados.
         </p>
       </div>
     );
   }
 
-  const sorted = [...stops].sort((a, b) => a.sort_order - b.sort_order);
-  const minOrder = sorted[0].sort_order;
-  const maxOrder = sorted[sorted.length - 1].sort_order;
-  const getX = makeGetX(minOrder, Math.max(maxOrder - minOrder, 1));
+  // ── Prepara dados ─────────────────────────────────────────────────────────
+  const sorted   = [...stops].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+  const minOrder = sorted[0]?.sort_order ?? 0;
+  const maxOrder = sorted[sorted.length - 1]?.sort_order ?? 1;
+  const range    = Math.max(maxOrder - minOrder, 1);
 
-  const stations = sorted.filter(s => ['estacao', 'patio'].includes(s.kind));
+  const x = (order: number) => posX(order, minOrder, range);
+
+  const stations = sorted.filter(s => s.kind === 'estacao' || s.kind === 'patio');
   const vses     = sorted.filter(s => s.kind === 'vse');
   const ses      = sorted.filter(s => s.kind === 'se');
-
-  const estacoes  = stations.filter(s => s.kind === 'estacao');
-  const firstEst  = estacoes[0];
-  const lastEst   = estacoes[estacoes.length - 1];
+  const estacoes = stations.filter(s => s.kind === 'estacao');
+  const firstEst = estacoes[0];
+  const lastEst  = estacoes[estacoes.length - 1];
 
   const href = (id: string) => `/${locale}/atividades?location=${id}`;
 
   return (
-    <div className="w-full rounded-xl border border-border bg-card/50">
+    <div style={cardStyle}>
 
-      {/* ── Legenda ─────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-5 px-5 pt-4 pb-2 justify-end">
-        <LegendDot color="#fb923c" label="Estação" />
-        <LegendDot color="#3b82f6" label="VSE" />
-        <LegendDot color="#fbbf24" label="SE" />
+      {/* ── Cabeçalho com legenda ───────────────────────────────────────── */}
+      <div style={headerStyle}>
+        <span style={labelStyle}>Diagrama Esquemático · {stops.length} locais</span>
+        <div style={legendWrapStyle}>
+          <LegendDot color="#fb923c" label="Estação" />
+          <LegendDot color="#3b82f6" label="VSE"     />
+          <LegendDot color="#fbbf24" label="SE"      />
+        </div>
       </div>
 
-      {/* ── Mapa SVG ────────────────────────────────────────────────── */}
-      <div className="overflow-x-auto pb-4 px-1">
+      {/* ── Mapa SVG ────────────────────────────────────────────────────── */}
+      <div style={{ overflowX: 'auto', padding: '0 4px 16px' }}>
         <svg
           width={W}
           height={H}
@@ -72,48 +126,48 @@ export function Linha6Map({
           style={{ display: 'block', minWidth: W }}
           aria-label="Diagrama esquemático da Linha 6 — Laranja"
         >
-          {/* Estilos SVG — usa variáveis CSS do tema */}
+          {/* Fundo explícito — garante visibilidade em qualquer contexto */}
+          <rect width={W} height={H} fill="#0c1018" />
+
+          {/* Gradiente da linha */}
           <defs>
             <linearGradient id="linha6grad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%"   stopColor="#c2410c" />
-              <stop offset="35%"  stopColor="#ea580c" />
-              <stop offset="65%"  stopColor="#fb923c" />
-              <stop offset="100%" stopColor="#c2410c" />
+              <stop offset="0%"    stopColor="#c2410c" />
+              <stop offset="30%"   stopColor="#ea580c" />
+              <stop offset="70%"   stopColor="#fb923c" />
+              <stop offset="100%"  stopColor="#c2410c" />
             </linearGradient>
           </defs>
 
-          {/* ── Linha laranja ─────────────────────────────────────── */}
+          {/* ── Linha laranja ─────────────────────────────────────────── */}
           <line
-            x1={MX} y1={LINE_Y}
+            x1={MX}     y1={LINE_Y}
             x2={W - MX} y2={LINE_Y}
             stroke="url(#linha6grad)"
-            strokeWidth="6"
+            strokeWidth="8"
             strokeLinecap="round"
-            filter="drop-shadow(0 0 8px rgba(249,115,22,0.45))"
+            filter="drop-shadow(0 0 10px rgba(249,115,22,0.5))"
           />
 
-          {/* ── VSEs (acima da linha, rótulo abaixo) ──────────────── */}
+          {/* ── VSEs — ponto azul + conector + rótulo inclinado abaixo ── */}
           {vses.map(vse => {
-            const x = getX(vse.sort_order);
-            const anchorY = LINE_Y + 16;
+            const cx = x(vse.sort_order);
+            const ty = LINE_Y + 20;
             return (
               <a key={vse.id} href={href(vse.id)}>
-                {/* Dot na linha */}
-                <circle cx={x} cy={LINE_Y} r={4} fill="#3b82f6" />
-                {/* Conector tracejado */}
+                <circle cx={cx} cy={LINE_Y} r={4.5} fill="#3b82f6" />
                 <line
-                  x1={x} y1={LINE_Y + 5}
-                  x2={x} y2={anchorY - 2}
+                  x1={cx} y1={LINE_Y + 6}
+                  x2={cx} y2={ty - 2}
                   stroke="#3b82f6" strokeWidth="1.5"
-                  strokeDasharray="3 2" strokeOpacity="0.55"
+                  strokeDasharray="3 2" strokeOpacity="0.5"
                 />
-                {/* Rótulo inclinado */}
                 <text
-                  x={x + 2} y={anchorY}
-                  transform={rotDown(x + 2, anchorY)}
+                  x={cx + 2} y={ty}
+                  transform={rotDown(cx + 2, ty)}
                   fontSize="9.5"
                   fill="#64748b"
-                  fontFamily="'GeistMono', 'Geist Mono', ui-monospace, monospace"
+                  fontFamily="'Geist Mono', 'GeistMono', ui-monospace, monospace"
                 >
                   {vse.name}
                 </text>
@@ -121,25 +175,25 @@ export function Linha6Map({
             );
           })}
 
-          {/* ── SEs (abaixo da linha, rótulo abaixo) ──────────────── */}
+          {/* ── SEs — ponto âmbar + conector + rótulo inclinado abaixo ── */}
           {ses.map(se => {
-            const x = getX(se.sort_order);
-            const anchorY = LINE_Y + 16;
+            const cx = x(se.sort_order);
+            const ty = LINE_Y + 20;
             return (
               <a key={se.id} href={href(se.id)}>
-                <circle cx={x} cy={LINE_Y} r={4} fill="#fbbf24" />
+                <circle cx={cx} cy={LINE_Y} r={4.5} fill="#fbbf24" />
                 <line
-                  x1={x} y1={LINE_Y + 5}
-                  x2={x} y2={anchorY - 2}
+                  x1={cx} y1={LINE_Y + 6}
+                  x2={cx} y2={ty - 2}
                   stroke="#fbbf24" strokeWidth="1.5"
-                  strokeDasharray="3 2" strokeOpacity="0.55"
+                  strokeDasharray="3 2" strokeOpacity="0.5"
                 />
                 <text
-                  x={x + 2} y={anchorY}
-                  transform={rotDown(x + 2, anchorY)}
+                  x={cx + 2} y={ty}
+                  transform={rotDown(cx + 2, ty)}
                   fontSize="9.5"
-                  fill="#92400e"
-                  fontFamily="'GeistMono', 'Geist Mono', ui-monospace, monospace"
+                  fill="#78350f"
+                  fontFamily="'Geist Mono', 'GeistMono', ui-monospace, monospace"
                 >
                   {se.name}
                 </text>
@@ -147,24 +201,22 @@ export function Linha6Map({
             );
           })}
 
-          {/* ── Estações e Pátio ──────────────────────────────────── */}
+          {/* ── Estações e Pátio — círculo + rótulo inclinado acima ───── */}
           {stations.map(s => {
-            const x      = getX(s.sort_order);
+            const cx         = x(s.sort_order);
             const isPatio    = s.kind === 'patio';
             const isTerminal = s.id === firstEst?.id || s.id === lastEst?.id;
-            const r          = isPatio ? 13 : isTerminal ? 11 : 8;
-            const anchorY    = LINE_Y - r - 6;
+            const r          = isPatio ? 14 : isTerminal ? 12 : 8;
+            const ty         = LINE_Y - r - 10;
 
             return (
               <a key={s.id} href={href(s.id)}>
-                {/* ── Ícone ─────────────────────────────── */}
                 {isPatio ? (
-                  /* Pátio: círculo duplo com "M" */
                   <>
-                    <circle cx={x} cy={LINE_Y} r={r}   fill="none" stroke="#ea580c" strokeWidth="2.5" />
-                    <circle cx={x} cy={LINE_Y} r={r - 5} fill="none" stroke="#ea580c" strokeWidth="1.5" />
+                    <circle cx={cx} cy={LINE_Y} r={r}     fill="none" stroke="#ea580c" strokeWidth="2.5" />
+                    <circle cx={cx} cy={LINE_Y} r={r - 5} fill="none" stroke="#ea580c" strokeWidth="1.5" />
                     <text
-                      x={x} y={LINE_Y + 3.5}
+                      x={cx} y={LINE_Y + 3.5}
                       textAnchor="middle"
                       fontSize="8" fontWeight="700"
                       fill="#ea580c"
@@ -173,16 +225,16 @@ export function Linha6Map({
                   </>
                 ) : (
                   <circle
-                    cx={x} cy={LINE_Y} r={r}
+                    cx={cx} cy={LINE_Y} r={r}
                     fill={isTerminal ? '#ea580c' : '#fb923c'}
-                    filter={isTerminal ? 'drop-shadow(0 0 6px rgba(234,88,12,0.5))' : undefined}
+                    filter={isTerminal ? 'drop-shadow(0 0 6px rgba(234,88,12,0.6))' : undefined}
                   />
                 )}
 
-                {/* ── Rótulo inclinado acima ─────────────── */}
+                {/* Rótulo inclinado -60° acima da linha */}
                 <text
-                  x={x} y={anchorY}
-                  transform={rotUp(x, anchorY)}
+                  x={cx} y={ty}
+                  transform={rotUp(cx, ty)}
                   fontSize={isPatio || isTerminal ? '11.5' : '10.5'}
                   fontWeight={isPatio || isTerminal ? '600' : '400'}
                   fill={isPatio ? '#fb923c' : '#e2e8f0'}
@@ -196,8 +248,8 @@ export function Linha6Map({
         </svg>
       </div>
 
-      {/* ── Rodapé ──────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-6 py-3 border-t border-border/50 text-[10px] font-mono uppercase tracking-widest text-muted-foreground/50">
+      {/* ── Rodapé ──────────────────────────────────────────────────────── */}
+      <div style={footerStyle}>
         <span>Brasilândia</span>
         <span>Linha 6 · Laranja · {estacoes.length} estações</span>
         <span>São Joaquim</span>
@@ -208,11 +260,13 @@ export function Linha6Map({
 
 function LegendDot({ color, label }: { color: string; label: string }) {
   return (
-    <span className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-      <span
-        className="inline-block h-2.5 w-2.5 rounded-full"
-        style={{ background: color }}
-      />
+    <span style={{
+      display: 'flex', alignItems: 'center', gap: '6px',
+      fontFamily: "'Geist Mono', 'GeistMono', ui-monospace, monospace",
+      fontSize: '0.6rem', textTransform: 'uppercase',
+      letterSpacing: '0.1em', color: '#64748b',
+    }}>
+      <span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: '50%', background: color }} />
       {label}
     </span>
   );
