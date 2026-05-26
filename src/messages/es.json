@@ -1,0 +1,334 @@
+{
+  "app": {
+    "name": "Soprano",
+    "tagline": "El registro vivo de la obra",
+    "description": "Registro de actividades de Zitrón Brasil — Línea 6 del Metro de São Paulo"
+  },
+  "nav": {
+    "dashboard": "Panel",
+    "linha6": "Línea 6",
+    "activities": "Actividades",
+    "locations": "Ubicaciones",
+    "team": "Equipo",
+    "reports": "Informes",
+    "complaints": "Reclamos",
+    "settings": "Ajustes",
+    "logout": "Salir"
+  },
+  "auth": {
+    "signIn": "Entrar",
+    "signInTitle": "Entra en Soprano",
+    "signInSubtitle": "Continúa donde lo dejaste",
+    "email": "Correo",
+    "password": "Contraseña",
+    "forgotPassword": "Olvidé mi contraseña",
+    "noAccount": "Contacta al administrador para solicitar acceso",
+    "invalidCredentials": "Correo o contraseña inválidos",
+    "signingIn": "Entrando..."
+  },
+  "roles": {
+    "admin": "Administrador",
+    "supervisor": "Supervisor",
+    "cliente": "Cliente"
+  },
+  "dashboard": {
+    "welcome": "Hola, {name}",
+    "today": "Hoy",
+    "pendingSignatures": "Firmas pendientes",
+    "recentActivities": "Actividades recientes",
+    "quickStats": "Resumen",
+    "activitiesThisMonth": "Actividades del mes",
+    "signedThisMonth": "Firmadas este mes",
+    "teamOnSite": "Equipo en obra"
+  },
+  "linha6": {
+    "title": "Línea 6 — Naranja",
+    "subtitle": "Brasilândia ↔ São Joaquim — 15 estaciones + patio Morro Grande",
+    "stationsLabel": "Estaciones",
+    "shaftsLabel": "Pozos de ventilación (VSE)",
+    "emergencyLabel": "Salidas de emergencia (SE)",
+    "totalActivities": "Total de actividades",
+    "byLocation": "Por ubicación"
+  },
+  "activities": {
+    "title": "Actividades",
+    "newActivity": "Nueva actividad",
+    "empty": "Aún no hay actividades.",
+    "emptyCta": "Registra la primera",
+    "filterByType": "Tipo",
+    "filterByLocation": "Ubicación",
+    "filterByDate": "Fecha",
+    "filterByStatus": "Estado",
+    "filterClear": "Limpiar filtros",
+    "duplicate": "Duplicar",
+    "duplicating": "Duplicando actividad",
+    "register": "Registrar actividad",
+    "duplicateHelp": "Prellenado desde la actividad original. Ajusta fechas y fotos antes de enviar.",
+    "newHelp": "Completa los datos de la obra ejecutada. Puedes guardar como borrador y enviar a firma después.",
+    "editDraft": "Editar borrador",
+    "editActivity": "Editar actividad",
+    "rejectReason": "Motivo",
+    "seeDetails": "ver detalles",
+    "copyVerifyLink": "Enlace de verificación",
+    "copiedLink": "Enlace de verificación copiado",
+    "copiedLinkError": "No se pudo copiar",
+    "copied": "Copiado",
+    "waitingClient": "Esperando acción del cliente asignado.",
+    "draftNotice": "Esta actividad sigue siendo un borrador. Envíala a firma cuando esté lista.",
+    "sections": {
+      "whereWhat": "Dónde y qué",
+      "when": "Cuándo",
+      "clientAndNotes": "Cliente y observaciones"
+    },
+    "fields": {
+      "location": "Ubicación",
+      "type": "Tipo de actividad",
+      "description": "Descripción",
+      "participants": "Equipo",
+      "photos": "Fotos",
+      "startedAt": "Inicio",
+      "endedAt": "Fin",
+      "notes": "Observaciones",
+      "supervisor": "Supervisor",
+      "client": "Cliente",
+      "clientForSigning": "Cliente (quien firmará)"
+    },
+    "placeholders": {
+      "description": "Describe lo ejecutado...",
+      "selectLocation": "Selecciona la ubicación",
+      "selectType": "Selecciona el tipo",
+      "addNew": "+ Añadir nuevo",
+      "assignClientLater": "Opcional — asignar después"
+    },
+    "status": {
+      "rascunho": "Borrador",
+      "enviada": "Pendiente de firma",
+      "assinada": "Firmada",
+      "rejeitada": "Rechazada"
+    },
+    "actions": {
+      "save": "Guardar borrador",
+      "submit": "Enviar para firma",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "sign": "Firmar",
+      "download": "Descargar PDF"
+    },
+    "toasts": {
+      "locationCreated": "Ubicación creada: {name}",
+      "typeCreated": "Tipo creado: {name}",
+      "submittedForSignature": "Actividad enviada a firma",
+      "draftSaved": "Borrador guardado"
+    },
+    "errors": {
+      "createLocation": "Error al crear la ubicación",
+      "createType": "Error al crear el tipo",
+      "saveActivity": "Error al guardar la actividad"
+    }
+  },
+  "expandableSelect": {
+    "addNewTitle": "Añadir nuevo",
+    "addNewLabel": "Nombre",
+    "addNewPlaceholder": "Escribe el nombre...",
+    "addNewConfirm": "Añadir",
+    "addNewCancel": "Cancelar",
+    "search": "Buscar..."
+  },
+  "locations": {
+    "title": "Ubicaciones",
+    "description": "Estaciones, pozos de ventilación, salidas de emergencia y demás puntos de la Línea 6",
+    "kinds": {
+      "estacao": "Estación",
+      "vse": "Pozo de ventilación",
+      "se": "Salida de emergencia",
+      "escadaria": "Escalera",
+      "patio": "Patio",
+      "outro": "Otro"
+    },
+    "kindsLong": {
+      "estacao": "Estación",
+      "vse": "VSE — Pozo de ventilación",
+      "se": "SE — Salida de emergencia",
+      "escadaria": "Escalera",
+      "patio": "Patio",
+      "outro": "Otro"
+    },
+    "delete": {
+      "title": "¿Eliminar \"{name}\"?",
+      "description": "La ubicación se moverá a la papelera. Las actividades existentes permanecen intactas, pero la ubicación ya no aparecerá al crear nuevas."
+    }
+  },
+  "activityTypes": {
+    "title": "Tipos de actividad",
+    "default": {
+      "eletrica": "Eléctrica",
+      "mecanica": "Mecánica",
+      "pintura": "Pintura",
+      "estrutura": "Estructura",
+      "dutos": "Conductos",
+      "instalacao_ventilador": "Instalación de ventilador",
+      "comissionamento": "Puesta en marcha",
+      "manutencao": "Mantenimiento",
+      "inspecao": "Inspección"
+    }
+  },
+  "signature": {
+    "title": "Firma del cliente",
+    "subtitle": "Al firmar, confirmas que el trabajo descrito fue ejecutado según lo presentado",
+    "draw": "Firma abajo",
+    "clear": "Limpiar",
+    "confirm": "Confirmar firma",
+    "reject": "Rechazar",
+    "rejectReason": "Motivo del rechazo",
+    "signedBy": "Firmado por",
+    "signedAt": "El",
+    "verification": "Código de verificación"
+  },
+  "photo": {
+    "upload": "Subir foto",
+    "uploading": "Subiendo...",
+    "remove": "Quitar",
+    "capturedAt": "Tomada el",
+    "view": "Ver foto",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "close": "Cerrar"
+  },
+  "participants": {
+    "name": "Nombre",
+    "roleOptional": "Función (opcional)",
+    "removeLabel": "Quitar"
+  },
+  "team": {
+    "title": "Equipo",
+    "description": "Supervisores, administradores y clientes registrados en Soprano.",
+    "adminHint": "Puedes editar nombre, empresa y rol haciendo clic en el lápiz.",
+    "audit": "Auditoría",
+    "trash": "Papelera",
+    "invite": "Invitar",
+    "inviteTitle": "Invitar usuario",
+    "inviteDescription": "El invitado recibe un correo con enlace para crear su contraseña.",
+    "inviteEmail": "Correo",
+    "inviteFullName": "Nombre completo",
+    "inviteCompany": "Empresa (opcional)",
+    "inviteRole": "Rol",
+    "inviteSend": "Enviar invitación",
+    "inviteSent": "Invitación enviada a {email}",
+    "inviteError": "Error al enviar la invitación",
+    "roleSupervisor": "Supervisor (crea actividades)",
+    "roleClient": "Cliente (solo firma)",
+    "roleAdmin": "Admin (todo)",
+    "profileUpdated": "Perfil actualizado",
+    "profileUpdateError": "Error al actualizar",
+    "profileNamePlaceholder": "Nombre completo",
+    "profileCompanyPlaceholder": "Empresa",
+    "back": "Equipo"
+  },
+  "audit": {
+    "title": "Auditoría",
+    "description": "Historial de cambios sensibles (últimos 50).",
+    "descriptionFull": "Registro completo de cambios del sistema. {count} evento(s) registrado(s).",
+    "filters": {
+      "table": "Tabla",
+      "action": "Acción",
+      "actor": "Actor (correo)",
+      "actorPlaceholder": "buscar por correo...",
+      "all": "Todas",
+      "clear": "Limpiar"
+    },
+    "actions": {
+      "insert": "Creado",
+      "update": "Actualizado",
+      "delete": "Eliminado",
+      "soft_delete": "Removido",
+      "restore": "Restaurado"
+    },
+    "empty": "Sin registros.",
+    "emptyFiltered": "Ningún evento con esos filtros.",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "showDiff": "Ver diff",
+    "by": "por",
+    "system": "sistema",
+    "pageOf": "Página {current} de {total}"
+  },
+  "trash": {
+    "title": "Papelera",
+    "description": "Ítems eliminados en los últimos 30 días. Restaura o destruye permanentemente.",
+    "descriptionFull": "Registros eliminados. Puedes restaurar o eliminar definitivamente.",
+    "tabs": {
+      "activities": "Actividades",
+      "locations": "Ubicaciones",
+      "types": "Tipos"
+    },
+    "restore": "Restaurar",
+    "destroy": "Destruir",
+    "empty": "Papelera vacía.",
+    "emptyShort": "Nada por aquí.",
+    "restored": "Restaurado",
+    "destroyed": "Destruido permanentemente",
+    "confirmDestroy": "¿Destruir permanentemente?",
+    "confirmDestroyHelp": "Esta acción no se puede deshacer.",
+    "hardDeleteTitle": "¿Eliminar definitivamente?",
+    "hardDeleteDescription": "Esta acción NO se puede deshacer. El registro se eliminará permanentemente de la base de datos.",
+    "hardDeleteLabel": "Destruir",
+    "restoreError": "Error",
+    "deletedAt": "eliminada el",
+    "deletedAtMasc": "eliminado el"
+  },
+  "reports": {
+    "title": "Informes",
+    "subtitle": "Últimos 90 días · datos en tiempo real",
+    "total90": "Total (90d)",
+    "signed": "Firmadas",
+    "pending": "Pendientes",
+    "rejected": "Rechazadas",
+    "monthlyChart": "Actividades por mes (12m)",
+    "topLocations": "Top ubicaciones (90d)",
+    "noData": "Sin datos.",
+    "avgTimeToSign": "Tiempo medio hasta la firma",
+    "avgTimeToSignHelp": "Desde el envío hasta la confirmación del cliente",
+    "avgTimeToSignBase": "Basado en {count} actividad(es) firmada(s).",
+    "exports": "Exportaciones",
+    "exportsHelp": "Descarga la planilla completa del período",
+    "csvDays": "CSV ({days} días)",
+    "csv12m": "CSV (12 meses)",
+    "monthlyReport": "Informe mensual consolidado",
+    "monthlyReportHelp": "PDF con KPIs del mes + tabla de todas las actividades + agrupación por ubicación. Ideal para LinhaUni/Acciona.",
+    "downloadPdf": "Descargar PDF"
+  },
+  "settings": {
+    "profile": "Perfil",
+    "profileDescription": "Información visible para tu equipo y clientes.",
+    "name": "Nombre",
+    "email": "Correo",
+    "role": "Rol"
+  },
+  "complaints": {
+    "subtitle": "Canal de reclamos entre equipo y cliente.",
+    "inProgressTitle": "Módulo en definición",
+    "inProgressBody": "La estructura del módulo de reclamos se está definiendo internamente con el equipo. La base de datos ya está preparada para recibir reclamos vinculados a actividades y ubicaciones, una vez definido el flujo.",
+    "nextUpdate": "Próxima actualización"
+  },
+  "confirmDelete": {
+    "title": "Confirmar eliminación",
+    "description": "Esta acción puede deshacerse por un admin desde la papelera.",
+    "triggerLabel": "Eliminar",
+    "success": "Eliminado",
+    "error": "Error al eliminar"
+  },
+  "common": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "confirm": "Confirmar",
+    "back": "Volver",
+    "next": "Siguiente",
+    "loading": "Cargando...",
+    "search": "Buscar",
+    "noResults": "Sin resultados",
+    "error": "Ocurrió un error",
+    "tryAgain": "Reintentar",
+    "home": "Inicio"
+  }
+}

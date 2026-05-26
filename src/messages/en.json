@@ -1,0 +1,336 @@
+{
+  "app": {
+    "name": "Soprano",
+    "tagline": "The living record of the works",
+    "description": "Activity log for Zitrón Brasil — São Paulo Metro Line 6"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "linha6": "Line 6",
+    "activities": "Activities",
+    "locations": "Locations",
+    "team": "Team",
+    "reports": "Reports",
+    "complaints": "Complaints",
+    "settings": "Settings",
+    "logout": "Sign out"
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "signInTitle": "Sign in to Soprano",
+    "signInSubtitle": "Pick up where you left off",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot password",
+    "noAccount": "Contact the administrator to request access",
+    "invalidCredentials": "Invalid email or password",
+    "signingIn": "Signing in..."
+  },
+  "roles": {
+    "admin": "Administrator",
+    "supervisor": "Supervisor",
+    "cliente": "Client"
+  },
+  "dashboard": {
+    "welcome": "Hi, {name}",
+    "today": "Today",
+    "pendingSignatures": "Pending signatures",
+    "recentActivities": "Recent activities",
+    "quickStats": "Overview",
+    "activitiesThisMonth": "Activities this month",
+    "signedThisMonth": "Signed this month",
+    "teamOnSite": "Team on site"
+  },
+  "linha6": {
+    "title": "Line 6 — Orange",
+    "subtitle": "Brasilândia ↔ São Joaquim — 15 stations + Morro Grande yard",
+    "stationsLabel": "Stations",
+    "shaftsLabel": "Ventilation shafts (VSE)",
+    "emergencyLabel": "Emergency exits (SE)",
+    "totalActivities": "Total activities",
+    "byLocation": "By location"
+  },
+  "activities": {
+    "title": "Activities",
+    "newActivity": "New activity",
+    "empty": "No activities yet.",
+    "emptyCta": "Log the first one",
+    "filterByType": "Type",
+    "filterByLocation": "Location",
+    "filterByDate": "Date",
+    "filterByStatus": "Status",
+    "filterClear": "Clear filters",
+    "duplicate": "Duplicate",
+    "duplicating": "Duplicating activity",
+    "register": "Log activity",
+    "duplicateHelp": "Pre-filled from the original activity. Adjust dates and photos before submitting.",
+    "newHelp": "Fill in the work performed. You can save as draft and submit for signature later.",
+    "editDraft": "Edit draft",
+    "editActivity": "Edit activity",
+    "rejectReason": "Reason",
+    "seeDetails": "see details",
+    "copyVerifyLink": "Verification link",
+    "copiedLink": "Verification link copied",
+    "copiedLinkError": "Could not copy",
+    "copied": "Copied",
+    "waitingClient": "Waiting for the assigned client to take action.",
+    "draftNotice": "This activity is still a draft. Submit it for signature when ready.",
+    "sections": {
+      "whereWhat": "Where and what",
+      "when": "When",
+      "clientAndNotes": "Client and notes"
+    },
+    "fields": {
+      "location": "Location",
+      "type": "Activity type",
+      "description": "Description",
+      "participants": "Team",
+      "photos": "Photos",
+      "startedAt": "Started",
+      "endedAt": "Ended",
+      "notes": "Notes",
+      "supervisor": "Supervisor",
+      "client": "Client",
+      "clientForSigning": "Client (who will sign)"
+    },
+    "placeholders": {
+      "description": "Describe what was done...",
+      "selectLocation": "Select location",
+      "selectType": "Select type",
+      "addNew": "+ Add new",
+      "assignClientLater": "Optional — assign later"
+    },
+    "status": {
+      "rascunho": "Draft",
+      "enviada": "Awaiting signature",
+      "assinada": "Signed",
+      "rejeitada": "Rejected"
+    },
+    "actions": {
+      "save": "Save draft",
+      "submit": "Submit for signature",
+      "edit": "Edit",
+      "delete": "Delete",
+      "sign": "Sign",
+      "download": "Download PDF"
+    },
+    "toasts": {
+      "locationCreated": "Location created: {name}",
+      "typeCreated": "Type created: {name}",
+      "submittedForSignature": "Activity submitted for signature",
+      "draftSaved": "Draft saved"
+    },
+    "errors": {
+      "createLocation": "Failed to create location",
+      "createType": "Failed to create type",
+      "saveActivity": "Failed to save activity"
+    }
+  },
+  "expandableSelect": {
+    "addNewTitle": "Add new",
+    "addNewLabel": "Name",
+    "addNewPlaceholder": "Type the name...",
+    "addNewConfirm": "Add",
+    "addNewCancel": "Cancel",
+    "search": "Search..."
+  },
+  "locations": {
+    "title": "Locations",
+    "description": "Stations, ventilation shafts, emergency exits and other points of Line 6",
+    "kinds": {
+      "estacao": "Station",
+      "vse": "Ventilation shaft",
+      "se": "Emergency exit",
+      "escadaria": "Stairway",
+      "patio": "Yard",
+      "outro": "Other"
+    },
+    "kindsLong": {
+      "estacao": "Station",
+      "vse": "VSE — Ventilation shaft",
+      "se": "SE — Emergency exit",
+      "escadaria": "Stairway",
+      "patio": "Yard",
+      "outro": "Other"
+    },
+    "delete": {
+      "title": "Delete \"{name}\"?",
+      "description": "The location will be moved to trash. Existing activities remain intact, but the location will no longer appear when creating new ones."
+    }
+  },
+  "activityTypes": {
+    "title": "Activity types",
+    "default": {
+      "eletrica": "Electrical",
+      "mecanica": "Mechanical",
+      "pintura": "Painting",
+      "estrutura": "Structural",
+      "dutos": "Ducting",
+      "instalacao_ventilador": "Fan installation",
+      "comissionamento": "Commissioning",
+      "manutencao": "Maintenance",
+      "inspecao": "Inspection"
+    }
+  },
+  "signature": {
+    "title": "Client signature",
+    "subtitle": "By signing, you confirm the described work was performed as presented",
+    "draw": "Sign below",
+    "clear": "Clear",
+    "confirm": "Confirm signature",
+    "reject": "Reject",
+    "rejectReason": "Reason for rejection",
+    "signedBy": "Signed by",
+    "signedAt": "At",
+    "verification": "Verification code"
+  },
+  "photo": {
+    "upload": "Upload photo",
+    "uploading": "Uploading...",
+    "remove": "Remove",
+    "capturedAt": "Taken",
+    "view": "View photo",
+    "previous": "Previous",
+    "next": "Next",
+    "close": "Close"
+  },
+  "participants": {
+    "name": "Name",
+    "roleOptional": "Role (optional)",
+    "removeLabel": "Remove"
+  },
+  "team": {
+    "title": "Team",
+    "description": "Supervisors, administrators and clients registered on Soprano.",
+    "adminHint": "You can edit name, company and role by clicking the pencil.",
+    "audit": "Audit log",
+    "trash": "Trash",
+    "invite": "Invite",
+    "inviteTitle": "Invite user",
+    "inviteDescription": "The invitee receives an email with a link to set their password.",
+    "inviteEmail": "Email",
+    "inviteFullName": "Full name",
+    "inviteCompany": "Company (optional)",
+    "inviteRole": "Role",
+    "inviteSend": "Send invite",
+    "inviteSent": "Invite sent to {email}",
+    "inviteError": "Failed to send invite",
+    "roleSupervisor": "Supervisor (creates activities)",
+    "roleClient": "Client (signs only)",
+    "roleAdmin": "Admin (everything)",
+    "profileUpdated": "Profile updated",
+    "profileUpdateError": "Update failed",
+    "profileNamePlaceholder": "Full name",
+    "profileCompanyPlaceholder": "Company",
+    "back": "Team",
+    "empty": "No users registered yet.",
+    "emptyHint": "Use the \"Invite\" button to add supervisors and clients."
+  },
+  "audit": {
+    "title": "Audit log",
+    "description": "History of sensitive changes (last 50).",
+    "descriptionFull": "Full log of system changes. {count} event(s) recorded.",
+    "filters": {
+      "table": "Table",
+      "action": "Action",
+      "actor": "Actor (email)",
+      "actorPlaceholder": "search by email...",
+      "all": "All",
+      "clear": "Clear"
+    },
+    "actions": {
+      "insert": "Created",
+      "update": "Updated",
+      "delete": "Deleted",
+      "soft_delete": "Removed",
+      "restore": "Restored"
+    },
+    "empty": "No records found.",
+    "emptyFiltered": "No events match these filters.",
+    "previous": "Previous",
+    "next": "Next",
+    "showDiff": "Show diff",
+    "by": "by",
+    "system": "system",
+    "pageOf": "Page {current} of {total}"
+  },
+  "trash": {
+    "title": "Trash",
+    "description": "Items deleted in the last 30 days. Restore or destroy permanently.",
+    "descriptionFull": "Deleted records. You can restore or permanently destroy.",
+    "tabs": {
+      "activities": "Activities",
+      "locations": "Locations",
+      "types": "Types"
+    },
+    "restore": "Restore",
+    "destroy": "Destroy",
+    "empty": "Trash is empty.",
+    "emptyShort": "Nothing here.",
+    "restored": "Restored",
+    "destroyed": "Destroyed permanently",
+    "confirmDestroy": "Destroy permanently?",
+    "confirmDestroyHelp": "This action cannot be undone.",
+    "hardDeleteTitle": "Delete permanently?",
+    "hardDeleteDescription": "This action CANNOT be undone. The record will be permanently removed from the database.",
+    "hardDeleteLabel": "Destroy",
+    "restoreError": "Error",
+    "deletedAt": "deleted at",
+    "deletedAtMasc": "deleted at"
+  },
+  "reports": {
+    "title": "Reports",
+    "subtitle": "Last 90 days · real-time data",
+    "total90": "Total (90d)",
+    "signed": "Signed",
+    "pending": "Pending",
+    "rejected": "Rejected",
+    "monthlyChart": "Activities per month (12m)",
+    "topLocations": "Top locations (90d)",
+    "noData": "No data.",
+    "avgTimeToSign": "Average time to signature",
+    "avgTimeToSignHelp": "From submission to client confirmation",
+    "avgTimeToSignBase": "Based on {count} signed activity(ies).",
+    "exports": "Exports",
+    "exportsHelp": "Download the full spreadsheet for the period",
+    "csvDays": "CSV ({days} days)",
+    "csv12m": "CSV (12 months)",
+    "monthlyReport": "Monthly consolidated report",
+    "monthlyReportHelp": "PDF with month KPIs + full activity table + grouping by location. Ideal for LinhaUni/Acciona delivery.",
+    "downloadPdf": "Download PDF"
+  },
+  "settings": {
+    "profile": "Profile",
+    "profileDescription": "Information visible to your team and clients.",
+    "name": "Name",
+    "email": "Email",
+    "role": "Role"
+  },
+  "complaints": {
+    "subtitle": "Complaints channel between team and client.",
+    "inProgressTitle": "Module under definition",
+    "inProgressBody": "The complaints module structure is being aligned internally with the team. The database is ready to receive complaints linked to activities and locations, once the flow is defined.",
+    "nextUpdate": "Next update"
+  },
+  "confirmDelete": {
+    "title": "Confirm deletion",
+    "description": "This action can be undone by an admin via the trash.",
+    "triggerLabel": "Delete",
+    "success": "Deleted",
+    "error": "Failed to delete"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "loading": "Loading...",
+    "search": "Search",
+    "noResults": "No results",
+    "error": "Something went wrong",
+    "tryAgain": "Try again",
+    "home": "Home"
+  }
+}
