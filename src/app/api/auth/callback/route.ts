@@ -28,11 +28,9 @@ export async function GET(request: NextRequest) {
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!exchangeError) {
-      // Redireciona para onde o link mandou (default: /pt/nova-senha)
-      const redirectUrl = next.startsWith('/')
-        ? `${origin}${next}`
-        : next;
-      return NextResponse.redirect(redirectUrl);
+      // Garante que o destino é sempre relativo ao próprio origin (evita open redirect)
+      const safePath = next.startsWith('/') ? next : '/pt/nova-senha';
+      return NextResponse.redirect(`${origin}${safePath}`);
     }
   }
 

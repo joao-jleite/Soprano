@@ -42,38 +42,52 @@ export async function createDailyReport(input: z.infer<typeof createReportSchema
 // ── Adicionar / remover atividade do resumo ────────────────────────────────
 
 export async function addActivityToReport(reportId: string, activityId: string) {
+  const rId = z.string().uuid().parse(reportId);
+  const aId = z.string().uuid().parse(activityId);
   const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
 
   const { error } = await (supabase as any)
     .from('daily_report_activities')
-    .insert({ daily_report_id: reportId, activity_id: activityId });
+    .insert({ daily_report_id: rId, activity_id: aId });
 
   if (error) throw error;
-  revalidatePath(`/resumo-diario/${reportId}`);
+  revalidatePath(`/resumo-diario/${rId}`);
 }
 
 export async function removeActivityFromReport(reportId: string, activityId: string) {
+  const rId = z.string().uuid().parse(reportId);
+  const aId = z.string().uuid().parse(activityId);
   const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
 
   const { error } = await (supabase as any)
     .from('daily_report_activities')
     .delete()
-    .eq('daily_report_id', reportId)
-    .eq('activity_id', activityId);
+    .eq('daily_report_id', rId)
+    .eq('activity_id', aId);
 
   if (error) throw error;
-  revalidatePath(`/resumo-diario/${reportId}`);
+  revalidatePath(`/resumo-diario/${rId}`);
 }
 
 // ── Enviar para assinatura ─────────────────────────────────────────────────
 
 export async function sendReportForSignature(reportId: string) {
+  const rId = z.string().uuid().parse(reportId);
   const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
 
   const { count, error: countError } = await (supabase as any)
     .from('daily_report_activities')
     .select('*', { count: 'exact', head: true })
-    .eq('daily_report_id', reportId);
+    .eq('daily_report_id', rId);
 
   if (countError) throw countError;
   if (!count || count === 0) throw new Error('Adicione pelo menos uma atividade antes de enviar');
@@ -81,11 +95,11 @@ export async function sendReportForSignature(reportId: string) {
   const { error } = await (supabase as any)
     .from('daily_reports')
     .update({ status: 'aguardando_assinatura' })
-    .eq('id', reportId);
+    .eq('id', rId);
 
   if (error) throw error;
 
-  revalidatePath(`/resumo-diario/${reportId}`);
+  revalidatePath(`/resumo-diario/${rId}`);
   revalidatePath('/resumo-diario');
   revalidatePath('/');
 }
@@ -113,9 +127,20 @@ export async function signDailyReport(input: z.infer<typeof signReportSchema>) {
   if (!profile) throw new Error('Perfil não encontrado');
   if ((profile as any).role !== 'cliente') throw new Error('Apenas clientes podem assinar');
 
+  // Verifica explicitamente que o cliente é o designado e o resumo está aguardando
+  const { data: report } = await (supabase as any)
+    .from('daily_reports')
+    .select('client_id, status')
+    .eq('id', parsed.reportId)
+    .single();
+  if (!report) throw new Error('Resumo não encontrado');
+  if (report.client_id !== user.id) throw new Error('Sem permissão para assinar este resumo');
+  if (report.status !== 'aguardando_assinatura') throw new Error('Resumo não está aguardando assinatura');
+
   const h = await headers();
   const ua = h.get('user-agent') ?? null;
-  const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
+  // Prefere x-real-ip (Vercel) para evitar X-Forwarded-For spoofing
+  const ip = h.get('x-real-ip') ?? h.get('x-forwarded-for')?.split(',').at(-1)?.trim() ?? null;
 
   const { error } = await (supabase as any)
     .from('daily_report_signatures')
@@ -157,9 +182,19 @@ export async function cancelDailyReport(input: z.infer<typeof cancelReportSchema
 
   if ((profile as any)?.role !== 'cliente') throw new Error('Apenas clientes podem cancelar');
 
+  // Verifica explicitamente que o cliente é o designado e o resumo está aguardando
+  const { data: report } = await (supabase as any)
+    .from('daily_reports')
+    .select('client_id, status')
+    .eq('id', parsed.reportId)
+    .single();
+  if (!report) throw new Error('Resumo não encontrado');
+  if (report.client_id !== user.id) throw new Error('Sem permissão para cancelar este resumo');
+  if (report.status !== 'aguardando_assinatura') throw new Error('Resumo não está aguardando assinatura');
+
   const h = await headers();
   const ua = h.get('user-agent') ?? null;
-  const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
+  const ip = h.get('x-real-ip') ?? h.get('x-forwarded-for')?.split(',').at(-1)?.trim() ?? null;
 
   const { error } = await (supabase as any)
     .from('daily_report_signatures')
@@ -184,35 +219,43 @@ export async function cancelDailyReport(input: z.infer<typeof cancelReportSchema
 // ── Atualizar observações (supervisor) ────────────────────────────────────
 
 export async function updateReportNotes(reportId: string, notes: string) {
+  const rId = z.string().uuid().parse(reportId);
   const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
 
   const { error } = await (supabase as any)
     .from('daily_reports')
     .update({ notes })
-    .eq('id', reportId);
+    .eq('id', rId);
 
   if (error) throw error;
-  revalidatePath(`/resumo-diario/${reportId}`);
+  revalidatePath(`/resumo-diario/${rId}`);
 }
 
 // ── Reenviar resumo cancelado ─────────────────────────────────────────────
 
 export async function resendReport(reportId: string) {
+  const rId = z.string().uuid().parse(reportId);
   const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
 
   // Remove assinatura de cancelamento anterior
   await (supabase as any)
     .from('daily_report_signatures')
     .delete()
-    .eq('daily_report_id', reportId);
+    .eq('daily_report_id', rId);
 
   const { error } = await (supabase as any)
     .from('daily_reports')
     .update({ status: 'aguardando_assinatura', cancellation_reason: null })
-    .eq('id', reportId);
+    .eq('id', rId);
 
   if (error) throw error;
 
-  revalidatePath(`/resumo-diario/${reportId}`);
+  revalidatePath(`/resumo-diario/${rId}`);
   revalidatePath('/resumo-diario');
 }

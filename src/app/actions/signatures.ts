@@ -35,9 +35,20 @@ export async function signActivity(input: z.infer<typeof signSchema>) {
   if (!profile) throw new Error('Profile not found');
   if (profile.role !== 'cliente') throw new Error('Only clients can sign');
 
+  // Verifica explicitamente que este cliente é o designado da atividade
+  const { data: act } = await supabase
+    .from('activities')
+    .select('client_id, status')
+    .eq('id', parsed.activityId)
+    .single();
+  if (!act) throw new Error('Atividade não encontrada');
+  if ((act as any).client_id !== user.id) throw new Error('Sem permissão para assinar esta atividade');
+  if ((act as any).status !== 'enviada') throw new Error('Atividade não está aguardando assinatura');
+
   const h = await headers();
   const ua = h.get('user-agent') ?? null;
-  const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
+  // Prefere x-real-ip (Vercel/Cloudflare) sobre x-forwarded-for para evitar spoofing
+  const ip = h.get('x-real-ip') ?? h.get('x-forwarded-for')?.split(',').at(-1)?.trim() ?? null;
 
   const { error } = await supabase.from('signatures').insert({
     activity_id: parsed.activityId,
@@ -99,6 +110,16 @@ export async function rejectActivity(input: z.infer<typeof rejectSchema>) {
     .eq('id', user.id)
     .single();
   if (profile?.role !== 'cliente') throw new Error('Only clients can reject');
+
+  // Verifica que o cliente é o designado e a atividade está no status correto
+  const { data: act } = await supabase
+    .from('activities')
+    .select('client_id, status')
+    .eq('id', parsed.activityId)
+    .single();
+  if (!act) throw new Error('Atividade não encontrada');
+  if ((act as any).client_id !== user.id) throw new Error('Sem permissão para recusar esta atividade');
+  if ((act as any).status !== 'enviada') throw new Error('Atividade não está aguardando assinatura');
 
   const { error } = await supabase.from('signatures').insert({
     activity_id: parsed.activityId,

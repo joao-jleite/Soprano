@@ -157,11 +157,30 @@ export async function updateActivity(input: z.infer<typeof updateActivitySchema>
 }
 
 export async function submitActivityForSignature(activityId: string) {
+  const actId = z.string().uuid().parse(activityId);
   const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  // Verifica que a atividade pertence ao supervisor ou que é admin
+  const { data: me } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+  const role = (me as any)?.role;
+
+  const { data: act } = await supabase
+    .from('activities')
+    .select('supervisor_id, status')
+    .eq('id', actId)
+    .single();
+
+  if (!act) throw new Error('Atividade não encontrada');
+  if (role !== 'admin' && (act as any).supervisor_id !== user.id) throw new Error('Sem permissão');
+  if (!['rascunho', 'rejeitada'].includes((act as any).status)) throw new Error('Status inválido para envio');
+
   const { error } = await supabase
     .from('activities')
     .update({ status: 'enviada', submitted_at: new Date().toISOString() })
-    .eq('id', activityId);
+    .eq('id', actId);
   if (error) throw error;
 
   // Notifica cliente por email (se configurado)
@@ -169,7 +188,7 @@ export async function submitActivityForSignature(activityId: string) {
     const { data: act } = await supabase
       .from('activities')
       .select('description, client_id')
-      .eq('id', activityId)
+      .eq('id', actId)
       .single();
     if ((act as any)?.client_id) {
       const { data: client } = await supabase
@@ -185,7 +204,7 @@ export async function submitActivityForSignature(activityId: string) {
           clientEmail: email,
           clientName: (client as any)?.full_name ?? 'cliente',
           description: (act as any).description,
-          activityUrl: `${origin}/pt/atividades/${activityId}`,
+          activityUrl: `${origin}/pt/atividades/${actId}`,
         });
       }
     }
@@ -193,18 +212,27 @@ export async function submitActivityForSignature(activityId: string) {
     console.warn('[notify] submit email failed', e);
   }
 
-  revalidatePath(`/atividades/${activityId}`);
+  revalidatePath(`/atividades/${actId}`);
   revalidatePath('/atividades');
 }
 
+const VALID_LOCATION_KINDS = ['estacao', 'vse', 'se', 'escadaria', 'patio', 'outro'] as const;
+
 export async function createLocation(name: string, kind: string) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  // Valida kind contra o enum do banco
+  if (!VALID_LOCATION_KINDS.includes(kind as any)) throw new Error('Tipo de local inválido');
+
+  // Verifica role — apenas admin e supervisor podem criar locais
+  const { data: me } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+  if (!['admin', 'supervisor'].includes((me as any)?.role)) throw new Error('Sem permissão');
+
   const { data, error } = await supabase
     .from('locations')
-    .insert({ name, kind: kind as any, created_by: user?.id ?? null, line: 'linha-6' })
+    .insert({ name, kind: kind as any, created_by: user.id, line: 'linha-6' })
     .select('id, name, kind')
     .single();
   if (error || !data) throw error ?? new Error('Failed to create location');
@@ -218,9 +246,12 @@ export async function createActivityType(input: {
   labelEs?: string;
 }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  // Verifica role — apenas admin e supervisor podem criar tipos
+  const { data: me } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+  if (!['admin', 'supervisor'].includes((me as any)?.role)) throw new Error('Sem permissão');
   const slug = slugify(input.labelPt);
   const { data, error } = await supabase
     .from('activity_types')
@@ -229,7 +260,7 @@ export async function createActivityType(input: {
       label_pt: input.labelPt,
       label_en: input.labelEn ?? input.labelPt,
       label_es: input.labelEs ?? input.labelPt,
-      created_by: user?.id ?? null,
+      created_by: user.id,
     })
     .select('id, slug, label_pt, label_en, label_es')
     .single();

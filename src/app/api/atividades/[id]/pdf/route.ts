@@ -56,6 +56,14 @@ export async function GET(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return new NextResponse('Unauthorized', { status: 401 });
 
+  // Busca role para controle de acesso (evitar IDOR)
+  const { data: me } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+  const role = (me as any)?.role;
+
   const { data: activity } = await supabase
     .from('activities')
     .select(`
@@ -70,6 +78,15 @@ export async function GET(
     .single();
 
   if (!activity) return new NextResponse('Not found', { status: 404 });
+
+  // Verifica acesso: admin vê tudo; supervisor vê apenas as próprias; cliente vê as suas (não-rascunho)
+  const act0 = activity as any;
+  if (role === 'supervisor' && act0.supervisor_id !== user.id) {
+    return new NextResponse('Forbidden', { status: 403 });
+  }
+  if (role === 'cliente' && (act0.client_id !== user.id || act0.status === 'rascunho')) {
+    return new NextResponse('Forbidden', { status: 403 });
+  }
   const act = activity as any;
 
   // Supervisor e cliente separados (evita ambiguidade FK)
