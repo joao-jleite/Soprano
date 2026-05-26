@@ -8,6 +8,7 @@
     "dashboard": "Dashboard",
     "linha6": "Line 6",
     "activities": "Activities",
+    "dailyReport": "Daily Summary",
     "locations": "Locations",
     "team": "Team",
     "reports": "Reports",
@@ -332,5 +333,11 @@
     "error": "Something went wrong",
     "tryAgain": "Try again",
     "home": "Home"
+  },
+  "dailyReport": {
+    "title": "Daily Summary",
+    "new": "New summary",
+    "empty": "No daily summaries yet.",
+    "emptyCta": "Create first summary"
   }
 }

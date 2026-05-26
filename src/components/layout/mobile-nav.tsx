@@ -1,6 +1,6 @@
 'use client';
 
-import { Activity, Building2, Home, MessageSquareWarning, MoreHorizontal } from 'lucide-react';
+import { Activity, Building2, ClipboardList, Home, MoreHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Link, usePathname } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
@@ -9,7 +9,7 @@ const ITEMS = [
   { href: '/', labelKey: 'nav.dashboard', icon: Home },
   { href: '/linha-6', labelKey: 'nav.linha6', icon: Building2 },
   { href: '/atividades', labelKey: 'nav.activities', icon: Activity },
-  { href: '/reclamos', labelKey: 'nav.complaints', icon: MessageSquareWarning },
+  { href: '/resumo-diario', labelKey: 'nav.dailyReport', icon: ClipboardList },
   { href: '/configuracoes', labelKey: 'nav.settings', icon: MoreHorizontal },
 ];
 

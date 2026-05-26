@@ -8,6 +8,7 @@
     "dashboard": "Painel",
     "linha6": "Linha 6",
     "activities": "Atividades",
+    "dailyReport": "Resumo Diário",
     "locations": "Locais",
     "team": "Equipe",
     "reports": "Relatórios",
@@ -332,5 +333,11 @@
     "error": "Ocorreu um erro",
     "tryAgain": "Tentar novamente",
     "home": "Início"
+  },
+  "dailyReport": {
+    "title": "Resumo Diário",
+    "new": "Novo resumo",
+    "empty": "Nenhum resumo diário ainda.",
+    "emptyCta": "Criar primeiro resumo"
   }
 }
