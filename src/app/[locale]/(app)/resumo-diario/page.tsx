@@ -25,37 +25,16 @@ export default async function DailyReportsPage({
     : { data: null };
   const role = (me as any)?.role as 'admin' | 'supervisor' | 'cliente' | undefined;
 
-  const { data: reports } = await (supabase as any)
-    .from('daily_reports')
-    .select('id, report_date, status, notes, cancellation_reason, sent_at, signed_at')
-    .is('deleted_at', null)
-    .order('report_date', { ascending: false })
-    .limit(60);
-
-  // Busca nomes de estações e clientes separado para evitar ambiguidade de FK
-  const stationIds = [...new Set((reports ?? []).map((r: any) => r.station_id).filter(Boolean))];
-  const clientIds  = [...new Set((reports ?? []).map((r: any) => r.client_id).filter(Boolean))];
-
-  const stationMap: Record<string, string> = {};
-  const clientMap:  Record<string, string> = {};
+  const clientMap: Record<string, string> = {};
 
   const { data: rawReports } = await (supabase as any)
     .from('daily_reports')
-    .select('id, report_date, status, notes, cancellation_reason, sent_at, signed_at, station_id, client_id')
+    .select('id, report_date, status, notes, cancellation_reason, sent_at, signed_at, client_id')
     .is('deleted_at', null)
     .order('report_date', { ascending: false })
     .limit(60);
 
-  const allStationIds = [...new Set((rawReports ?? []).map((r: any) => r.station_id).filter(Boolean))];
-  const allClientIds  = [...new Set((rawReports ?? []).map((r: any) => r.client_id).filter(Boolean))];
-
-  if (allStationIds.length) {
-    const { data: stations } = await supabase
-      .from('locations')
-      .select('id, name')
-      .in('id', allStationIds);
-    (stations ?? []).forEach((s: any) => { stationMap[s.id] = s.name; });
-  }
+  const allClientIds = [...new Set((rawReports ?? []).map((r: any) => r.client_id).filter(Boolean))];
 
   if (allClientIds.length) {
     const { data: clients } = await supabase
@@ -114,10 +93,9 @@ export default async function DailyReportsPage({
                     </span>
                   </div>
                   <p className="text-sm font-medium">
-                    {stationMap[r.station_id] ?? '—'}
+                    {clientMap[r.client_id] ? `Cliente: ${clientMap[r.client_id]}` : 'Sem cliente definido'}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {clientMap[r.client_id] ? `Cliente: ${clientMap[r.client_id]}` : 'Sem cliente definido'}
                     {r.status === 'cancelado' && r.cancellation_reason && (
                       <span className="text-destructive/80">
                         {' · '}Cancelado: {r.cancellation_reason}

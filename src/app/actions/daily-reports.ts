@@ -9,7 +9,6 @@ import { createClient } from '@/lib/supabase/server';
 
 const createReportSchema = z.object({
   reportDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  stationId: z.string().uuid(),
   clientId: z.string().uuid().nullable().optional(),
   notes: z.string().optional(),
 });
@@ -25,7 +24,7 @@ export async function createDailyReport(input: z.infer<typeof createReportSchema
     .from('daily_reports')
     .insert({
       report_date: parsed.reportDate,
-      station_id: parsed.stationId,
+      station_id: null,
       client_id: parsed.clientId ?? null,
       supervisor_id: user.id,
       notes: parsed.notes ?? null,

@@ -31,3 +31,5 @@ supabase/.temp
 # ide
 .vscode/
 .idea/
+
+.vercel

@@ -4,10 +4,12 @@ import { notFound } from 'next/navigation';
 import { setRequestLocale } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { formatDate, formatDateTime } from '@/lib/utils';
-import { ShieldCheck, AlertTriangle, Clock, CalendarDays, Building2, User } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, Clock, CalendarDays, User } from 'lucide-react';
+import { FileDown } from 'lucide-react';
 import { ActivityPicker } from './activity-picker';
 import { SendReportButton } from './send-button';
 import { SignDailyReportPanel } from './sign-panel';
@@ -39,13 +41,11 @@ export default async function DailyReportPage({
 
   // Dados relacionados em paralelo
   const [
-    { data: station },
     { data: client },
     { data: supervisor },
     { data: reportActivities },
     { data: signature },
   ] = await Promise.all([
-    supabase.from('locations').select('name, kind').eq('id', report.station_id).single(),
     report.client_id
       ? supabase.from('profiles').select('full_name').eq('id', report.client_id).single()
       : Promise.resolve({ data: null }),
@@ -135,8 +135,14 @@ export default async function DailyReportPage({
     <div className="space-y-8 max-w-3xl">
       {/* Cabeçalho */}
       <header className="space-y-3">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <Badge variant={sc.variant}>{sc.label}</Badge>
+          <Button asChild variant="secondary" size="sm">
+            <a href={`/api/resumo-diario/${id}/pdf`} target="_blank" rel="noopener noreferrer">
+              <FileDown className="h-4 w-4" />
+              PDF
+            </a>
+          </Button>
         </div>
         <h1 className="text-3xl font-semibold tracking-tight">
           Resumo diário — {formatDate(report.report_date + 'T12:00:00', localeStr)}
@@ -151,13 +157,6 @@ export default async function DailyReportPage({
             <div>
               <p className="text-xs text-muted-foreground">Data</p>
               <p className="font-medium">{formatDate(report.report_date + 'T12:00:00', localeStr)}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2.5 text-sm">
-            <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-            <div>
-              <p className="text-xs text-muted-foreground">Estação</p>
-              <p className="font-medium">{(station as any)?.name ?? '—'}</p>
             </div>
           </div>
           <div className="flex items-center gap-2.5 text-sm">
