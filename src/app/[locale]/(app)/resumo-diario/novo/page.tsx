@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { setRequestLocale } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
 import { NewDailyReportForm } from './new-report-form';

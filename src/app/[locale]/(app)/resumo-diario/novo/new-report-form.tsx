@@ -23,7 +23,7 @@ export function NewDailyReportForm({ stations, clients }: Props) {
   const today = new Date().toISOString().slice(0, 10);
 
   const [stationId, setStationId] = React.useState('');
-  const [clientId,  setClientId]  = React.useState('');
+  const [clientId,  setClientId]  = React.useState('__none__');
   const [date,      setDate]      = React.useState(today);
   const [notes,     setNotes]     = React.useState('');
 
@@ -37,7 +37,7 @@ export function NewDailyReportForm({ stations, clients }: Props) {
       const id = await createDailyReport({
         reportDate: date,
         stationId,
-        clientId: clientId || null,
+        clientId: (clientId && clientId !== '__none__') ? clientId : null,
         notes: notes || undefined,
       });
       toast.success('Resumo criado');
@@ -86,7 +86,7 @@ export function NewDailyReportForm({ stations, clients }: Props) {
             <SelectValue placeholder="Opcional — atribuir depois" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Sem cliente definido</SelectItem>
+            <SelectItem value="__none__">Sem cliente definido</SelectItem>
             {clients.map((c) => (
               <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
             ))}

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { Plus } from 'lucide-react';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
