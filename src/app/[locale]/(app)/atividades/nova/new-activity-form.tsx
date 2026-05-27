@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Loader2, Save, Send } from 'lucide-react';
+import { Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
@@ -10,13 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { ExpandableSelect, type Option } from '@/components/activity/expandable-select';
 import { ParticipantsEditor, type Participant } from '@/components/activity/participants-editor';
 import { PhotoUpload, type UploadedPhoto } from '@/components/activity/photo-upload';
@@ -26,7 +19,6 @@ export type InitialActivity = {
   id: string;
   locationId: string;
   activityTypeId: string;
-  clientId: string | null;
   description: string;
   notes: string | null;
   startedAt: string;
@@ -38,13 +30,12 @@ export type InitialActivity = {
 type Props = {
   locations: { id: string; name: string; kind: string }[];
   types: { id: string; slug: string; label_pt: string; label_en: string; label_es: string }[];
-  clients: { id: string; full_name: string }[];
   locale: string;
   initial?: InitialActivity;
   mode?: 'create' | 'edit';
 };
 
-export function NewActivityForm({ locations, types, clients, locale, initial, mode = 'create' }: Props) {
+export function NewActivityForm({ locations, types, locale, initial, mode = 'create' }: Props) {
   const t = useTranslations('activities');
   const tLoc = useTranslations('locations');
   const router = useRouter();
@@ -68,7 +59,6 @@ export function NewActivityForm({ locations, types, clients, locale, initial, mo
 
   const [locationId, setLocationId] = React.useState<string | null>(initial?.locationId ?? null);
   const [typeId, setTypeId] = React.useState<string | null>(initial?.activityTypeId ?? null);
-  const [clientId, setClientId] = React.useState<string | null>(initial?.clientId ?? null);
   const [description, setDescription] = React.useState(initial?.description ?? '');
   const [notes, setNotes] = React.useState(initial?.notes ?? '');
   const [startedAt, setStartedAt] = React.useState(() =>
@@ -86,7 +76,7 @@ export function NewActivityForm({ locations, types, clients, locale, initial, mo
     (initial?.photos ?? []).map((p) => ({ storagePath: p.storagePath, url: p.url ?? '' })),
   );
 
-  const [savingAs, setSavingAs] = React.useState<'draft' | 'submit' | null>(null);
+  const [saving, setSaving] = React.useState(false);
 
   async function handleCreateLocation(name: string): Promise<Option> {
     try {
@@ -114,32 +104,32 @@ export function NewActivityForm({ locations, types, clients, locale, initial, mo
     }
   }
 
-  async function submit(submitForSignature: boolean) {
+  async function handleSave() {
     if (!locationId || !typeId || !description.trim()) return;
-    setSavingAs(submitForSignature ? 'submit' : 'draft');
+    setSaving(true);
     try {
       const payload = {
         locationId,
         activityTypeId: typeId,
-        clientId: clientId,
+        clientId: null,
         description,
         notes: notes || undefined,
         startedAt: new Date(startedAt + 'T12:00:00').toISOString(),
         endedAt: endedAt ? new Date(endedAt + 'T12:00:00').toISOString() : null,
         participants,
         photos: photos.map((p) => ({ storagePath: p.storagePath })),
-        submit: submitForSignature,
+        submit: false,
       };
       const id =
         mode === 'edit' && initial
           ? await updateActivity({ ...payload, id: initial.id })
           : await createActivity(payload);
-      toast.success(submitForSignature ? t('toasts.submittedForSignature') : t('toasts.draftSaved'));
+      toast.success(t('toasts.draftSaved'));
       router.push(`/atividades/${id}`);
     } catch (e: any) {
       toast.error(e?.message ?? t('errors.saveActivity'));
     } finally {
-      setSavingAs(null);
+      setSaving(false);
     }
   }
 
@@ -227,57 +217,27 @@ export function NewActivityForm({ locations, types, clients, locale, initial, mo
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t('sections.clientAndNotes')}</CardTitle>
+          <CardTitle className="text-base">{t('fields.notes')}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <Field label={t('fields.clientForSigning')}>
-            <Select value={clientId ?? ''} onValueChange={(v) => setClientId(v || null)}>
-              <SelectTrigger>
-                <SelectValue placeholder={t('placeholders.assignClientLater')} />
-              </SelectTrigger>
-              <SelectContent>
-                {clients.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.full_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label={t('fields.notes')}>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-            />
-          </Field>
+        <CardContent>
+          <Textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder={t('placeholders.description')}
+            rows={3}
+          />
         </CardContent>
       </Card>
 
       <div className="flex flex-wrap gap-3 justify-end sticky bottom-4 z-10">
         <Button
           type="button"
-          variant="secondary"
-          onClick={() => submit(false)}
-          disabled={!canSave || savingAs !== null}
+          onClick={handleSave}
+          disabled={!canSave || saving}
         >
-          {savingAs === 'draft' ? <Loader2 className="animate-spin" /> : <Save />}
+          {saving ? <Loader2 className="animate-spin" /> : <Save />}
           {t('actions.save')}
         </Button>
-        <Button
-          type="button"
-          onClick={() => submit(true)}
-          disabled={!canSave || !clientId || savingAs !== null}
-          title={!clientId ? t('placeholders.assignClientLater') : undefined}
-        >
-          {savingAs === 'submit' ? <Loader2 className="animate-spin" /> : <Send />}
-          {t('actions.submit')}
-        </Button>
-        {canSave && !clientId && (
-          <p className="w-full text-right text-xs text-muted-foreground -mt-1">
-            ↑ {t('fields.clientForSigning')} obrigatório para enviar
-          </p>
-        )}
       </div>
     </div>
   );

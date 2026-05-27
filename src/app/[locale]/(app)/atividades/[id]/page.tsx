@@ -1,13 +1,11 @@
-import Image from 'next/image';
 import { notFound } from 'next/navigation';
-import { Calendar, MapPin, User, Users } from 'lucide-react';
+import { Calendar, ClipboardList, MapPin, User, Users } from 'lucide-react';
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from '@/i18n/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { SignActivityPanel } from './sign-panel';
 import { PhotoGallery } from '@/components/activity/photo-lightbox';
 import { Pencil, Copy } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
@@ -69,12 +67,7 @@ export default async function ActivityDetailPage({
   const localeKey = (locale === 'en' ? 'label_en' : locale === 'es' ? 'label_es' : 'label_pt') as any;
   const typeLabel = act.activity_types?.[localeKey];
 
-  const signature = act.signatures?.[0];
-  const canSign =
-    profile?.role === 'cliente' &&
-    act.client_id === user.id &&
-    act.status === 'enviada' &&
-    !signature;
+  const signature = act.signatures?.find((s: any) => !s.rejected) ?? null;
 
   // Bucket é privado → usar signed URLs (expiram em 1h)
   const photosWithUrls = await Promise.all(
@@ -191,9 +184,8 @@ export default async function ActivityDetailPage({
 
       <Separator />
 
-      {/* ── Bloco de assinatura ── */}
-      {signature ? (
-        /* Assinatura já registrada */
+      {/* ── Bloco de assinatura (histórico) ou aviso para Resumo Diário ── */}
+      {signature && act.status === 'assinada' ? (
         <Card className="surface-elevated border-primary/30">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
@@ -210,44 +202,21 @@ export default async function ActivityDetailPage({
             <SignatureDisplay signature={signature} locale={locale} />
           </CardContent>
         </Card>
-      ) : canSign ? (
-        /* Aguardando assinatura do cliente — destaque máximo */
-        <Card className="border-primary/40 shadow-lg shadow-primary/5">
-          <CardHeader className="pb-2 border-b border-border/50">
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <svg className="h-5 w-5 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
-              </div>
-              <div>
-                <CardTitle className="text-base">{t('signature.title')}</CardTitle>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Revise os dados acima e assine para confirmar a atividade
-                </p>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-5">
-            <SignActivityPanel
-              activityId={act.id}
-              signerName={act.client?.full_name ?? undefined}
-            />
-          </CardContent>
-        </Card>
-      ) : (
-        /* Sem ação disponível */
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t('signature.title')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              {act.status === 'rascunho'
-                ? t('activities.draftNotice')
-                : t('activities.waitingClient')}
+      ) : act.status === 'rascunho' && profile?.role !== 'cliente' ? (
+        <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3">
+          <ClipboardList className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium">Envio para assinatura via Resumo Diário</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Para enviar para assinatura, adicione esta atividade a um resumo diário na seção{' '}
+              <Link href="/resumo-diario" className="text-primary hover:underline">
+                Resumo Diário
+              </Link>
+              .
             </p>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

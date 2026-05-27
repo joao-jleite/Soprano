@@ -20,11 +20,11 @@ export default async function EditActivityPage({
   } = await supabase.auth.getUser();
   if (!user) redirect({ href: '/login', locale });
 
-  const [{ data: activity }, { data: locations }, { data: types }, { data: clients }] = await Promise.all([
+  const [{ data: activity }, { data: locations }, { data: types }] = await Promise.all([
     supabase
       .from('activities')
       .select(`
-        id, location_id, activity_type_id, client_id, description, notes,
+        id, location_id, activity_type_id, description, notes,
         started_at, ended_at, status, supervisor_id,
         activity_participants(name, role),
         activity_photos(storage_path)
@@ -34,7 +34,6 @@ export default async function EditActivityPage({
       .single(),
     supabase.from('locations').select('id, name, kind').eq('line', 'linha-6').is('deleted_at', null).order('sort_order'),
     supabase.from('activity_types').select('id, slug, label_pt, label_en, label_es').is('deleted_at', null).order('label_pt'),
-    supabase.from('profiles').select('id, full_name').eq('role', 'cliente').is('deleted_at', null).order('full_name'),
   ]);
 
   if (!activity) notFound();
@@ -51,7 +50,6 @@ export default async function EditActivityPage({
     id: act.id,
     locationId: act.location_id,
     activityTypeId: act.activity_type_id,
-    clientId: act.client_id,
     description: act.description,
     notes: act.notes,
     startedAt: act.started_at,
@@ -80,7 +78,6 @@ export default async function EditActivityPage({
       <NewActivityForm
         locations={locations ?? []}
         types={types ?? []}
-        clients={clients ?? []}
         locale={locale}
         initial={initial}
         mode="edit"
