@@ -2,7 +2,7 @@ import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { FileSearch, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { Link } from '@/i18n/navigation';
+import { Link, redirect } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { ProfileRow } from './profile-row';
 import { InviteDialog } from './invite-dialog';
@@ -33,6 +33,9 @@ export default async function EquipePage({
   // Fallback: se o profiles query falhar, tenta pelo user metadata
   const role = (me as any)?.role ?? (user as any)?.user_metadata?.role;
   const isAdmin = role === 'admin';
+
+  // Apenas admins acessam esta página
+  if (!isAdmin) redirect({ href: '/', locale });
 
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
