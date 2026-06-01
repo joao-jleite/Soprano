@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 
 // ── Criar resumo diário ────────────────────────────────────────────────────
 
@@ -231,6 +232,61 @@ export async function updateReportNotes(reportId: string, notes: string) {
 
   if (error) throw error;
   revalidatePath(`/resumo-diario/${rId}`);
+}
+
+// ── Excluir resumo (soft-delete — admin/supervisor) ───────────────────────
+
+export async function deleteDailyReport(reportId: string): Promise<{ error?: string }> {
+  try {
+    const rId = z.string().uuid().parse(reportId);
+    const supabase = await createClient();
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: 'Não autenticado' };
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    const role = (profile as any)?.role;
+    if (!['admin', 'supervisor'].includes(role)) return { error: 'Sem permissão para excluir resumos' };
+
+    // Supervisores só podem excluir os próprios resumos
+    if (role === 'supervisor') {
+      const { data: existingReport } = await (supabase as any)
+        .from('daily_reports')
+        .select('supervisor_id')
+        .eq('id', rId)
+        .single();
+      if (existingReport?.supervisor_id !== user.id) return { error: 'Sem permissão para excluir este resumo' };
+    }
+
+    // Usa service role para bypassar RLS — permissões já validadas acima
+    const adminClient = createServiceClient();
+    const { error: updateError, data: updated } = await (adminClient as any)
+      .from('daily_reports')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', rId)
+      .is('deleted_at', null)
+      .select('id');
+
+    if (updateError) {
+      console.error('[delete] code=' + updateError.code + ' msg=' + updateError.message);
+      return { error: updateError.message ?? 'Falha ao excluir resumo' };
+    }
+
+    if (!updated || updated.length === 0) {
+      return { error: 'Resumo não encontrado ou já excluído' };
+    }
+
+    revalidatePath('/resumo-diario');
+    return {};
+  } catch (e: any) {
+    console.error('[delete] unexpected:', e?.message);
+    return { error: e?.message ?? 'Erro inesperado' };
+  }
 }
 
 // ── Reenviar resumo cancelado ─────────────────────────────────────────────

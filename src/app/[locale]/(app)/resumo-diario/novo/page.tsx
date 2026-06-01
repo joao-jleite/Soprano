@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { setRequestLocale } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
+import { redirect } from '@/i18n/navigation';
 import { NewDailyReportForm } from './new-report-form';
 
 export default async function NovoDailyReportPage({
@@ -12,6 +13,10 @@ export default async function NovoDailyReportPage({
   const { locale } = await params;
   setRequestLocale(locale);
   const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: me } = user ? await supabase.from('profiles').select('role').eq('id', user.id).single() : { data: null };
+  if ((me as any)?.role === 'cliente') redirect({ href: '/resumo-diario', locale });
 
   const { data: clients } = await supabase
     .from('profiles')

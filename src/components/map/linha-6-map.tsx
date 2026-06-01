@@ -1,295 +1,258 @@
 /**
- * Linha6Map — Vertical transit-style stop list
- * Inspired by: Citymapper · Google Maps transit · Linear
- *
- * Layout: vertical orange line on the left, stops listed downward.
- * Stations: large row, prominent dot, readable name.
- * VSE/SE:  compact row, small dot, muted label.
- * Zero angles — everything horizontal. Labels always readable.
+ * Linha6Map — Diagrama horizontal da Linha 6-Laranja
+ * Suporta modo claro e escuro via CSS variables + .dark class (Tailwind).
+ * Itens clicáveis com área de toque expandida, hover com pill highlight + scale no dot.
  */
 
 type Stop = { id: string; name: string; kind: string; sort_order: number };
 
-// ── Tokens ────────────────────────────────────────────────────────────────────
-const BG        = '#070d1b';
-const BG_CARD   = '#080e1d';
-const BORDER    = '#0e1e38';
-const ORANGE    = '#f97316';
-const ORANGE_D  = '#c2410c';
-const WHITE     = '#ffffff';
-const SLATE_200 = '#e2e8f0';
-const SLATE_400 = '#94a3b8';
-const SLATE_600 = '#475569';
-const BLUE_400  = '#60a5fa';
-const AMBER_400 = '#fbbf24';
-const MONO      = "'Geist Mono','GeistMono',ui-monospace,monospace";
-const SANS      = "'Geist Sans',ui-sans-serif,system-ui,-apple-system,sans-serif";
+const LINE_PEACH = '#f5b87a';   // linha principal — visível em ambos os modos
+const ORANGE     = '#ee7203';   // dots das estações
+const SANS = "'Geist Sans',ui-sans-serif,system-ui,-apple-system,sans-serif";
+const MONO = "'Geist Mono','GeistMono',ui-monospace,monospace";
 
-// ─────────────────────────────────────────────────────────────────────────────
+function interchange(name: string): { ring: string; sub: string } | null {
+  const n = name.toLowerCase();
+  if (n.includes('freguesia')) return { ring: '#a3238e', sub: '#e2231a' };
+  if (n.includes('higien'))    return { ring: '#f5a800', sub: '#f5a800' };
+  if (n.includes('joaquim'))   return { ring: '#0a3d91', sub: '#4c8ef7' };
+  return null;
+}
+
+const PAD_L  = 130;
+const GAP    = 88;
+const PAD_R  = 260;
+const LINE_Y = 230;
+const HEIGHT = 470;
+const ANGLE  = 40;
 
 export function Linha6Map({ stops, locale = 'pt' }: { stops: Stop[]; locale?: string }) {
-
   if (!stops || stops.length === 0) {
     return (
-      <div style={{
-        background: BG_CARD, borderRadius: '0.875rem',
-        border: `1px solid ${BORDER}`, padding: '3rem', textAlign: 'center',
-      }}>
-        <p style={{ color: SLATE_600, fontSize: '0.875rem', margin: 0 }}>
-          Nenhum local cadastrado para esta linha.
-        </p>
-      </div>
+      <p className="text-sm text-muted-foreground" style={{ fontFamily: SANS }}>
+        Nenhum local cadastrado para esta linha.
+      </p>
     );
   }
 
-  // ── Data ───────────────────────────────────────────────────────────────────
   const sorted   = [...stops].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
-  const estacoes = sorted.filter(s => s.kind === 'estacao');
-  const firstEst = estacoes[0];
-  const lastEst  = estacoes[estacoes.length - 1];
+  const stations = sorted.filter(s => s.kind === 'estacao' || s.kind === 'patio');
+  const shafts   = sorted.filter(s => s.kind === 'vse' || s.kind === 'se');
+
+  const firstEst = stations.find(s => s.kind === 'estacao');
+  const lastEst  = [...stations].reverse().find(s => s.kind === 'estacao');
+
+  const stationX = (i: number) => PAD_L + i * GAP;
+  const lineX0   = stationX(0);
+  const lineX1   = stationX(Math.max(0, stations.length - 1));
+  const vbWidth  = lineX1 + PAD_R;
+
+  const segIndexOf = (shaft: Stop) => {
+    let idx = 0;
+    for (let i = 0; i < stations.length; i++) {
+      if ((stations[i].sort_order ?? 0) < (shaft.sort_order ?? 0)) idx = i;
+      else break;
+    }
+    return idx;
+  };
+  const bySeg: Record<number, Stop[]> = {};
+  shafts.forEach(s => { (bySeg[segIndexOf(s)] ||= []).push(s); });
+
+  const shaftPos: { s: Stop; x: number }[] = [];
+  Object.entries(bySeg).forEach(([k, arr]) => {
+    const i  = Number(k);
+    const x0 = stationX(i);
+    const x1 = i + 1 < stations.length ? stationX(i + 1) : x0 + GAP;
+    arr.forEach((s, j) => {
+      shaftPos.push({ s, x: x0 + (x1 - x0) * ((j + 1) / (arr.length + 1)) });
+    });
+  });
 
   const href = (id: string) => `/${locale}/atividades?location=${id}`;
 
   return (
-    <div style={{
-      background: BG_CARD,
-      borderRadius: '0.875rem',
-      border: `1px solid ${BORDER}`,
-      overflow: 'hidden',
-      width: '100%',
-    }}>
-
-      {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '1rem 1.25rem 0.875rem',
-        borderBottom: `1px solid ${BORDER}`,
-      }}>
-        <div>
-          <div style={{
-            fontFamily: SANS, fontSize: '0.8125rem', fontWeight: '600',
-            color: SLATE_200, letterSpacing: '-0.01em', marginBottom: '2px',
-          }}>
-            Linha 6 — Laranja
-          </div>
-          <div style={{
-            fontFamily: MONO, fontSize: '0.5625rem', textTransform: 'uppercase',
-            letterSpacing: '0.18em', color: SLATE_600,
-          }}>
-            {estacoes.length} estações · {stops.length} locais
-          </div>
-        </div>
-
-        {/* Legend */}
-        <div style={{ display: 'flex', gap: '1.25rem' }}>
-          {[
-            { color: ORANGE,    label: 'Estação' },
-            { color: BLUE_400,  label: 'VSE'     },
-            { color: AMBER_400, label: 'SE'      },
-          ].map(({ color, label }) => (
-            <span key={label} style={{
-              display: 'flex', alignItems: 'center', gap: '5px',
-              fontFamily: MONO, fontSize: '0.5rem',
-              textTransform: 'uppercase', letterSpacing: '0.15em', color: SLATE_600,
-            }}>
-              <span style={{
-                display: 'inline-block', width: 6, height: 6,
-                borderRadius: '50%', background: color, flexShrink: 0,
-              }} />
-              {label}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Stop list ───────────────────────────────────────────────────── */}
+    <div style={{ width: '100%' }}>
+      {/* CSS variables por tema */}
       <style>{`
-        .l6-row { transition: background 120ms ease; text-decoration: none; display: flex; align-items: center; }
-        .l6-row:hover { background: rgba(255,255,255,0.028); }
-        .l6-scroll::-webkit-scrollbar { width: 3px; }
-        .l6-scroll::-webkit-scrollbar-track { background: transparent; }
-        .l6-scroll::-webkit-scrollbar-thumb { background: #1a2e4a; border-radius: 2px; }
+        :root {
+          --l6-label:       #1e293b;
+          --l6-label-hover: ${ORANGE};
+          --l6-patio-label: #c2590a;
+          --l6-vse:         #64748b;
+          --l6-vse-hover:   #334155;
+          --l6-dot-conn:    #cbd5e1;
+          --l6-pill-bg:     rgba(238,114,3,0.10);
+          --l6-pill-border: rgba(238,114,3,0.30);
+          --l6-head:        #0f172a;
+          --l6-sub:         #64748b;
+        }
+        .dark {
+          --l6-label:       #e2e8f0;
+          --l6-label-hover: #fbbf72;
+          --l6-patio-label: #f6a04a;
+          --l6-vse:         #7c8fa3;
+          --l6-vse-hover:   #c8d3df;
+          --l6-dot-conn:    #3d4f63;
+          --l6-pill-bg:     rgba(238,114,3,0.15);
+          --l6-pill-border: rgba(238,114,3,0.35);
+          --l6-head:        #f1f5f9;
+          --l6-sub:         #7c8fa3;
+        }
+
+        /* Nó clicável */
+        .l6-node { cursor: pointer; }
+
+        /* Dot — scale no hover via transform-box fill-box */
+        .l6-node .l6-dot {
+          transform-box: fill-box;
+          transform-origin: center;
+          transition: transform 140ms ease, filter 140ms ease;
+        }
+        .l6-node:hover .l6-dot { transform: scale(1.30); filter: brightness(1.15); }
+
+        /* Label estação */
+        .l6-node .l6-stn {
+          fill: var(--l6-label);
+          transition: fill 120ms ease;
+        }
+        .l6-node .l6-patio-stn {
+          fill: var(--l6-patio-label);
+          transition: fill 120ms ease;
+        }
+        .l6-node:hover .l6-stn,
+        .l6-node:hover .l6-patio-stn { fill: var(--l6-label-hover); }
+
+        /* Pill de destaque atrás do label */
+        .l6-node .l6-pill {
+          opacity: 0;
+          transition: opacity 140ms ease;
+        }
+        .l6-node:hover .l6-pill { opacity: 1; }
+
+        /* Label VSE/SE */
+        .l6-node .l6-vse {
+          fill: var(--l6-vse);
+          transition: fill 120ms ease;
+        }
+        .l6-node:hover .l6-vse { fill: var(--l6-vse-hover); }
+
+        /* Conector pontilhado */
+        .l6-conn { stroke: var(--l6-dot-conn); }
       `}</style>
 
-      <div
-        className="l6-scroll"
-        style={{
-          maxHeight: '540px',
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          padding: '8px 0',
-        }}
+      {/* Cabeçalho */}
+      <div style={{ marginBottom: '0.85rem' }}>
+        <h2 style={{
+          fontFamily: SANS, fontSize: '1.05rem', fontWeight: 700,
+          color: 'var(--l6-head)', letterSpacing: '-0.01em', margin: 0,
+        }}>
+          Linha 6 — Laranja
+        </h2>
+        <p style={{ fontFamily: SANS, fontSize: '0.7rem', color: 'var(--l6-sub)', margin: '0.15rem 0 0' }}>
+          Brasilândia ↔ São Joaquim · {stations.filter(s => s.kind === 'estacao').length} estações · {stops.length} locais
+        </p>
+      </div>
+
+      <svg
+        width="100%"
+        viewBox={`0 0 ${vbWidth} ${HEIGHT}`}
+        preserveAspectRatio="xMidYMid meet"
+        style={{ display: 'block', fontFamily: SANS, overflow: 'visible' }}
+        aria-label="Mapa da Linha 6 Laranja"
       >
-        {/* Relative wrapper for the vertical line */}
-        <div style={{ position: 'relative', padding: '0 20px 0 0' }}>
+        {/* Linha pêssego */}
+        <line
+          x1={lineX0} y1={LINE_Y} x2={lineX1} y2={LINE_Y}
+          stroke={LINE_PEACH} strokeWidth={10} strokeLinecap="round"
+        />
 
-          {/* Vertical orange line */}
-          <div style={{
-            position: 'absolute',
-            left:  '32px',
-            top:   '0',
-            bottom: '0',
-            width: '3px',
-            background: `linear-gradient(to bottom, ${ORANGE_D} 0%, ${ORANGE} 40%, ${ORANGE} 60%, ${ORANGE_D} 100%)`,
-            borderRadius: '2px',
-            boxShadow: `0 0 10px rgba(249,115,22,0.25)`,
-          }} />
+        {/* ── VSE / SE (abaixo) ─────────────────────────────────────────── */}
+        {shaftPos.map(({ s, x }) => (
+          <a key={s.id} href={href(s.id)} className="l6-node" aria-label={s.name}>
+            {/* Área de toque expandida */}
+            <rect x={x - 20} y={LINE_Y - 10} width={40} height={120} fill="transparent" />
 
-          {sorted.map((stop) => {
-            const isStation  = stop.kind === 'estacao' || stop.kind === 'patio';
-            const isPatio    = stop.kind === 'patio';
-            const isVse      = stop.kind === 'vse';
-            const isSe       = stop.kind === 'se';
-            const isTerminal = stop.id === firstEst?.id || stop.id === lastEst?.id;
-            const isSub      = isVse || isSe;
+            <circle cx={x} cy={LINE_Y} r={3} className="l6-conn" fill="currentColor" />
+            <line x1={x} y1={LINE_Y + 3} x2={x} y2={LINE_Y + 20}
+              className="l6-conn" strokeWidth={1.2} strokeDasharray="2.5 3" stroke="currentColor" />
 
-            const rowHeight  = isStation ? '56px' : '26px';
-            const dotSize    = isPatio  ? 14
-                             : isTerminal ? 13
-                             : isStation  ? 11
-                             : 6;
-
-            const dotBg      = isPatio    ? BG_CARD
-                             : isTerminal ? ORANGE
-                             : isStation  ? WHITE
-                             : isVse      ? BLUE_400
-                             : AMBER_400;
-
-            const dotBorder  = isPatio    ? `2.5px solid ${ORANGE}`
-                             : isTerminal ? `2px solid ${ORANGE_D}`
-                             : isStation  ? `2px solid ${ORANGE}`
-                             : 'none';
-
-            const labelColor = isPatio    ? ORANGE
-                             : isTerminal ? WHITE
-                             : isStation  ? SLATE_200
-                             : isVse      ? BLUE_400
-                             : AMBER_400;
-
-            const fontSize   = isStation ? '0.875rem' : '0.6875rem';
-            const fontWeight = isTerminal || isPatio ? '700' : isStation ? '500' : '400';
-            const fontFamily = isStation ? SANS : MONO;
-            const indent     = isSub ? '4px' : '0';
-
-            return (
-              <a
-                key={stop.id}
-                href={href(stop.id)}
-                className="l6-row"
-                style={{ minHeight: rowHeight }}
+            {/* Pill hover atrás do label */}
+            <g transform={`translate(${x}, ${LINE_Y + 24}) rotate(-${ANGLE})`}>
+              <rect className="l6-pill"
+                x={-108} y={-13} width={110} height={17} rx={4}
+                fill="var(--l6-pill-bg)" stroke="var(--l6-pill-border)" strokeWidth={0.8}
+              />
+              <text
+                className="l6-vse"
+                textAnchor="end" fontSize={12} fontFamily={MONO}
               >
-                {/* Left: dot column */}
-                <div style={{
-                  width: '64px',
-                  flexShrink: 0,
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  position: 'relative',
-                  alignSelf: 'stretch',
-                }}>
-                  {/* Dot */}
-                  <div style={{
-                    width:  `${dotSize}px`,
-                    height: `${dotSize}px`,
-                    borderRadius: '50%',
-                    background: dotBg,
-                    border: dotBorder,
-                    flexShrink: 0,
-                    position: 'relative',
-                    zIndex: 1,
-                    // Patio inner ring via box-shadow
-                    boxShadow: isPatio
-                      ? `0 0 0 3px ${BG_CARD}, 0 0 0 5px ${ORANGE}`
-                      : isTerminal
-                      ? `0 0 8px rgba(249,115,22,0.5)`
-                      : 'none',
-                  }} />
-                </div>
+                {s.name}
+              </text>
+            </g>
+          </a>
+        ))}
 
-                {/* Right: text */}
-                <div style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  paddingLeft: indent,
-                  paddingRight: '16px',
-                }}>
-                  <span style={{
-                    fontFamily,
-                    fontSize,
-                    fontWeight,
-                    color: labelColor,
-                    lineHeight: '1.3',
-                    letterSpacing: isSub ? '0.02em' : '-0.01em',
-                  }}>
-                    {stop.name}
-                  </span>
+        {/* ── Estações + Pátio (acima) ──────────────────────────────────── */}
+        {stations.map((s, i) => {
+          const x          = stationX(i);
+          const isPatio    = s.kind === 'patio';
+          const isTerminal = s.id === firstEst?.id || s.id === lastEst?.id;
+          const ic         = interchange(s.name);
+          const labelClass = isPatio ? 'l6-patio-stn' : 'l6-stn';
 
-                  {/* Terminal badge */}
-                  {isTerminal && (
-                    <span style={{
-                      fontFamily: MONO,
-                      fontSize: '0.45rem',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.15em',
-                      color: ORANGE,
-                      border: `1px solid ${ORANGE}33`,
-                      borderRadius: '3px',
-                      padding: '1px 5px',
-                      background: `${ORANGE}0f`,
-                      flexShrink: 0,
-                    }}>
-                      Terminal
-                    </span>
-                  )}
+          return (
+            <a key={s.id} href={href(s.id)} className="l6-node" aria-label={s.name}>
+              {/* Área de toque expandida */}
+              <rect x={x - 20} y={LINE_Y - 130} width={40} height={150} fill="transparent" />
 
-                  {/* Patio badge */}
-                  {isPatio && (
-                    <span style={{
-                      fontFamily: MONO,
-                      fontSize: '0.45rem',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.15em',
-                      color: ORANGE,
-                      border: `1px solid ${ORANGE}33`,
-                      borderRadius: '3px',
-                      padding: '1px 5px',
-                      background: `${ORANGE}0f`,
-                      flexShrink: 0,
-                    }}>
-                      Pátio
-                    </span>
-                  )}
-                </div>
-              </a>
-            );
-          })}
-        </div>
-      </div>
+              {/* Label + pill de hover */}
+              <g transform={`translate(${x}, ${LINE_Y - 24}) rotate(-${ANGLE})`}>
+                <rect className="l6-pill"
+                  x={-4} y={-15} width={160} height={19} rx={4}
+                  fill="var(--l6-pill-bg)" stroke="var(--l6-pill-border)" strokeWidth={0.8}
+                />
+                <text
+                  className={labelClass}
+                  textAnchor="start"
+                  fontSize={15}
+                  fontWeight={isPatio || isTerminal ? 700 : 600}
+                >
+                  {s.name}
+                </text>
+              </g>
 
-      {/* ── Footer ──────────────────────────────────────────────────────── */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '0.625rem 1.25rem',
-        borderTop: `1px solid ${BORDER}`,
-        fontFamily: MONO,
-        fontSize: '0.525rem',
-        textTransform: 'uppercase',
-        letterSpacing: '0.2em',
-        color: SLATE_600,
-      }}>
-        <span>↑ Brasilândia</span>
-        <div style={{
-          width: '32px', height: '3px',
-          borderRadius: '2px',
-          background: `linear-gradient(to right, ${ORANGE_D}, ${ORANGE}, ${ORANGE_D})`,
-        }} />
-        <span>São Joaquim ↓</span>
-      </div>
+              {/* Marcador na linha */}
+              {isPatio ? (
+                <>
+                  <circle className="l6-dot" cx={x} cy={LINE_Y} r={11}
+                    fill="transparent" stroke={ORANGE} strokeWidth={3.5} />
+                  <circle cx={x} cy={LINE_Y} r={4} fill={ORANGE} />
+                </>
+              ) : ic ? (
+                <>
+                  <rect className="l6-dot"
+                    x={x - 7} y={LINE_Y - 17} width={14} height={34} rx={7}
+                    fill={ic.ring}
+                  />
+                  <rect
+                    x={x - 5.5} y={LINE_Y + 22} width={11} height={11} rx={2}
+                    fill={ic.sub}
+                    transform={`rotate(45 ${x} ${LINE_Y + 27.5})`}
+                  />
+                </>
+              ) : isTerminal ? (
+                <>
+                  <circle cx={x} cy={LINE_Y} r={11}
+                    fill="transparent" stroke={ORANGE} strokeWidth={2.5} />
+                  <circle className="l6-dot" cx={x} cy={LINE_Y} r={6.5} fill={ORANGE} />
+                </>
+              ) : (
+                <circle className="l6-dot" cx={x} cy={LINE_Y} r={7.5} fill={ORANGE} />
+              )}
+            </a>
+          );
+        })}
+      </svg>
     </div>
   );
 }

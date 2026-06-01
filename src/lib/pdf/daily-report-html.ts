@@ -5,9 +5,11 @@ export type PdfReportActivity = {
   description: string;
   started_at: string;
   location_name?: string;
+  location_sort_order?: number;
   type_label?: string;
   participants?: { name: string; role?: string | null }[];
   notes?: string | null;
+  photos?: { url: string; caption?: string | null }[];
 };
 
 export type PdfReportSignature = {
@@ -49,6 +51,31 @@ function fmtDate(iso: string) {
       weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
     });
   } catch { return iso; }
+}
+
+function fmtTime(iso: string) {
+  try {
+    return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  } catch { return ''; }
+}
+
+// Agrupa atividades por local (sort_order → name) e ordena
+function groupByLocation(activities: PdfReportActivity[]) {
+  const sorted = [...activities].sort((a, b) => {
+    const sa = a.location_sort_order ?? 9999;
+    const sb = b.location_sort_order ?? 9999;
+    if (sa !== sb) return sa - sb;
+    return new Date(a.started_at).getTime() - new Date(b.started_at).getTime();
+  });
+
+  const groups: { locName: string; items: PdfReportActivity[] }[] = [];
+  let last = '';
+  for (const act of sorted) {
+    const loc = act.location_name ?? 'Sem local';
+    if (loc !== last) { groups.push({ locName: loc, items: [] }); last = loc; }
+    groups[groups.length - 1].items.push(act);
+  }
+  return groups;
 }
 
 export function buildDailyReportHtml(opts: BuildDailyReportHtmlOptions): string {
@@ -123,6 +150,17 @@ export function buildDailyReportHtml(opts: BuildDailyReportHtmlOptions): string 
     .meta-label { font-size: 6.5pt; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8; margin-bottom: 3pt; }
     .meta-value { font-size: 10pt; font-weight: 600; color: #0f172a; }
 
+    /* Location group header */
+    .loc-header td {
+      background: #f1f5f9;
+      font-size: 8pt;
+      font-weight: 700;
+      color: #334155;
+      padding: 6pt 8pt;
+      border-bottom: 1pt solid #e2e8f0;
+      letter-spacing: 0.3px;
+    }
+
     /* Activities table */
     .act-table { width: 100%; border-collapse: collapse; }
     .act-table th {
@@ -143,7 +181,6 @@ export function buildDailyReportHtml(opts: BuildDailyReportHtmlOptions): string 
       border-bottom: 0.5pt solid #f1f5f9;
     }
     .act-table tr:last-child td { border-bottom: none; }
-    .act-table tr:nth-child(even) td { background: #f8fafc; }
     .act-num {
       font-size: 8pt;
       color: #94a3b8;
@@ -161,6 +198,35 @@ export function buildDailyReportHtml(opts: BuildDailyReportHtmlOptions): string 
       padding-left: 6pt;
       border-left: 2pt solid #bfdbfe;
       font-style: italic;
+    }
+
+    /* Photos */
+    .photo-grid {
+      display: flex;
+      gap: 5pt;
+      flex-wrap: wrap;
+      margin-top: 7pt;
+    }
+    .photo-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .photo-img {
+      width: 90pt;
+      height: 68pt;
+      object-fit: cover;
+      border-radius: 3pt;
+      border: 0.5pt solid #e2e8f0;
+      display: block;
+    }
+    .photo-caption {
+      font-size: 6pt;
+      color: #94a3b8;
+      text-align: center;
+      margin-top: 2pt;
+      max-width: 90pt;
+      line-height: 1.3;
     }
 
     /* Observations */
@@ -262,26 +328,45 @@ export function buildDailyReportHtml(opts: BuildDailyReportHtmlOptions): string 
     }
   `;
 
-  // Activitites rows
-  const activityRows = activities.map((a, i) => {
-    const teamStr = (a.participants ?? [])
-      .map(p => p.role ? `${p.name} (${p.role})` : p.name)
-      .join(', ');
+  // Agrupamento por local
+  const groups = groupByLocation(activities);
 
-    return `
-      <tr>
-        <td class="act-num">${i + 1}</td>
-        <td>
-          <div class="act-desc">${a.description}</div>
-          <div class="act-sub">
-            ${a.location_name ? `📍 ${a.location_name}` : ''}
-            ${a.type_label ? ` · ${a.type_label}` : ''}
-            ${a.started_at ? ` · ${fmtDate(a.started_at)}` : ''}
-          </div>
-          ${teamStr ? `<div class="act-team">Equipe: ${teamStr}</div>` : ''}
-          ${a.notes ? `<div class="act-notes">${a.notes}</div>` : ''}
-        </td>
-      </tr>`;
+  let globalNum = 0;
+  const activityRows = groups.map(group => {
+    const locRow = `<tr class="loc-header"><td></td><td>📍 ${group.locName}</td></tr>`;
+    const itemRows = group.items.map(a => {
+      globalNum++;
+      const teamStr = (a.participants ?? [])
+        .map(p => p.role ? `${p.name} (${p.role})` : p.name)
+        .join(', ');
+
+      const photosHtml = (a.photos ?? []).length > 0
+        ? `<div class="photo-grid">
+            ${(a.photos ?? []).slice(0, 4).map(ph =>
+              `<div class="photo-item">
+                <img class="photo-img" src="${ph.url}" />
+                ${ph.caption ? `<div class="photo-caption">${ph.caption}</div>` : ''}
+              </div>`
+            ).join('')}
+          </div>`
+        : '';
+
+      return `
+        <tr>
+          <td class="act-num">${globalNum}</td>
+          <td>
+            <div class="act-desc">${a.description}</div>
+            <div class="act-sub">
+              ${a.type_label ? `${a.type_label}` : ''}
+              ${a.started_at ? ` · ${fmtTime(a.started_at)}` : ''}
+            </div>
+            ${teamStr ? `<div class="act-team">Equipe: ${teamStr}</div>` : ''}
+            ${a.notes ? `<div class="act-notes">${a.notes}</div>` : ''}
+            ${photosHtml}
+          </td>
+        </tr>`;
+    }).join('');
+    return locRow + itemRows;
   }).join('');
 
   // Signature block

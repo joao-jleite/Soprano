@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 
-const PUBLIC_ROUTES = ['/login', '/verify', '/nova-senha', '/esqueci-senha'];
+const PUBLIC_ROUTES = ['/login', '/verify', '/nova-senha', '/esqueci-senha', '/auth/confirmar'];
 
 // Propaga cookies do supaResponse (refresh tokens etc) para qualquer redirect
 // que a gente faça no middleware — senão a sessão é perdida e vira loop.

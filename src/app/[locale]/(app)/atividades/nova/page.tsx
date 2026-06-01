@@ -1,5 +1,6 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
+import { redirect } from '@/i18n/navigation';
 import { NewActivityForm, type InitialActivity } from './new-activity-form';
 
 export const dynamic = 'force-dynamic';
@@ -16,6 +17,11 @@ export default async function NewActivityPage({
   setRequestLocale(locale);
   const t = await getTranslations('activities');
   const supabase = await createClient();
+
+  // Clientes não podem criar atividades
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: me } = user ? await supabase.from('profiles').select('role').eq('id', user.id).single() : { data: null };
+  if ((me as any)?.role === 'cliente') redirect({ href: '/atividades', locale });
 
   const [{ data: locations }, { data: types }] = await Promise.all([
     supabase.from('locations').select('id, name, kind').eq('line', 'linha-6').is('deleted_at', null).order('sort_order'),

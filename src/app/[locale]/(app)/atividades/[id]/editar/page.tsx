@@ -20,6 +20,12 @@ export default async function EditActivityPage({
   } = await supabase.auth.getUser();
   if (!user) redirect({ href: '/login', locale });
 
+  // Busca perfil uma única vez
+  const { data: me } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+
+  // Clientes não podem editar atividades
+  if ((me as any)?.role === 'cliente') redirect({ href: `/atividades/${id}`, locale });
+
   const [{ data: activity }, { data: locations }, { data: types }] = await Promise.all([
     supabase
       .from('activities')
@@ -42,7 +48,6 @@ export default async function EditActivityPage({
   // Apenas rascunhos editáveis — redireciona para detalhe se já foi enviada/assinada
   if (act.status !== 'rascunho') redirect({ href: `/atividades/${id}`, locale });
 
-  const { data: me } = await supabase.from('profiles').select('role').eq('id', user.id).single();
   // Sem permissão → detalhe da atividade (não 404)
   if ((me as any)?.role !== 'admin' && act.supervisor_id !== user.id) redirect({ href: `/atividades/${id}`, locale });
 

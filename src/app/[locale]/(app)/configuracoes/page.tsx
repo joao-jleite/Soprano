@@ -1,10 +1,12 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
+import { redirect } from '@/i18n/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ChangePasswordForm } from './change-password-form';
+import { ActivityTypesSection } from './activity-types-section';
 
 export default async function ConfiguracoesPage({
   params,
@@ -22,6 +24,19 @@ export default async function ConfiguracoesPage({
   const { data: profile } = user
     ? await supabase.from('profiles').select('*').eq('id', user.id).single()
     : { data: null };
+
+  // Clientes não têm acesso à página de configurações
+  if ((profile as any)?.role === 'cliente') redirect({ href: '/', locale });
+
+  const isAdmin = (profile as any)?.role === 'admin';
+
+  const { data: activityTypes } = isAdmin
+    ? await supabase
+        .from('activity_types')
+        .select('id, slug, label_pt, label_en, label_es')
+        .is('deleted_at', null)
+        .order('label_pt')
+    : { data: [] };
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -62,6 +77,21 @@ export default async function ConfiguracoesPage({
           <ChangePasswordForm />
         </CardContent>
       </Card>
+
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Tipos de atividade</CardTitle>
+            <CardDescription>
+              Gerencie os tipos disponíveis ao registrar atividades. A exclusão é irreversível —
+              atividades já registradas não são afetadas.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ActivityTypesSection types={(activityTypes ?? []) as any} />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

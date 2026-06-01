@@ -98,12 +98,14 @@ export default async function ActivitiesPage({
             {activities?.length ?? 0} {t('activities.title').toLowerCase()}
           </p>
         </div>
-        <Button asChild>
-          <Link href="/atividades/nova">
-            <Plus />
-            {t('activities.newActivity')}
-          </Link>
-        </Button>
+        {role !== 'cliente' && (
+          <Button asChild>
+            <Link href="/atividades/nova">
+              <Plus />
+              {t('activities.newActivity')}
+            </Link>
+          </Button>
+        )}
       </header>
 
       <ActivityFilters locations={locations ?? []} types={types ?? []} localeKey={localeKey} />
@@ -122,9 +124,11 @@ export default async function ActivitiesPage({
         <Card>
           <CardContent className="p-10 flex flex-col items-center gap-3 text-center">
             <p className="text-sm text-muted-foreground">{t('activities.empty')}</p>
-            <Button asChild size="sm" variant="outline">
-              <Link href="/atividades/nova">{t('activities.emptyCta')}</Link>
-            </Button>
+            {role !== 'cliente' && (
+              <Button asChild size="sm" variant="outline">
+                <Link href="/atividades/nova">{t('activities.emptyCta')}</Link>
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}

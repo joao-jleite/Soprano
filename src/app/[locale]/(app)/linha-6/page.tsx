@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Link } from '@/i18n/navigation';
-import { Linha6Map } from '@/components/map/linha-6-map';
+import { MapToggle } from './map-toggle';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,7 +55,7 @@ export default async function Linha6Page({
         </div>
       )}
 
-      <Linha6Map stops={(locations ?? []) as any} locale={locale} />
+      <MapToggle stops={(locations ?? []) as any} locale={locale} />
 
       <section className="grid gap-4 sm:grid-cols-3">
         <StatBlock label={t('stationsLabel')} value={grouped.estacao?.length ?? 0} icon={<Building2 className="h-4 w-4" />} />

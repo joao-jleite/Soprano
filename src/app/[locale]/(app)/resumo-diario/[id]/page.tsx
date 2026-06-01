@@ -13,6 +13,7 @@ import { FileDown } from 'lucide-react';
 import { ActivityPicker } from './activity-picker';
 import { SendReportButton } from './send-button';
 import { SignDailyReportPanel } from './sign-panel';
+import { DeleteReportButton } from './delete-button';
 
 export default async function DailyReportPage({
   params,
@@ -63,14 +64,45 @@ export default async function DailyReportPage({
 
   const includedIds: string[] = (reportActivities ?? []).map((r: any) => r.activity_id);
 
-  // Atividades incluídas (com detalhes)
-  const { data: includedActivities } = includedIds.length
-    ? await supabase
-        .from('activities')
-        .select('id, description, status, started_at, locations(name), activity_types(label_pt)')
-        .in('id', includedIds)
-        .order('started_at')
-    : { data: [] };
+  // Atividades incluídas (com detalhes) + fotos
+  const [{ data: includedActivities }, { data: allPhotos }] = await Promise.all([
+    includedIds.length
+      ? supabase
+          .from('activities')
+          .select('id, description, status, started_at, locations(name, sort_order), activity_types(label_pt)')
+          .in('id', includedIds)
+          .order('started_at')
+      : Promise.resolve({ data: [] }),
+    includedIds.length
+      ? (supabase as any)
+          .from('activity_photos')
+          .select('id, activity_id, storage_path, caption')
+          .in('activity_id', includedIds)
+          .order('uploaded_at')
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  // Signed URLs para fotos (expiram em 1h)
+  const photosWithUrls = await Promise.all(
+    (allPhotos ?? []).map(async (ph: any) => {
+      const { data } = await supabase.storage
+        .from('activity-photos')
+        .createSignedUrl(ph.storage_path, 3600);
+      return { ...ph, url: data?.signedUrl ?? null };
+    })
+  );
+  const photosByActivity: Record<string, typeof photosWithUrls> = {};
+  photosWithUrls.forEach(ph => {
+    if (ph.url) (photosByActivity[ph.activity_id] ||= []).push(ph);
+  });
+
+  // Ordena por local (sort_order) → started_at
+  const sortedActivities = [...(includedActivities ?? [])].sort((a: any, b: any) => {
+    const sa = a.locations?.sort_order ?? 9999;
+    const sb = b.locations?.sort_order ?? 9999;
+    if (sa !== sb) return sa - sb;
+    return new Date(a.started_at).getTime() - new Date(b.started_at).getTime();
+  });
 
   // Atividades disponíveis para adicionar (mesmo dia, não incluídas, não assinadas)
   const dateStart = report.report_date + 'T00:00:00';
@@ -137,12 +169,17 @@ export default async function DailyReportPage({
       <header className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Badge variant={sc.variant}>{sc.label}</Badge>
-          <Button asChild variant="secondary" size="sm">
-            <a href={`/api/resumo-diario/${id}/pdf`} target="_blank" rel="noopener noreferrer">
-              <FileDown className="h-4 w-4" />
-              PDF
-            </a>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="secondary" size="sm">
+              <a href={`/api/resumo-diario/${id}/pdf`} target="_blank" rel="noopener noreferrer">
+                <FileDown className="h-4 w-4" />
+                PDF
+              </a>
+            </Button>
+            {!isClient && (
+              <DeleteReportButton reportId={id} />
+            )}
+          </div>
         </div>
         <h1 className="text-3xl font-semibold tracking-tight">
           Resumo diário — {formatDate(report.report_date + 'T12:00:00', localeStr)}
@@ -237,19 +274,66 @@ export default async function DailyReportPage({
             />
           ) : (
             <>
-              {includedActivities?.length === 0 ? (
+              {sortedActivities.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Nenhuma atividade incluída.</p>
               ) : (
-                <ul className="space-y-2">
-                  {(includedActivities ?? []).map((a: any) => (
-                    <li key={a.id} className="rounded-lg border border-border bg-card/50 px-3 py-2.5">
-                      <p className="text-sm font-medium">{a.description}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {a.locations?.name} · {a.activity_types?.label_pt} · {formatDate(a.started_at, localeStr)}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
+                <div className="space-y-5">
+                  {(() => {
+                    // Agrupa por local para exibição
+                    const groups: { locName: string; items: any[] }[] = [];
+                    let lastLoc = '';
+                    for (const a of sortedActivities) {
+                      const loc = (a as any).locations?.name ?? 'Sem local';
+                      if (loc !== lastLoc) { groups.push({ locName: loc, items: [] }); lastLoc = loc; }
+                      groups[groups.length - 1].items.push(a);
+                    }
+                    return groups.map(group => (
+                      <div key={group.locName}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            📍 {group.locName}
+                          </span>
+                          <div className="flex-1 h-px bg-border" />
+                        </div>
+                        <ul className="space-y-2">
+                          {group.items.map((a: any) => {
+                            const photos = photosByActivity[a.id] ?? [];
+                            return (
+                              <li key={a.id} className="rounded-lg border border-border bg-card/50 px-3 py-2.5 space-y-2">
+                                <div>
+                                  <p className="text-sm font-medium">{a.description}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {a.activity_types?.label_pt} · {formatDate(a.started_at, localeStr)}
+                                  </p>
+                                </div>
+                                {photos.length > 0 && (
+                                  <div className="flex gap-1.5 flex-wrap">
+                                    {photos.slice(0, 6).map((ph: any) => (
+                                      <a
+                                        key={ph.id}
+                                        href={ph.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block"
+                                      >
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
+                                          src={ph.url}
+                                          alt={ph.caption ?? 'Foto da atividade'}
+                                          className="h-16 w-24 object-cover rounded-md border border-border hover:opacity-80 transition-opacity"
+                                        />
+                                      </a>
+                                    ))}
+                                  </div>
+                                )}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    ));
+                  })()}
+                </div>
               )}
             </>
           )}

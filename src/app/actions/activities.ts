@@ -268,6 +268,33 @@ export async function createActivityType(input: {
   return data;
 }
 
+export async function deleteActivityType(typeId: string): Promise<{ error?: string }> {
+  try {
+    const id = z.string().uuid().parse(typeId);
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: 'Não autenticado' };
+
+    const { data: me } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+    if ((me as any)?.role !== 'admin') return { error: 'Apenas admins podem excluir tipos de atividade' };
+
+    const { error } = await supabase
+      .from('activity_types')
+      .update({ deleted_at: new Date().toISOString() } as any)
+      .eq('id', id)
+      .is('deleted_at', null);
+
+    if (error) return { error: error.message };
+
+    revalidatePath('/configuracoes');
+    revalidatePath('/atividades');
+    revalidatePath('/atividades/nova');
+    return {};
+  } catch (e: any) {
+    return { error: e?.message ?? 'Erro inesperado' };
+  }
+}
+
 function slugify(s: string) {
   return s
     .normalize('NFD')

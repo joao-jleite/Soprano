@@ -4,9 +4,10 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect, Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RestoreRow } from './restore-row';
-import { formatDateTime } from '@/lib/utils';
+import { formatDateTime, initials } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,6 +20,7 @@ export default async function LixeiraPage({
   setRequestLocale(locale);
   const t = await getTranslations('trash');
   const tTeam = await getTranslations('team');
+  const tRoles = await getTranslations('roles');
   const supabase = await createClient();
 
   const {
@@ -29,7 +31,7 @@ export default async function LixeiraPage({
     : { data: null };
   if ((me as any)?.role !== 'admin') redirect({ href: '/equipe', locale });
 
-  const [{ data: acts }, { data: locs }, { data: types }] = await Promise.all([
+  const [{ data: acts }, { data: locs }, { data: types }, { data: profs }] = await Promise.all([
     supabase
       .from('activities')
       .select('id, description, deleted_at, status, locations(name)')
@@ -45,6 +47,12 @@ export default async function LixeiraPage({
     supabase
       .from('activity_types')
       .select('id, label_pt, slug, deleted_at')
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false })
+      .limit(200),
+    supabase
+      .from('profiles')
+      .select('id, full_name, email, role, company, deleted_at')
       .not('deleted_at', 'is', null)
       .order('deleted_at', { ascending: false })
       .limit(200),
@@ -65,13 +73,39 @@ export default async function LixeiraPage({
         <p className="text-sm text-muted-foreground">{t('descriptionFull')}</p>
       </header>
 
-      <Tabs defaultValue="activities">
+      <Tabs defaultValue="profiles">
         <TabsList>
+          <TabsTrigger value="profiles">Usuários ({profs?.length ?? 0})</TabsTrigger>
           <TabsTrigger value="activities">{t('tabs.activities')} ({acts?.length ?? 0})</TabsTrigger>
           <TabsTrigger value="locations">{t('tabs.locations')} ({locs?.length ?? 0})</TabsTrigger>
           <TabsTrigger value="types">{t('tabs.types')} ({types?.length ?? 0})</TabsTrigger>
         </TabsList>
 
+        {/* ── Usuários ────────────────────────────────────────────── */}
+        <TabsContent value="profiles" className="space-y-2 mt-4">
+          {(!profs || profs.length === 0) && <Empty label={t('emptyShort')} />}
+          {(profs ?? []).map((p: any) => (
+            <Card key={p.id}>
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-muted text-muted-foreground text-sm font-semibold flex items-center justify-center shrink-0">
+                  {initials(p.full_name)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium truncate">{p.full_name}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {p.email} · {t('deletedAt')} {formatDateTime(p.deleted_at, loc)}
+                  </p>
+                </div>
+                <Badge variant="secondary" className="shrink-0 text-[10px]">
+                  {tRoles(p.role)}
+                </Badge>
+                <RestoreRow table="profiles" id={p.id} />
+              </CardContent>
+            </Card>
+          ))}
+        </TabsContent>
+
+        {/* ── Atividades ───────────────────────────────────────────── */}
         <TabsContent value="activities" className="space-y-2 mt-4">
           {(!acts || acts.length === 0) && <Empty label={t('emptyShort')} />}
           {(acts ?? []).map((a: any) => (
@@ -89,6 +123,7 @@ export default async function LixeiraPage({
           ))}
         </TabsContent>
 
+        {/* ── Locais ──────────────────────────────────────────────── */}
         <TabsContent value="locations" className="space-y-2 mt-4">
           {(!locs || locs.length === 0) && <Empty label={t('emptyShort')} />}
           {(locs ?? []).map((l: any) => (
@@ -106,6 +141,7 @@ export default async function LixeiraPage({
           ))}
         </TabsContent>
 
+        {/* ── Tipos de atividade ──────────────────────────────────── */}
         <TabsContent value="types" className="space-y-2 mt-4">
           {(!types || types.length === 0) && <Empty label={t('emptyShort')} />}
           {(types ?? []).map((tp: any) => (

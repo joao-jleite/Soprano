@@ -1,10 +1,16 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { FileSearch, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { ProfileRow } from './profile-row';
 import { InviteDialog } from './invite-dialog';
+
+export type AuthMeta = {
+  confirmedAt: string | null;
+  lastSignInAt: string | null;
+};
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +30,9 @@ export default async function EquipePage({
   const { data: me } = user
     ? await supabase.from('profiles').select('role').eq('id', user.id).single()
     : { data: null };
-  const isAdmin = (me as any)?.role === 'admin';
+  // Fallback: se o profiles query falhar, tenta pelo user metadata
+  const role = (me as any)?.role ?? (user as any)?.user_metadata?.role;
+  const isAdmin = role === 'admin';
 
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
@@ -32,6 +40,24 @@ export default async function EquipePage({
     .is('deleted_at', null)
     .order('role')
     .order('full_name');
+
+  // Busca metadados de auth (confirmação e último acesso) para admins
+  const authMetaMap = new Map<string, AuthMeta>();
+  if (isAdmin && profiles?.length) {
+    const admin = createServiceClient();
+    if (admin) {
+      const { data: usersData } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      const profileIds = new Set(profiles.map((p: any) => p.id));
+      for (const u of usersData?.users ?? []) {
+        if (profileIds.has(u.id)) {
+          authMetaMap.set(u.id, {
+            confirmedAt: (u as any).email_confirmed_at ?? null,
+            lastSignInAt: (u as any).last_sign_in_at ?? null,
+          });
+        }
+      }
+    }
+  }
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -80,7 +106,12 @@ export default async function EquipePage({
       <ul className="grid gap-3 sm:grid-cols-2">
         {(profiles ?? []).map((p: any) => (
           <li key={p.id}>
-            <ProfileRow profile={p} editable={isAdmin} />
+            <ProfileRow
+            profile={p}
+            editable={isAdmin}
+            currentUserId={user?.id}
+            authMeta={isAdmin ? authMetaMap.get(p.id) : undefined}
+          />
           </li>
         ))}
       </ul>

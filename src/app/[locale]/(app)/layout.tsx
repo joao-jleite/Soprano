@@ -128,7 +128,7 @@ export default async function AppLayout({
             <PageTransition>{children}</PageTransition>
           </div>
         </main>
-        <MobileNav />
+        <MobileNav role={profile.role} />
       </div>
     </div>
   );
