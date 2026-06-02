@@ -2,6 +2,55 @@
 
 import * as React from 'react';
 import { Loader2, Save } from 'lucide-react';
+
+// Duração padrão (dias) por label_pt do tipo de atividade.
+// Chave em MAIÚSCULAS para comparação case-insensitive.
+const DURACAO_PADRAO: Record<string, number> = {
+  'GRELHA DE ENTRADA DE AR PRESSURIZAÇÃO': 1,
+  'REGISTRO CORTAFOGO + SOBREPRESSÃO': 2,
+  'ATENUADOR ANTES DO VENTILADOR DUTO 1': 2,
+  'ATENUADOR ANTES DO VENTILADOR DUTO 2': 2,
+  'ATENUADOR APÓS DO VENTILADOR DUTO 1': 3,
+  'ATENUADOR APÓS DO VENTILADOR DUTO 2': 3,
+  'ATENUADOR ANTES DO VENTILADOR EXAUSTÃO D3': 2,
+  'ATENUADOR ANTES DO VENTILADOR EXAUSTÃO D4': 2,
+  'ATENUADOR ANTES DO VENTILADOR INSUFLAÇÃO D1': 2,
+  'ATENUADOR ANTES DO VENTILADOR INSUFLAÇÃO D2': 2,
+  'ATENUADOR APOS DO VENTILADOR EXAUSTÃO D3': 3,
+  'ATENUADOR APOS DO VENTILADOR EXAUSTÃO D4': 3,
+  'ATENUADOR APOS DO VENTILADOR INSUFLAÇÃO D1': 3,
+  'ATENUADOR APOS DO VENTILADOR INSUFLAÇÃO D2': 3,
+  'ATENUADOR ANTES DO VENTILADOR EXAUSTÃO': 5,
+  'ATENUADOR ANTES DO VENTILADOR INSUFLAÇÃO': 5,
+  'ATENUADOR APÓS DO VENTILADOR INSUFLAÇÃO': 6,
+  'ATENUADOR APÓS DO VENTILADOR EXAUSTÃO': 6,
+  'ATENUADOR ANTES DO VENTILADOR': 11,
+  'ATENUADOR APÓS DO VENTILADOR': 11,
+  'GRELHAS PRESSURIZAÇÃO NA CAIXA DA ESCADA': 6,
+  'GRELHAS EMBAIXO PLATAFORMA 1': 7,
+  'GRELHAS EMBAIXO PLATAFORMA 2': 7,
+  'DUTOS PRESSURIZAÇÃO + VENTILADORES CENTRÍFUGOS + DAMPERS DE RETORNO': 4,
+  'ELECTROCALHAS + PAINEIS + C. FORÇA + C. SENSOR. CORTA FOGO. + ELETRODUTOS': 8,
+  'ELECTROCALHAS + PAINEIS + C. FORÇA + C. CONTROLE + C. S. TEMP + ELETRODUTOS + S. TEMP': 10,
+  'VENTILADORES AXIAIS + CALDELERIA DUTO 1': 7,
+  'VENTILADORES AXIAIS + CALDELERIA DUTO 2': 7,
+  'VENTILADORES AXIAIS + CALDELERIA EXAUSTÃO D3': 4,
+  'VENTILADORES AXIAIS + CALDELERIA EXAUSTÃO D4': 4,
+  'VENTILADORES AXIAIS + CALDELERIA INSUFLAÇÃO D1': 4,
+  'VENTILADORES AXIAIS + CALDELERIA INSUFLAÇÃO D2': 4,
+  'VENTILADORES AXIAIS + CALDELERIA EXAUSTÃO': 14,
+  'VENTILADORES AXIAIS + CALDELERIA INSUFLAÇÃO': 14,
+  'VENTILADORES AXIAIS + CALDELERIA': 14,
+  'DUTOS VIA 1': 14,
+  'DUTOS VIA 2': 14,
+};
+
+/** Retorna YYYY-MM-DD somando `days` dias a uma data ISO string. */
+function addDays(dateStr: string, days: number): string {
+  const d = new Date(dateStr + 'T12:00:00');
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
@@ -42,6 +91,12 @@ export function NewActivityForm({ locations, types, locale, initial, mode = 'cre
 
   const draftIdRef = React.useRef(initial?.id ?? crypto.randomUUID());
 
+  // Controle de duração automática
+  // - durationManual: true quando o usuário editou o campo manualmente após a seleção de tipo
+  // - isInitialMount: evita que o efeito de typeId sobrescreva valores em modo edição
+  const durationManualRef = React.useRef(false);
+  const isInitialMount = React.useRef(true);
+
   const [locationOptions, setLocationOptions] = React.useState<Option[]>(
     locations.map((l) => ({
       value: l.id,
@@ -69,6 +124,8 @@ export function NewActivityForm({ locations, types, locale, initial, mode = 'cre
   const [endedAt, setEndedAt] = React.useState(
     initial?.endedAt ? new Date(initial.endedAt).toISOString().slice(0, 10) : '',
   );
+  const [duration, setDuration] = React.useState('');
+
   const [participants, setParticipants] = React.useState<Participant[]>(
     (initial?.participants ?? []) as any,
   );
@@ -77,6 +134,33 @@ export function NewActivityForm({ locations, types, locale, initial, mode = 'cre
   );
 
   const [saving, setSaving] = React.useState(false);
+
+  // Ao mudar o tipo: preenche duração padrão (se mapeado) e recalcula término
+  React.useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    if (!typeId) return;
+
+    const typeObj = types.find((tp) => tp.id === typeId);
+    const labelKey = typeObj?.label_pt?.toUpperCase().trim() ?? '';
+    const defaultDuration = DURACAO_PADRAO[labelKey];
+
+    if (defaultDuration !== undefined) {
+      // Tipo mapeado → sempre aplica o valor padrão e reseta o flag manual
+      durationManualRef.current = false;
+      setDuration(String(defaultDuration));
+      if (startedAt) {
+        setEndedAt(addDays(startedAt, defaultDuration));
+      }
+    } else if (!durationManualRef.current) {
+      // Tipo sem mapeamento E usuário não editou manualmente → limpa o campo
+      setDuration('');
+    }
+    // Se durationManualRef.current === true, mantém o valor que o usuário digitou
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [typeId]);
 
   async function handleCreateLocation(name: string): Promise<Option> {
     try {
@@ -179,12 +263,36 @@ export function NewActivityForm({ locations, types, locale, initial, mode = 'cre
         <CardHeader>
           <CardTitle className="text-base">{t('sections.when')}</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
+        <CardContent className="grid gap-4 sm:grid-cols-3">
           <Field label={t('fields.startedAt')}>
             <Input
               type="date"
               value={startedAt}
-              onChange={(e) => setStartedAt(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setStartedAt(val);
+                // Recalcula término se duração estiver preenchida
+                const days = parseInt(duration, 10);
+                if (val && !isNaN(days) && days > 0) {
+                  setEndedAt(addDays(val, days));
+                }
+              }}
+            />
+          </Field>
+          <Field label="Duração prevista (dias)">
+            <Input
+              type="number"
+              min="1"
+              value={duration}
+              placeholder="—"
+              onChange={(e) => {
+                durationManualRef.current = true;
+                setDuration(e.target.value);
+                const days = parseInt(e.target.value, 10);
+                if (startedAt && !isNaN(days) && days > 0) {
+                  setEndedAt(addDays(startedAt, days));
+                }
+              }}
             />
           </Field>
           <Field label={t('fields.endedAt')}>
