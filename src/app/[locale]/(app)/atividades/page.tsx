@@ -47,6 +47,7 @@ export default async function ActivitiesPage({
   let q = supabase
     .from('activities')
     .select('id, description, status, started_at, supervisor_id, locations(name, kind), activity_types(label_pt, label_en, label_es)')
+    .is('deleted_at', null)
     .order('started_at', { ascending: false })
     .limit(100);
 
