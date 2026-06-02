@@ -12,7 +12,7 @@ export const maxDuration = 60;
 // Mantida em env var para facilitar atualização: CHROMIUM_PACK_URL
 const CHROMIUM_PACK_URL =
   process.env.CHROMIUM_PACK_URL ??
-  'https://github.com/Sparticuz/chromium/releases/download/v131.0.1/chromium-v131.0.1-pack.tar';
+  'https://github.com/Sparticuz/chromium/releases/download/v147.0.2/chromium-v147.0.2-pack.tar';
 
 async function getBrowser() {
   // Em produção (Vercel / Lambda) usa @sparticuz/chromium-min
