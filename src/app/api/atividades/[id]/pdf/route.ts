@@ -115,7 +115,8 @@ export async function GET(
         const b64 = Buffer.from(buf).toString('base64');
         return { signedUrl: `data:${mime};base64,${b64}`, caption: p.caption };
       } catch {
-        return { signedUrl: data.signedUrl, caption: p.caption };
+        // Falha no fetch → descarta a foto (não retornar URL HTTP — Puppeteer não faz rede no Lambda)
+        return null;
       }
     }),
   )).filter((x): x is { signedUrl: string; caption: string | null } => x !== null);

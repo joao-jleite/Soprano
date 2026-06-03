@@ -55,8 +55,11 @@ export async function GET(
       .from('profiles')
       .select('role')
       .eq('id', user.id)
-      .single();
-    const role = (me as any)?.role;
+      .maybeSingle();
+    const role = (me as any)?.role as string | undefined;
+
+    // Usuário sem profile no banco não deve acessar nada
+    if (!role) return new NextResponse('Forbidden', { status: 403 });
 
     // Busca o resumo
     const { data: report, error: reportError } = await (supabase as any)
@@ -72,7 +75,7 @@ export async function GET(
     }
     if (!report) return new NextResponse('Not found', { status: 404 });
 
-    // Controle de acesso
+    // Controle de acesso por role
     if (role === 'supervisor' && report.supervisor_id !== user.id) {
       return new NextResponse('Forbidden', { status: 403 });
     }
@@ -133,8 +136,16 @@ export async function GET(
       } catch { return null; }
     }
 
+    // Limita a 4 fotos por atividade e 40 fotos no total
+    const photoCap = 40;
+    const countPerActivity: Record<string, number> = {};
+    const limitedPhotos = (allPhotos ?? []).filter((ph: any) => {
+      countPerActivity[ph.activity_id] = (countPerActivity[ph.activity_id] ?? 0) + 1;
+      return countPerActivity[ph.activity_id] <= 4;
+    }).slice(0, photoCap);
+
     const photosWithUrls = await Promise.all(
-      (allPhotos ?? []).map(async (ph: any) => {
+      limitedPhotos.map(async (ph: any) => {
         const { data: signed } = await supabase.storage
           .from('activity-photos')
           .createSignedUrl(ph.storage_path, 300);
@@ -202,7 +213,8 @@ export async function GET(
     const browser = await getBrowser();
     try {
       const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: 'networkidle0' });
+      // domcontentloaded é suficiente — imagens já vêm como data URIs (sem rede)
+      await page.setContent(html, { waitUntil: 'domcontentloaded' });
       const pdf = await page.pdf({
         format: 'A4',
         printBackground: true,
