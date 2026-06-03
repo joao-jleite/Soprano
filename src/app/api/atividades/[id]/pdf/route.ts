@@ -10,9 +10,11 @@ export const maxDuration = 60;
 
 // URL do binário do Chromium para @sparticuz/chromium-min
 // Mantida em env var para facilitar atualização: CHROMIUM_PACK_URL
+// A partir de v147 o release passou a ter sufixo de arquitetura (.x64 / .arm64)
+// Vercel Lambda roda em x64
 const CHROMIUM_PACK_URL =
   process.env.CHROMIUM_PACK_URL ??
-  'https://github.com/Sparticuz/chromium/releases/download/v147.0.2/chromium-v147.0.2-pack.tar';
+  'https://github.com/Sparticuz/chromium/releases/download/v147.0.2/chromium-v147.0.2-pack.x64.tar';
 
 async function getBrowser() {
   // Em produção (Vercel / Lambda) usa @sparticuz/chromium-min
