@@ -97,45 +97,6 @@ export async function POST(
       }
     }
 
-    // Busca todas as atividades vinculadas ao resumo
-    const { data: reportActivities } = await (admin as any)
-      .from('daily_report_activities')
-      .select('activity_id')
-      .eq('daily_report_id', reportId);
-
-    if (reportActivities && reportActivities.length > 0) {
-      const activityIds: string[] = reportActivities.map((ra: any) => ra.activity_id);
-
-      // Atualiza status das atividades para 'assinada'
-      await (admin as any)
-        .from('activities')
-        .update({ status: 'assinada' })
-        .in('id', activityIds);
-
-      // Remove assinaturas individuais anteriores (para evitar conflito de unique constraint)
-      await (admin as any)
-        .from('signatures')
-        .delete()
-        .in('activity_id', activityIds)
-        .eq('rejected', false);
-
-      // Insere entrada na tabela signatures para cada atividade
-      // (necessário para o relatório mensal exibir signed_at corretamente)
-      const signatureRows = activityIds.map((actId: string) => ({
-        activity_id: actId,
-        signer_id: user.id,
-        signer_name: (profile as any).full_name,
-        svg_data: svgData,
-        ip_address: ip,
-        user_agent: ua,
-        rejected: false,
-      }));
-
-      await (admin as any)
-        .from('signatures')
-        .insert(signatureRows);
-    }
-
     // Email ao supervisor (silencioso)
     try {
       if (report.supervisor_id) {

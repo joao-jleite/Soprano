@@ -134,24 +134,6 @@ export async function sendReportForSignature(reportId: string): Promise<{ error?
       updatedReport = withSentAt.data;
     }
 
-    // Atualiza status das atividades do resumo para 'enviada' (service role bypassa RLS)
-    try {
-      const adminClient = createServiceClient();
-      if (adminClient) {
-        const { data: reportActivities } = await (adminClient as any)
-          .from('daily_report_activities')
-          .select('activity_id')
-          .eq('daily_report_id', rId);
-        if (reportActivities && reportActivities.length > 0) {
-          const activityIds = reportActivities.map((ra: any) => ra.activity_id);
-          await (adminClient as any)
-            .from('activities')
-            .update({ status: 'enviada' })
-            .in('id', activityIds);
-        }
-      }
-    } catch (_) { /* silencioso — não bloqueia o envio */ }
-
     // Notifica cliente por email (silencioso)
     try {
       if (updatedReport?.client_id) {
@@ -343,20 +325,6 @@ export async function cancelDailyReport(
       .update({ status: 'cancelado', cancellation_reason: parsed.reason })
       .eq('id', parsed.reportId);
 
-    // Marca atividades do resumo como 'rejeitada'
-    try {
-      const { data: reportActivities } = await (adminForCancel as any)
-        .from('daily_report_activities')
-        .select('activity_id')
-        .eq('daily_report_id', parsed.reportId);
-      if (reportActivities && reportActivities.length > 0) {
-        const activityIds = reportActivities.map((ra: any) => ra.activity_id);
-        await (adminForCancel as any)
-          .from('activities')
-          .update({ status: 'rejeitada' })
-          .in('id', activityIds);
-      }
-    } catch (_) { /* silencioso */ }
 
     return {};
   } catch (e: unknown) {
@@ -488,26 +456,6 @@ export async function resendReport(reportId: string): Promise<{ error?: string }
       .eq('id', rId);
 
     if (error) return { error: error.message ?? 'Erro ao reenviar resumo' };
-
-    // Busca atividades do resumo e volta para 'enviada', removendo assinaturas individuais
-    try {
-      const { data: reportActivities } = await (adminResend as any)
-        .from('daily_report_activities')
-        .select('activity_id')
-        .eq('daily_report_id', rId);
-      if (reportActivities && reportActivities.length > 0) {
-        const activityIds = reportActivities.map((ra: any) => ra.activity_id);
-        await (adminResend as any)
-          .from('activities')
-          .update({ status: 'enviada' })
-          .in('id', activityIds);
-        await (adminResend as any)
-          .from('signatures')
-          .delete()
-          .in('activity_id', activityIds)
-          .eq('rejected', false);
-      }
-    } catch (_) { /* silencioso */ }
 
     // Notifica cliente por email (silencioso)
     try {
