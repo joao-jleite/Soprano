@@ -177,7 +177,7 @@ export async function submitActivityForSignature(activityId: string): Promise<{ 
     if (!['admin', 'supervisor'].includes(role)) return { error: 'Sem permissão' };
 
     // Supervisor só pode submeter as próprias atividades
-    const { data: act } = await supabase.from('activities').select('supervisor_id, status').eq('id', aId).single();
+    const { data: act } = await supabase.from('activities').select('supervisor_id, client_id, status, description').eq('id', aId).single();
     if (!act) return { error: 'Atividade não encontrada' };
     if (role === 'supervisor' && (act as any).supervisor_id !== user.id) return { error: 'Sem permissão para esta atividade' };
 
@@ -189,29 +189,22 @@ export async function submitActivityForSignature(activityId: string): Promise<{ 
 
     // Notifica cliente por email (se configurado, silencioso)
     try {
-      if ((act as any).supervisor_id && (act as any)) {
-        const { data: actDetail } = await supabase
-          .from('activities')
-          .select('description, client_id')
-          .eq('id', aId)
+      if ((act as any).client_id) {
+        const { data: client } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', (act as any).client_id)
           .single();
-        if ((actDetail as any)?.client_id) {
-          const { data: client } = await supabase
-            .from('profiles')
-            .select('full_name')
-            .eq('id', (actDetail as any).client_id)
-            .single();
-          const email = await getUserEmail((actDetail as any).client_id);
-          if (email) {
-            const h = await headers();
-            const origin = h.get('origin') ?? h.get('referer')?.replace(/\/[^/]*$/, '') ?? '';
-            await activitySubmittedEmail({
-              clientEmail: email,
-              clientName: (client as any)?.full_name ?? 'cliente',
-              description: (actDetail as any).description,
-              activityUrl: `${origin}/pt/atividades/${aId}`,
-            });
-          }
+        const email = await getUserEmail((act as any).client_id);
+        if (email) {
+          const h = await headers();
+          const origin = h.get('origin') ?? h.get('referer')?.replace(/\/[^/]*$/, '') ?? '';
+          await activitySubmittedEmail({
+            clientEmail: email,
+            clientName: (client as any)?.full_name ?? 'cliente',
+            description: (act as any).description,
+            activityUrl: `${origin}/pt/atividades/${aId}`,
+          });
         }
       }
     } catch (e) {

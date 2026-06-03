@@ -149,11 +149,12 @@ export default async function DailyReportPage({
     }
   }
 
-  const localeStr = locale === 'pt' ? 'pt-BR' : locale;
-  const isClient  = role === 'cliente';
+  const localeStr  = locale === 'pt' ? 'pt-BR' : locale;
+  const isClient   = role === 'cliente';
+  const isOwner    = role === 'admin' || (role === 'supervisor' && user?.id === report.supervisor_id);
   // Verifica que o cliente logado é o cliente designado neste resumo
-  const canSign   = report.status === 'aguardando_assinatura' && isClient && user?.id === report.client_id;
-  const isSigned  = report.status === 'assinado';
+  const canSign    = report.status === 'aguardando_assinatura' && isClient && user?.id === report.client_id;
+  const isSigned   = report.status === 'assinado';
   const isCancelled = report.status === 'cancelado';
 
   const statusConfig: Record<string, { label: string; variant: any }> = {
@@ -177,7 +178,7 @@ export default async function DailyReportPage({
                 PDF
               </a>
             </Button>
-            {!isClient && (
+            {isOwner && (
               <DeleteReportButton reportId={id} />
             )}
           </div>

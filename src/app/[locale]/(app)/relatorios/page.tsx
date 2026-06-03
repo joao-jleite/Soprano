@@ -1,6 +1,7 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { FileText, Download, Activity as ActivityIcon, CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
+import { redirect } from '@/i18n/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MonthlyPicker } from './monthly-picker';
@@ -18,9 +19,20 @@ export default async function RelatoriosPage({
   const tr = await getTranslations('reports');
   const supabase = await createClient();
 
-  const sinceISO = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
+  // Guard: apenas admin e supervisor acessam relatórios
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: me } = user
+    ? await supabase.from('profiles').select('role').eq('id', user.id).single()
+    : { data: null };
+  const role = (me as any)?.role;
+  if (!user || !['admin', 'supervisor'].includes(role)) {
+    redirect({ href: '/', locale });
+  }
 
-  const [{ data: byStatus }, { data: byLocation }, { data: monthly }, { data: timeToSign }] =
+  const sinceISO = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
+  const sinceDate = sinceISO.slice(0, 10);
+
+  const [{ data: byStatus }, { data: byLocation }, { data: monthly }, { data: signedReports }] =
     await Promise.all([
       supabase.from('activities').select('status').gte('started_at', sinceISO),
       supabase
@@ -33,12 +45,13 @@ export default async function RelatoriosPage({
         .select('started_at')
         .gte('started_at', new Date(Date.now() - 365 * 24 * 3600 * 1000).toISOString())
         .limit(2000),
-      supabase
-        .from('activities')
-        .select('submitted_at, signatures(signed_at)')
-        .eq('status', 'assinada')
-        .not('submitted_at', 'is', null)
-        .gte('started_at', sinceISO)
+      // Resumos assinados nos últimos 90 dias (substitui query de signatures em activities)
+      (supabase as any)
+        .from('daily_reports')
+        .select('signed_at, sent_at')
+        .eq('status', 'assinado')
+        .gte('report_date', sinceDate)
+        .not('signed_at', 'is', null)
         .limit(500),
     ]);
 
@@ -54,19 +67,19 @@ export default async function RelatoriosPage({
   const monthlySorted = Object.entries(monthlyCounts).sort(([a], [b]) => a.localeCompare(b));
   const monthlyMax = Math.max(1, ...monthlySorted.map(([, v]) => v));
 
-  // avg time-to-sign in hours
+  // avg time-to-sign em horas — calculado via daily_reports (signed_at - sent_at)
   let avgHours = 0;
   let ttsCount = 0;
-  for (const row of (timeToSign ?? []) as any[]) {
-    const sig = row.signatures?.[0];
-    if (!sig?.signed_at || !row.submitted_at) continue;
-    const delta = new Date(sig.signed_at).getTime() - new Date(row.submitted_at).getTime();
+  for (const row of (signedReports ?? []) as any[]) {
+    if (!row.signed_at || !row.sent_at) continue;
+    const delta = new Date(row.signed_at).getTime() - new Date(row.sent_at).getTime();
     if (delta > 0) {
       avgHours += delta / 3_600_000;
       ttsCount++;
     }
   }
   const avg = ttsCount ? (avgHours / ttsCount).toFixed(1) : '—';
+  const signedCount90 = (signedReports ?? []).length;
 
   const total = (byStatus ?? []).length;
 
@@ -86,7 +99,7 @@ export default async function RelatoriosPage({
         <Stat
           icon={<CheckCircle2 className="h-4 w-4 text-green-500" />}
           label={tr('signed')}
-          value={statusCounts['assinada'] ?? 0}
+          value={signedCount90}
           accent
         />
         <Stat
