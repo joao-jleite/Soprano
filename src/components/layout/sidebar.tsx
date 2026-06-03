@@ -3,7 +3,6 @@
 import { motion } from 'framer-motion';
 import {
   Activity,
-  Building2,
   ClipboardList,
   FileText,
   Home,
@@ -26,8 +25,7 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/',              labelKey: 'nav.dashboard',   icon: Home,                roles: ['admin', 'supervisor', 'cliente'] },
-  { href: '/linha-6',       labelKey: 'nav.linha6',      icon: Building2,           roles: ['admin', 'supervisor', 'cliente'] },
-  { href: '/atividades',    labelKey: 'nav.activities',  icon: Activity,            roles: ['admin', 'supervisor', 'cliente'] },
+{ href: '/atividades',    labelKey: 'nav.activities',  icon: Activity,            roles: ['admin', 'supervisor', 'cliente'] },
   { href: '/resumo-diario', labelKey: 'nav.dailyReport', icon: ClipboardList,       roles: ['admin', 'supervisor', 'cliente'] },
   { href: '/relatorios',    labelKey: 'nav.reports',     icon: FileText,            roles: ['admin', 'supervisor'] },
   { href: '/equipe',        labelKey: 'nav.team',        icon: Users,               roles: ['admin'] },
