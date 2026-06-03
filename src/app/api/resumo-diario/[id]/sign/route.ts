@@ -51,22 +51,19 @@ export async function POST(
     const ua = h.get('user-agent') ?? null;
     const ip = h.get('x-real-ip') ?? h.get('x-forwarded-for')?.split(',').at(-1)?.trim() ?? null;
 
-    // Usa service role para garantir que o DELETE bypassa RLS
+    // Usa service role para tudo (bypass RLS)
     const admin = createServiceClient();
-
-    // Remove assinatura anterior via service role (RLS pode bloquear DELETE do cliente)
-    if (admin) {
-      await (admin as any)
-        .from('daily_report_signatures')
-        .delete()
-        .eq('daily_report_id', reportId);
-    }
-
     if (!admin) {
       return NextResponse.json({ error: 'Configuração de servidor ausente' }, { status: 500 });
     }
 
-    // Insere nova assinatura via service role
+    // Remove assinatura anterior via service role (evita unique constraint 23505)
+    await (admin as any)
+      .from('daily_report_signatures')
+      .delete()
+      .eq('daily_report_id', reportId);
+
+    // Insere nova assinatura do resumo
     const { error: sigError } = await (admin as any)
       .from('daily_report_signatures')
       .insert({
@@ -82,25 +79,61 @@ export async function POST(
       return NextResponse.json({ error: sigError.message }, { status: 500 });
     }
 
-    // Atualiza status via service role (bypass RLS)
-    if (admin) {
-      const now = new Date().toISOString();
-      const { error: updError } = await (admin as any)
+    // Atualiza status do resumo
+    const now = new Date().toISOString();
+    const { error: updError } = await (admin as any)
+      .from('daily_reports')
+      .update({ status: 'assinado', signed_at: now })
+      .eq('id', reportId);
+
+    if (updError) {
+      // Fallback sem signed_at (coluna pode não existir)
+      const { error: updError2 } = await (admin as any)
         .from('daily_reports')
-        .update({ status: 'assinado', signed_at: now })
+        .update({ status: 'assinado' })
         .eq('id', reportId);
-
-      if (updError) {
-        // Tenta só o status sem signed_at (coluna pode não existir)
-        const { error: updError2 } = await (admin as any)
-          .from('daily_reports')
-          .update({ status: 'assinado' })
-          .eq('id', reportId);
-
-        if (updError2) {
-          return NextResponse.json({ error: updError2.message }, { status: 500 });
-        }
+      if (updError2) {
+        return NextResponse.json({ error: updError2.message }, { status: 500 });
       }
+    }
+
+    // Busca todas as atividades vinculadas ao resumo
+    const { data: reportActivities } = await (admin as any)
+      .from('daily_report_activities')
+      .select('activity_id')
+      .eq('daily_report_id', reportId);
+
+    if (reportActivities && reportActivities.length > 0) {
+      const activityIds: string[] = reportActivities.map((ra: any) => ra.activity_id);
+
+      // Atualiza status das atividades para 'assinada'
+      await (admin as any)
+        .from('activities')
+        .update({ status: 'assinada' })
+        .in('id', activityIds);
+
+      // Remove assinaturas individuais anteriores (para evitar conflito de unique constraint)
+      await (admin as any)
+        .from('signatures')
+        .delete()
+        .in('activity_id', activityIds)
+        .eq('rejected', false);
+
+      // Insere entrada na tabela signatures para cada atividade
+      // (necessário para o relatório mensal exibir signed_at corretamente)
+      const signatureRows = activityIds.map((actId: string) => ({
+        activity_id: actId,
+        signer_id: user.id,
+        signer_name: (profile as any).full_name,
+        svg_data: svgData,
+        ip_address: ip,
+        user_agent: ua,
+        rejected: false,
+      }));
+
+      await (admin as any)
+        .from('signatures')
+        .insert(signatureRows);
     }
 
     // Email ao supervisor (silencioso)

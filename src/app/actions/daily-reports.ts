@@ -121,6 +121,24 @@ export async function sendReportForSignature(reportId: string): Promise<{ error?
       updatedReport = withSentAt.data;
     }
 
+    // Atualiza status das atividades do resumo para 'enviada' (service role bypassa RLS)
+    try {
+      const adminClient = createServiceClient();
+      if (adminClient) {
+        const { data: reportActivities } = await (adminClient as any)
+          .from('daily_report_activities')
+          .select('activity_id')
+          .eq('daily_report_id', rId);
+        if (reportActivities && reportActivities.length > 0) {
+          const activityIds = reportActivities.map((ra: any) => ra.activity_id);
+          await (adminClient as any)
+            .from('activities')
+            .update({ status: 'enviada' })
+            .in('id', activityIds);
+        }
+      }
+    } catch (_) { /* silencioso — não bloqueia o envio */ }
+
     // Notifica cliente por email (silencioso)
     try {
       if (updatedReport?.client_id) {
@@ -304,6 +322,21 @@ export async function cancelDailyReport(
         .from('daily_reports')
         .update({ status: 'cancelado', cancellation_reason: parsed.reason })
         .eq('id', parsed.reportId);
+
+      // Marca atividades do resumo como 'rejeitada'
+      try {
+        const { data: reportActivities } = await (adminForCancel as any)
+          .from('daily_report_activities')
+          .select('activity_id')
+          .eq('daily_report_id', parsed.reportId);
+        if (reportActivities && reportActivities.length > 0) {
+          const activityIds = reportActivities.map((ra: any) => ra.activity_id);
+          await (adminForCancel as any)
+            .from('activities')
+            .update({ status: 'rejeitada' })
+            .in('id', activityIds);
+        }
+      } catch (_) { /* silencioso */ }
     }
 
     return {};
@@ -396,17 +429,44 @@ export async function resendReport(reportId: string): Promise<{ error?: string }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { error: 'Não autenticado' };
 
-    await (supabase as any)
+    const adminResend = createServiceClient();
+    if (!adminResend) return { error: 'Configuração de servidor ausente' };
+
+    // Remove assinaturas do resumo (bypass RLS via service role)
+    await (adminResend as any)
       .from('daily_report_signatures')
       .delete()
       .eq('daily_report_id', rId);
 
-    const { error } = await (supabase as any)
+    // Reativa o resumo
+    const { error } = await (adminResend as any)
       .from('daily_reports')
       .update({ status: 'aguardando_assinatura', cancellation_reason: null })
       .eq('id', rId);
 
     if (error) return { error: error.message ?? 'Erro ao reenviar resumo' };
+
+    // Busca atividades do resumo e volta para 'enviada', removendo assinaturas individuais
+    try {
+      const { data: reportActivities } = await (adminResend as any)
+        .from('daily_report_activities')
+        .select('activity_id')
+        .eq('daily_report_id', rId);
+      if (reportActivities && reportActivities.length > 0) {
+        const activityIds = reportActivities.map((ra: any) => ra.activity_id);
+        await (adminResend as any)
+          .from('activities')
+          .update({ status: 'enviada' })
+          .in('id', activityIds);
+        // Remove assinaturas individuais anteriores
+        await (adminResend as any)
+          .from('signatures')
+          .delete()
+          .in('activity_id', activityIds)
+          .eq('rejected', false);
+      }
+    } catch (_) { /* silencioso */ }
+
     revalidatePath('/resumo-diario');
     return {};
   } catch (e: unknown) {
