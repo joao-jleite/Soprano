@@ -88,9 +88,11 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: 'ss01', 'cv11';
+    overflow-x: hidden;
   }
   body {
     @apply bg-background text-foreground;
+    overflow-x: hidden;
     background-image:
       radial-gradient(1200px circle at 50% -10%, hsl(var(--zitron-blue) / 0.12), transparent 55%),
       radial-gradient(900px circle at 0% 100%, hsl(var(--zitron-cyan) / 0.04), transparent 60%);

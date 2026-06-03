@@ -106,6 +106,7 @@ export function buildActivityHtml(opts: BuildHtmlOptions): string {
       background: #fff;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
+      padding-bottom: 8mm;
     }
 
     /* ── Page layout ── */
@@ -113,31 +114,29 @@ export function buildActivityHtml(opts: BuildHtmlOptions): string {
       width: 210mm;
       min-height: 297mm;
       padding: 0;
-      page-break-after: always;
     }
-    .page:last-child { page-break-after: avoid; }
 
     /* ── Header bar ── */
     .header {
       background: #0959C8;
       color: #fff;
-      padding: 18pt 28pt 16pt;
+      padding: 20pt 32pt 18pt;
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
     }
     .brand { font-size: 22pt; font-weight: 800; letter-spacing: 2px; line-height: 1; }
-    .brand-sub { font-size: 7pt; opacity: 0.7; margin-top: 4px; letter-spacing: 1.5px; text-transform: uppercase; }
-    .doc-meta { text-align: right; font-size: 7pt; opacity: 0.75; line-height: 1.7; }
+    .brand-sub { font-size: 7pt; opacity: 0.7; margin-top: 5px; letter-spacing: 1.5px; text-transform: uppercase; }
+    .doc-meta { text-align: right; font-size: 7pt; opacity: 0.75; line-height: 1.8; }
 
     /* ── Body content ── */
-    .body { padding: 22pt 28pt 24pt; }
+    .body { padding: 26pt 32pt 28pt; }
 
     /* ── Status + title ── */
-    .status-row { display: flex; align-items: center; gap: 8pt; margin-bottom: 6pt; }
+    .status-row { display: flex; align-items: center; gap: 8pt; margin-bottom: 7pt; }
     .badge {
       display: inline-block;
-      padding: 2pt 9pt;
+      padding: 2.5pt 10pt;
       border-radius: 20pt;
       font-size: 7pt;
       font-weight: 700;
@@ -145,8 +144,8 @@ export function buildActivityHtml(opts: BuildHtmlOptions): string {
       text-transform: uppercase;
     }
     .type-label { font-size: 8pt; color: #64748b; letter-spacing: 0.5px; }
-    .title { font-size: 20pt; font-weight: 800; line-height: 1.2; margin-bottom: 2pt; color: #0f172a; }
-    .id-line { font-size: 7pt; color: #94a3b8; font-family: monospace; margin-bottom: 18pt; }
+    .title { font-size: 20pt; font-weight: 800; line-height: 1.25; margin-bottom: 3pt; color: #0f172a; }
+    .id-line { font-size: 7pt; color: #94a3b8; font-family: monospace; margin-bottom: 20pt; }
 
     /* ── Section ── */
     .section-title {
@@ -155,21 +154,21 @@ export function buildActivityHtml(opts: BuildHtmlOptions): string {
       text-transform: uppercase;
       letter-spacing: 2px;
       color: #94a3b8;
-      margin: 18pt 0 8pt;
-      padding-bottom: 4pt;
+      margin: 22pt 0 9pt;
+      padding-bottom: 5pt;
       border-bottom: 0.5pt solid #e2e8f0;
     }
 
     /* ── Fields grid ── */
-    .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 6pt; }
+    .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 7pt; }
     .fields.cols3 { grid-template-columns: 1fr 1fr 1fr; }
     .field {
       background: #f8fafc;
       border: 0.5pt solid #e2e8f0;
-      border-radius: 4pt;
-      padding: 8pt 10pt;
+      border-radius: 5pt;
+      padding: 10pt 12pt;
     }
-    .field-label { font-size: 6.5pt; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8; margin-bottom: 3pt; }
+    .field-label { font-size: 6.5pt; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8; margin-bottom: 4pt; }
     .field-value { font-size: 10pt; font-weight: 600; color: #0f172a; }
 
     /* ── Notes ── */
@@ -177,44 +176,44 @@ export function buildActivityHtml(opts: BuildHtmlOptions): string {
       background: #f8fafc;
       border: 0.5pt solid #e2e8f0;
       border-left: 3pt solid #0959C8;
-      border-radius: 4pt;
-      padding: 10pt 12pt;
+      border-radius: 5pt;
+      padding: 12pt 14pt;
       font-size: 9.5pt;
-      line-height: 1.6;
+      line-height: 1.65;
       color: #334155;
     }
 
     /* ── Participants ── */
-    .chips { display: flex; flex-wrap: wrap; gap: 6pt; }
+    .chips { display: flex; flex-wrap: wrap; gap: 7pt; }
     .chip {
       background: #eff6ff;
       border: 0.5pt solid #bfdbfe;
-      border-radius: 4pt;
-      padding: 5pt 10pt;
+      border-radius: 5pt;
+      padding: 6pt 11pt;
       display: flex;
       flex-direction: column;
     }
     .chip-name { font-size: 8.5pt; font-weight: 600; color: #1e40af; }
-    .chip-role { font-size: 7pt; color: #64748b; margin-top: 1pt; }
+    .chip-role { font-size: 7pt; color: #64748b; margin-top: 1.5pt; }
 
     /* ── Signature ── */
     .sig-box {
       border: 1pt solid #bfdbfe;
       border-radius: 6pt;
-      padding: 14pt;
+      padding: 16pt;
       background: #f8fafc;
     }
     .sig-name { font-size: 13pt; font-weight: 700; margin-bottom: 8pt; }
     .sig-drawing { max-height: 90pt; margin: 8pt 0; overflow: hidden; }
     .sig-drawing svg { max-height: 90pt; width: auto; }
-    .sig-meta { display: flex; gap: 16pt; font-size: 7.5pt; color: #64748b; margin-top: 6pt; }
+    .sig-meta { display: flex; gap: 16pt; font-size: 7.5pt; color: #64748b; margin-top: 7pt; }
     .verify-row {
       display: flex; gap: 14pt; align-items: flex-start;
-      margin-top: 12pt; padding-top: 10pt;
+      margin-top: 13pt; padding-top: 11pt;
       border-top: 0.5pt dashed #cbd5e1;
     }
     .qr { width: 64pt; height: 64pt; flex-shrink: 0; }
-    .verify-text { font-size: 7.5pt; color: #475569; line-height: 1.6; }
+    .verify-text { font-size: 7.5pt; color: #475569; line-height: 1.7; }
     .verify-title { font-weight: 700; color: #0f172a; margin-bottom: 3pt; }
     .verify-url { color: #0959C8; word-break: break-all; }
     .verify-code { margin-top: 4pt; }
@@ -223,35 +222,18 @@ export function buildActivityHtml(opts: BuildHtmlOptions): string {
 
     /* ── Photos ── */
     .photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10pt; }
-    .photo-cell { border: 0.5pt solid #e2e8f0; border-radius: 4pt; overflow: hidden; break-inside: avoid; }
+    .photo-cell { border: 0.5pt solid #e2e8f0; border-radius: 5pt; overflow: hidden; break-inside: avoid; }
     .photo-cell img { width: 100%; height: 160pt; object-fit: cover; display: block; }
     .photo-caption { font-size: 7.5pt; color: #64748b; padding: 5pt 8pt; background: #f8fafc; }
-
-    /* ── Footer ── */
-    .footer {
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      height: 20pt;
-      padding: 0 28pt;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 7pt;
-      color: #94a3b8;
-      border-top: 0.5pt solid #e2e8f0;
-      background: #fff;
-    }
 
     /* ── Print ── */
     @media print {
       body { margin: 0; }
-      .page { page-break-after: always; }
-      .page:last-child { page-break-after: avoid; }
     }
   `;
 
-  /* ── Page 1: activity ─────────────────────────────────────────── */
-  const page1 = `
+  /* ── Single page: activity + photos ──────────────────────────── */
+  const page = `
   <div class="page">
     <div class="header">
       <div>
@@ -285,6 +267,10 @@ export function buildActivityHtml(opts: BuildHtmlOptions): string {
       <div class="section-title">Equipe em campo</div>
       <div class="chips">${participantsHtml}</div>` : ''}
 
+      ${photos.length > 0 ? `
+      <div class="section-title">Registro fotográfico</div>
+      <div class="photo-grid">${photosHtml}</div>` : ''}
+
       ${activity.notes ? `
       <div class="section-title">Observações</div>
       <div class="notes-box">${activity.notes}</div>` : ''}
@@ -292,54 +278,17 @@ export function buildActivityHtml(opts: BuildHtmlOptions): string {
       <div class="section-title">Assinatura do cliente</div>
       ${sigHtml}
     </div>
-
-    <div class="footer">
-      <span>Soprano · Registro de atividades — Zitrón Brasil</span>
-      <span>Linha 6 · São Paulo</span>
-    </div>
   </div>`;
-
-  /* ── Photo pages ──────────────────────────────────────────────── */
-  const photoPageCount = Math.ceil(photos.length / 4);
-  const photoPages = Array.from({ length: photoPageCount }, (_, i) => {
-    const pagePhotos = photos.slice(i * 4, i * 4 + 4);
-    return `
-    <div class="page">
-      <div class="header">
-        <div>
-          <div class="brand">SOPRANO</div>
-          <div class="brand-sub">Registro fotográfico · ${activity.description.slice(0, 48)}</div>
-        </div>
-        <div class="doc-meta">
-          <div>ID: ${activity.id.slice(0, 8)}</div>
-          <div>Fotos ${i * 4 + 1}–${Math.min((i + 1) * 4, photos.length)} de ${photos.length}</div>
-        </div>
-      </div>
-      <div class="body">
-        <div class="photo-grid">
-          ${pagePhotos.map(p => `
-            <div class="photo-cell">
-              <img src="${p.signedUrl}" />
-              ${p.caption ? `<div class="photo-caption">${p.caption}</div>` : ''}
-            </div>`).join('')}
-        </div>
-      </div>
-      <div class="footer">
-        <span>Soprano · Registro de atividades — Zitrón Brasil</span>
-        <span>Linha 6 · São Paulo</span>
-      </div>
-    </div>`;
-  }).join('');
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>${css}</style>
 </head>
 <body>
-  ${page1}
-  ${photoPages}
+  ${page}
 </body>
 </html>`;
 }

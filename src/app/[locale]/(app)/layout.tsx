@@ -118,12 +118,12 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen overflow-x-hidden">
       <Sidebar role={profile.role} />
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
         <Topbar fullName={profile.full_name} role={profile.role} />
         <main className="flex-1 pb-20 lg:pb-8">
-          <div className="px-4 lg:px-8 py-6 lg:py-8 max-w-7xl">
+          <div className="px-4 lg:px-8 py-6 lg:py-8 w-full max-w-7xl">
             <Breadcrumbs />
             <PageTransition>{children}</PageTransition>
           </div>

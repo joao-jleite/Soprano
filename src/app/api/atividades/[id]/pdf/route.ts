@@ -163,7 +163,16 @@ export async function GET(
     const pdf = await page.pdf({
       format: 'A4',
       printBackground: true,
-      margin: { top: '0', right: '0', bottom: '8mm', left: '0' },
+      displayHeaderFooter: true,
+      headerTemplate: '<span></span>',
+      footerTemplate: `
+        <div style="width:100%;padding:0 28mm;display:flex;justify-content:space-between;
+          font-size:7pt;color:#94a3b8;font-family:sans-serif;border-top:0.5pt solid #e2e8f0;
+          box-sizing:border-box;">
+          <span>Soprano · Registro de atividades — Zitrón Brasil</span>
+          <span>Linha 6 · São Paulo</span>
+        </div>`,
+      margin: { top: '0', right: '0', bottom: '14mm', left: '0' },
     });
     return new NextResponse(pdf, {
       headers: {

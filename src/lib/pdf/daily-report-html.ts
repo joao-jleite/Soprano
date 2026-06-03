@@ -307,19 +307,7 @@ export function buildDailyReportHtml(opts: BuildDailyReportHtmlOptions): string 
       padding-top: 10pt;
     }
 
-    .footer {
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      height: 20pt;
-      padding: 0 28pt;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 7pt;
-      color: #94a3b8;
-      border-top: 0.5pt solid #e2e8f0;
-      background: #fff;
-    }
+    /* footer removido — gerado via footerTemplate do Puppeteer para evitar páginas em branco */
 
     @media print {
       body { margin: 0; }
@@ -480,10 +468,6 @@ export function buildDailyReportHtml(opts: BuildDailyReportHtmlOptions): string 
       ${sigHtml}
     </div>
 
-    <div class="footer">
-      <span>Soprano · Resumo Diário — Zitrón Brasil · Linha 6</span>
-      <span>São Paulo · ${fmtDate(report.report_date + 'T12:00:00')}</span>
-    </div>
   </div>
 </body>
 </html>`;
