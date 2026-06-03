@@ -4,7 +4,7 @@ import * as React from 'react';
 import { toast } from 'sonner';
 import { useRouter } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
-import { SignatureCanvas } from '@/components/signature/signature-canvas';
+import { SignatureTyped } from '@/components/signature/signature-typed';
 import { signActivity, rejectActivity } from '@/app/actions/signatures';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -99,15 +99,11 @@ export function SignActivityPanel({ activityId, signerName }: Props) {
       </div>
 
       {mode === 'sign' ? (
-        <div className="space-y-3">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
-            {t('draw')}
-          </p>
-          <SignatureCanvas
-            onConfirm={onConfirm}
-            disabled={signing}
-          />
-        </div>
+        <SignatureTyped
+          signerName={signerName}
+          onConfirm={onConfirm}
+          disabled={signing}
+        />
       ) : (
         <div className="space-y-4">
           <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">

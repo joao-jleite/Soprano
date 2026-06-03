@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { toast } from 'sonner';
 import { useRouter } from '@/i18n/navigation';
-import { SignatureCanvas } from '@/components/signature/signature-canvas';
+import { SignatureTyped } from '@/components/signature/signature-typed';
 import { signDailyReport, cancelDailyReport } from '@/app/actions/daily-reports';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -95,12 +95,11 @@ export function SignDailyReportPanel({ reportId, signerName }: Props) {
       </div>
 
       {mode === 'sign' ? (
-        <div className="space-y-3">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
-            Desenhe sua assinatura
-          </p>
-          <SignatureCanvas onConfirm={onSign} disabled={signing} />
-        </div>
+        <SignatureTyped
+          signerName={signerName}
+          onConfirm={onSign}
+          disabled={signing}
+        />
       ) : (
         <div className="space-y-4">
           <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">
