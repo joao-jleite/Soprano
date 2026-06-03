@@ -5,7 +5,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 
 export type Role = 'admin' | 'supervisor' | 'cliente';
 export type LocationKind = 'estacao' | 'vse' | 'se' | 'escadaria' | 'patio' | 'outro';
-export type ActivityStatus = 'rascunho' | 'enviada' | 'assinada' | 'rejeitada';
+export type ActivityStatus = 'rascunho' | 'enviada' | 'rejeitada';
 export type AuditAction = 'insert' | 'update' | 'delete' | 'soft_delete' | 'restore';
 
 export interface Database {
@@ -102,6 +102,9 @@ export interface Database {
           client_id: string | null;
           description: string;
           notes: string | null;
+          evolucao: string | null;
+          pendencias: string | null;
+          continuation_of: string | null;
           status: ActivityStatus;
           started_at: string;
           ended_at: string | null;
@@ -118,6 +121,9 @@ export interface Database {
           client_id?: string | null;
           description: string;
           notes?: string | null;
+          evolucao?: string | null;
+          pendencias?: string | null;
+          continuation_of?: string | null;
           status?: ActivityStatus;
           started_at: string;
           ended_at?: string | null;

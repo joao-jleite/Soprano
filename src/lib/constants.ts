@@ -23,10 +23,9 @@ export const LOCATION_KINDS = {
 export type LocationKind = (typeof LOCATION_KINDS)[keyof typeof LOCATION_KINDS];
 
 export const ACTIVITY_STATUS = {
-  DRAFT: 'rascunho',           // Supervisor ainda editando
-  SUBMITTED: 'enviada',        // Aguardando assinatura do cliente
-  SIGNED: 'assinada',          // Cliente assinou
-  REJECTED: 'rejeitada',       // Cliente recusou
+  DRAFT: 'rascunho',       // Supervisor ainda editando
+  SUBMITTED: 'enviada',    // Adicionada a resumo enviado
+  REJECTED: 'rejeitada',   // Atividade rejeitada pelo cliente
 } as const;
 
 export type ActivityStatus = (typeof ACTIVITY_STATUS)[keyof typeof ACTIVITY_STATUS];

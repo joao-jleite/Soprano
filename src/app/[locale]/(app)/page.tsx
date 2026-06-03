@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Link } from '@/i18n/navigation';
-import { formatDateTime } from '@/lib/utils';
+import { formatDate, formatDateTime } from '@/lib/utils';
 
 // Força renderização dinâmica — evita que Vercel faça cache estático de uma
 // versão "com erro" (ex: 404 de deploy antigo) no CDN
@@ -66,14 +66,23 @@ export default async function DashboardPage({
           .gte('started_at', monthStart),
       ),
       signedReportsQuery,
-      applyScope(
-        supabase
-          .from('activities')
-          .select('id, description, started_at, locations(name), activity_types(label_pt)')
-          .eq('status', 'enviada')
-          .order('submitted_at', { ascending: false })
-          .limit(5),
-      ),
+      // Resumos aguardando assinatura (pendentes)
+      role === 'cliente' && user
+        ? (supabase as any)
+            .from('daily_reports')
+            .select('id, report_date, notes')
+            .eq('status', 'aguardando_assinatura')
+            .eq('client_id', user.id)
+            .is('deleted_at', null)
+            .order('report_date', { ascending: false })
+            .limit(5)
+        : (supabase as any)
+            .from('daily_reports')
+            .select('id, report_date, notes')
+            .eq('status', 'aguardando_assinatura')
+            .is('deleted_at', null)
+            .order('report_date', { ascending: false })
+            .limit(5),
       applyScope(
         supabase
           .from('activities')
@@ -124,17 +133,19 @@ export default async function DashboardPage({
             {(pending ?? []).length === 0 && (
               <p className="text-sm text-muted-foreground">Sem pendências.</p>
             )}
-            {(pending ?? []).map((a: any) => (
+            {(pending ?? []).map((r: any) => (
               <Link
-                key={a.id}
-                href={`/atividades/${a.id}`}
+                key={r.id}
+                href={`/resumo-diario/${r.id}`}
                 className="flex items-center justify-between py-2 border-b border-border last:border-0 hover:text-primary transition-colors"
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{a.description}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {a.locations?.name} · {a.activity_types?.label_pt}
+                  <p className="text-sm font-medium">
+                    Resumo de {formatDate(r.report_date + 'T12:00:00', locale === 'pt' ? 'pt-BR' : locale)}
                   </p>
+                  {r.notes && (
+                    <p className="text-xs text-muted-foreground truncate">{r.notes}</p>
+                  )}
                 </div>
                 <ArrowUpRight className="h-4 w-4 shrink-0 opacity-60" />
               </Link>
@@ -167,7 +178,7 @@ export default async function DashboardPage({
                     {a.locations?.name}
                   </p>
                 </div>
-                <StatusBadge status={a.status} />
+                {a.status !== 'rascunho' && <StatusBadge status={a.status} />}
               </Link>
             ))}
           </CardContent>

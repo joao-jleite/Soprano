@@ -118,7 +118,6 @@ export default async function DailyReportPage({
       .select('id, description, status, started_at, locations(name), activity_types(label_pt)')
       .gte('started_at', dateStart)
       .lte('started_at', dateEnd)
-      .not('status', 'in', '("assinada")')
       .is('deleted_at', null)
       .order('started_at');
 

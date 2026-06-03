@@ -48,9 +48,9 @@ export default async function ActivitiesPage({
     .order('started_at', { ascending: false })
     .limit(100);
 
-  // Cliente só vê atividades dele
+  // Cliente só vê atividades dele (sem filtrar por status — assinatura é no resumo diário)
   if (role === 'cliente' && user) {
-    q = q.eq('client_id', user.id).neq('status', 'rascunho');
+    q = q.eq('client_id', user.id);
   }
 
   if (sp.location) q = q.eq('location_id', sp.location);
@@ -170,7 +170,6 @@ function StatusBadge({ status, label }: { status: string; label?: string }) {
   const map: Record<string, 'default' | 'warning' | 'success' | 'destructive' | 'secondary'> = {
     rascunho: 'secondary',
     enviada: 'warning',
-    assinada: 'success',
     rejeitada: 'destructive',
   };
   return <Badge variant={map[status] ?? 'secondary'}>{label ?? status}</Badge>;
