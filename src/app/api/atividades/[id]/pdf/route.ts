@@ -12,7 +12,7 @@ export const maxDuration = 60;
 // Mantida em env var para facilitar atualização: CHROMIUM_PACK_URL
 const CHROMIUM_PACK_URL =
   process.env.CHROMIUM_PACK_URL ??
-  'https://github.com/Sparticuz/chromium/releases/download/v131.0.1/chromium-v131.0.1-pack.tar';
+  'https://github.com/Sparticuz/chromium/releases/download/v147.0.2/chromium-v147.0.2-pack.tar';
 
 async function getBrowser() {
   // Em produção (Vercel / Lambda) usa @sparticuz/chromium-min
@@ -96,7 +96,8 @@ export async function GET(
       })
     : undefined;
 
-  // Fotos: signed URLs (bucket privado)
+  // Fotos: converte para base64 data URI — Puppeteer não precisa fazer
+  // requisições HTTP externas durante o render (mais rápido e confiável no Vercel)
   const rawPhotos: { id: string; storage_path: string; caption: string | null }[] =
     (act.activity_photos ?? []).slice(0, 20);
 
@@ -104,9 +105,18 @@ export async function GET(
     rawPhotos.map(async (p) => {
       const { data } = await supabase.storage
         .from('activity-photos')
-        .createSignedUrl(p.storage_path, 600);
+        .createSignedUrl(p.storage_path, 300);
       if (!data?.signedUrl) return null;
-      return { signedUrl: data.signedUrl, caption: p.caption };
+      try {
+        const imgRes = await fetch(data.signedUrl);
+        if (!imgRes.ok) return null;
+        const buf = await imgRes.arrayBuffer();
+        const mime = imgRes.headers.get('content-type') ?? 'image/jpeg';
+        const b64 = Buffer.from(buf).toString('base64');
+        return { signedUrl: `data:${mime};base64,${b64}`, caption: p.caption };
+      } catch {
+        return { signedUrl: data.signedUrl, caption: p.caption };
+      }
     }),
   )).filter((x): x is { signedUrl: string; caption: string | null } => x !== null);
 
@@ -141,10 +151,12 @@ export async function GET(
   });
 
   // Puppeteer → PDF
-  const browser = await getBrowser();
+  let browser;
   try {
+    browser = await getBrowser();
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
+    // domcontentloaded é suficiente — imagens já vêm como data URIs (sem rede)
+    await page.setContent(html, { waitUntil: 'domcontentloaded' });
     const pdf = await page.pdf({
       format: 'A4',
       printBackground: true,
@@ -157,7 +169,13 @@ export async function GET(
         'Cache-Control': 'no-store',
       },
     });
+  } catch (err: any) {
+    console.error('[pdf/atividade] erro ao gerar PDF:', err?.message ?? err);
+    return new NextResponse(
+      `Erro ao gerar PDF: ${err?.message ?? 'erro desconhecido'}`,
+      { status: 500 },
+    );
   } finally {
-    await browser.close();
+    await browser?.close();
   }
 }
