@@ -1,11 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import { X, Plus } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { X, Users } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 export type Participant = { name: string; role?: string };
 
@@ -14,83 +13,107 @@ type Props = {
   onChange: (next: Participant[]) => void;
 };
 
+/**
+ * Editor de participantes sem campo de função.
+ * Aceita múltiplos nomes de uma vez — separados por vírgula, ponto-e-vírgula ou Enter.
+ * Ex: "Rafael, Ildeu, Mario Sérgio, Renato" → 4 chips adicionados de uma vez.
+ */
 export function ParticipantsEditor({ value, onChange }: Props) {
-  const t = useTranslations('participants');
-  const [name, setName] = React.useState('');
-  const [role, setRole] = React.useState('');
+  const [input, setInput] = React.useState('');
+  const inputRef = React.useRef<HTMLInputElement>(null);
 
-  function add() {
-    const n = name.trim();
-    if (!n) return;
-    if (value.some((p) => p.name.toLowerCase() === n.toLowerCase())) {
-      setName('');
-      return;
-    }
-    onChange([...value, { name: n, role: role.trim() || undefined }]);
-    setName('');
-    setRole('');
+  function commit(raw: string) {
+    const names = raw
+      .split(/[,;]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    if (names.length === 0) return;
+
+    const existing = new Set(value.map((p) => p.name.toLowerCase()));
+    const toAdd = names
+      .filter((n) => !existing.has(n.toLowerCase()))
+      .map((name) => ({ name }));
+
+    if (toAdd.length > 0) onChange([...value, ...toAdd]);
+    setInput('');
   }
 
-  function remove(target: Participant) {
-    onChange(value.filter((p) => p.name !== target.name));
+  function remove(name: string) {
+    onChange(value.filter((p) => p.name !== name));
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      commit(input);
+    }
+    // Vírgula ou ponto-e-vírgula: confirma o que foi digitado até agora
+    if (e.key === ',' || e.key === ';') {
+      e.preventDefault();
+      commit(input);
+    }
+    // Backspace no campo vazio remove o último participante
+    if (e.key === 'Backspace' && input === '' && value.length > 0) {
+      onChange(value.slice(0, -1));
+    }
   }
 
   return (
-    <div className="space-y-3">
-      {value.length > 0 && (
-        <ul className="flex flex-wrap gap-2">
-          {value.map((p) => (
-            <li key={p.name}>
-              <Badge variant="secondary" className="pl-2.5 pr-1 py-1">
-                <span className="flex items-center gap-2">
-                  <span className="font-medium">{p.name}</span>
-                  {p.role && (
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                      {p.role}
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => remove(p)}
-                    className="rounded-full hover:bg-destructive/20 p-0.5 text-muted-foreground hover:text-destructive transition-colors"
-                    aria-label={t('removeLabel')}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              </Badge>
-            </li>
-          ))}
-        </ul>
+    <div
+      className={cn(
+        'flex flex-wrap gap-2 rounded-md border border-input bg-transparent px-3 py-2 min-h-[44px]',
+        'focus-within:ring-1 focus-within:ring-ring focus-within:border-ring',
+        'cursor-text transition-colors',
       )}
+      onClick={() => inputRef.current?.focus()}
+    >
+      {/* Chips dos participantes já adicionados */}
+      {value.map((p) => (
+        <Badge
+          key={p.name}
+          variant="secondary"
+          className="pl-2.5 pr-1 py-0.5 gap-1.5 text-sm font-normal shrink-0"
+        >
+          {p.name}
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); remove(p.name); }}
+            className="rounded-full hover:bg-destructive/20 p-0.5 text-muted-foreground hover:text-destructive transition-colors"
+            aria-label={`Remover ${p.name}`}
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </Badge>
+      ))}
 
-      <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
-        <Input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={t('name')}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              add();
-            }
-          }}
-        />
-        <Input
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-          placeholder={t('roleOptional')}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              add();
-            }
-          }}
-        />
-        <Button type="button" variant="secondary" onClick={add} disabled={!name.trim()}>
-          <Plus className="h-4 w-4" />
-        </Button>
-      </div>
+      {/* Input inline */}
+      <input
+        ref={inputRef}
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={handleKeyDown}
+        onBlur={() => { if (input.trim()) commit(input); }}
+        placeholder={
+          value.length === 0
+            ? 'Rafael, Ildeu, Mario Sérgio… (vírgula para separar)'
+            : 'Adicionar mais…'
+        }
+        className={cn(
+          'flex-1 min-w-[180px] bg-transparent text-sm outline-none placeholder:text-muted-foreground',
+          'py-0.5',
+        )}
+        autoCapitalize="words"
+        autoComplete="off"
+      />
+
+      {/* Contador quando há participantes */}
+      {value.length > 0 && (
+        <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground/60 shrink-0 self-center">
+          <Users className="h-3 w-3" />
+          {value.length}
+        </span>
+      )}
     </div>
   );
 }
