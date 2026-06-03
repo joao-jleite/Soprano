@@ -313,7 +313,17 @@ export async function cancelDailyReport(
     const ua = h.get('user-agent') ?? null;
     const ip = h.get('x-real-ip') ?? h.get('x-forwarded-for')?.split(',').at(-1)?.trim() ?? null;
 
-    const { error: cancelSigError } = await (supabase as any)
+    // Usa service role para DELETE+INSERT (bypass RLS e unique constraint)
+    const adminForCancel = createServiceClient();
+    if (!adminForCancel) return { error: 'Configuração de servidor ausente' };
+
+    // Remove assinatura anterior (evita 23505 em tentativas parciais)
+    await (adminForCancel as any)
+      .from('daily_report_signatures')
+      .delete()
+      .eq('daily_report_id', parsed.reportId);
+
+    const { error: cancelSigError } = await (adminForCancel as any)
       .from('daily_report_signatures')
       .insert({
         daily_report_id: parsed.reportId,
@@ -328,29 +338,25 @@ export async function cancelDailyReport(
 
     if (cancelSigError) return { error: cancelSigError.message ?? 'Falha ao registrar cancelamento' };
 
-    // Atualiza status via service role (bypass RLS)
-    const adminForCancel = createServiceClient();
-    if (adminForCancel) {
-      await (adminForCancel as any)
-        .from('daily_reports')
-        .update({ status: 'cancelado', cancellation_reason: parsed.reason })
-        .eq('id', parsed.reportId);
+    await (adminForCancel as any)
+      .from('daily_reports')
+      .update({ status: 'cancelado', cancellation_reason: parsed.reason })
+      .eq('id', parsed.reportId);
 
-      // Marca atividades do resumo como 'rejeitada'
-      try {
-        const { data: reportActivities } = await (adminForCancel as any)
-          .from('daily_report_activities')
-          .select('activity_id')
-          .eq('daily_report_id', parsed.reportId);
-        if (reportActivities && reportActivities.length > 0) {
-          const activityIds = reportActivities.map((ra: any) => ra.activity_id);
-          await (adminForCancel as any)
-            .from('activities')
-            .update({ status: 'rejeitada' })
-            .in('id', activityIds);
-        }
-      } catch (_) { /* silencioso */ }
-    }
+    // Marca atividades do resumo como 'rejeitada'
+    try {
+      const { data: reportActivities } = await (adminForCancel as any)
+        .from('daily_report_activities')
+        .select('activity_id')
+        .eq('daily_report_id', parsed.reportId);
+      if (reportActivities && reportActivities.length > 0) {
+        const activityIds = reportActivities.map((ra: any) => ra.activity_id);
+        await (adminForCancel as any)
+          .from('activities')
+          .update({ status: 'rejeitada' })
+          .in('id', activityIds);
+      }
+    } catch (_) { /* silencioso */ }
 
     return {};
   } catch (e: unknown) {
@@ -366,6 +372,17 @@ export async function updateReportNotes(reportId: string, notes: string): Promis
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { error: 'Não autenticado' };
+
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+    const role = (profile as any)?.role;
+    if (!['admin', 'supervisor'].includes(role)) return { error: 'Sem permissão para editar observações' };
+
+    // Supervisor só edita seus próprios resumos
+    if (role === 'supervisor') {
+      const { data: rep } = await (supabase as any).from('daily_reports').select('supervisor_id').eq('id', rId).single();
+      if (rep?.supervisor_id !== user.id) return { error: 'Sem permissão para editar este resumo' };
+    }
+
     const { error } = await (supabase as any)
       .from('daily_reports')
       .update({ notes })

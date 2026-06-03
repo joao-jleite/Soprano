@@ -14,6 +14,7 @@ import { ActivityPicker } from './activity-picker';
 import { SendReportButton } from './send-button';
 import { SignDailyReportPanel } from './sign-panel';
 import { DeleteReportButton } from './delete-button';
+import { NotesEditor } from './notes-editor';
 
 export default async function DailyReportPage({
   params,
@@ -233,11 +234,15 @@ export default async function DailyReportPage({
       </Card>
 
       {/* Observações */}
-      {report.notes && (
+      {(report.notes || (canEdit && !isClient)) && (
         <Card>
           <CardContent className="p-5">
             <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Observações</p>
-            <p className="text-sm whitespace-pre-wrap">{report.notes}</p>
+            {canEdit && !isClient ? (
+              <NotesEditor reportId={id} initialNotes={report.notes ?? ''} />
+            ) : (
+              <p className="text-sm whitespace-pre-wrap">{report.notes}</p>
+            )}
           </CardContent>
         </Card>
       )}

@@ -109,6 +109,19 @@ export async function GET(
 
     const includedIds: string[] = (reportActivities ?? []).map((r: any) => r.activity_id);
 
+    // Busca verification_code da tabela signatures (existe por atividade, não em daily_report_signatures)
+    let verificationCode: string | undefined;
+    if (includedIds.length && report.status === 'assinado') {
+      const { data: firstSig } = await (supabase as any)
+        .from('signatures')
+        .select('verification_code')
+        .in('activity_id', includedIds)
+        .eq('rejected', false)
+        .limit(1)
+        .maybeSingle();
+      verificationCode = firstSig?.verification_code;
+    }
+
     const [{ data: activities }, { data: allPhotos }] = await Promise.all([
       includedIds.length
         ? supabase
@@ -167,8 +180,9 @@ export async function GET(
     const origin = new URL(request.url).origin;
     const sig = (signature && !signature.cancelled) ? signature : null;
 
-    const verifyUrl = sig?.verification_code
-      ? `${origin}/verify/${sig.verification_code}`
+    // verification_code vem da tabela signatures (por atividade), não de daily_report_signatures
+    const verifyUrl = verificationCode
+      ? `${origin}/verify/${verificationCode}`
       : undefined;
 
     const qrDataUrl = verifyUrl
@@ -201,9 +215,9 @@ export async function GET(
       signature: sig
         ? {
             signer_name: sig.signer_name,
-            signed_at: sig.signed_at,
+            signed_at: report.signed_at ?? new Date().toISOString(), // signed_at está em daily_reports
             svg_data: sig.svg_data,
-            verification_code: sig.verification_code,
+            verification_code: verificationCode ?? '',
             ip_address: sig.ip_address,
           }
         : null,
