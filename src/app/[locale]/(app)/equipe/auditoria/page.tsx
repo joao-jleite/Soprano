@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AuditFilters } from './filters';
+import type { AuditAction } from '@/lib/supabase/database.types';
 import { formatDateTime } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -54,7 +55,7 @@ export default async function AuditoriaPage({
     .range(from, to);
 
   if (sp.table) q = q.eq('table_name', sp.table);
-  if (sp.action) q = q.eq('action', sp.action);
+  if (sp.action) q = q.eq('action', sp.action as AuditAction);
   if (sp.actor) q = q.ilike('actor_email', `%${sp.actor}%`);
 
   const [{ data: logs, count }, { data: distinctTables }] = await Promise.all([

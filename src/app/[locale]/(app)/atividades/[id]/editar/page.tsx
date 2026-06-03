@@ -18,7 +18,7 @@ export default async function EditActivityPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect({ href: '/login', locale });
+  if (!user) return redirect({ href: '/login', locale });
 
   const [{ data: activity }, { data: locations }, { data: types }, { data: clients }] = await Promise.all([
     supabase

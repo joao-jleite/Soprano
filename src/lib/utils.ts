@@ -29,6 +29,15 @@ export function formatDateTime(date: string | Date | null | undefined, locale: s
   }).format(d);
 }
 
+/** Tempo relativo em português — ex: "agora mesmo", "5 min atrás", "2h atrás", "3 dias atrás". */
+export function timeAgo(date: string | Date): string {
+  const diff = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
+  if (diff < 60) return 'agora mesmo';
+  if (diff < 3600) return `${Math.floor(diff / 60)} min atrás`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h atrás`;
+  return `${Math.floor(diff / 86400)} dias atrás`;
+}
+
 export function initials(name: string) {
   return name
     .split(' ')

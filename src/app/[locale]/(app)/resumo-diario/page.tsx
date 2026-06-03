@@ -23,11 +23,11 @@ export default async function DailyReportsPage({
   const { data: me } = user
     ? await supabase.from('profiles').select('role').eq('id', user.id).single()
     : { data: null };
-  const role = (me as any)?.role as 'admin' | 'supervisor' | 'cliente' | undefined;
+  const role = me?.role;
 
   const clientMap: Record<string, string> = {};
 
-  let reportsQuery = (supabase as any)
+  let reportsQuery = supabase
     .from('daily_reports')
     .select('id, report_date, status, notes, cancellation_reason, sent_at, signed_at, client_id, supervisor_id')
     .is('deleted_at', null)
@@ -44,7 +44,9 @@ export default async function DailyReportsPage({
 
   const { data: rawReports } = await reportsQuery;
 
-  const allClientIds = [...new Set((rawReports ?? []).map((r: any) => r.client_id).filter(Boolean))];
+  const allClientIds = [...new Set(
+    (rawReports ?? []).map((r) => r.client_id).filter((id): id is string => id !== null)
+  )];
 
   if (allClientIds.length) {
     const { data: clients } = await supabase

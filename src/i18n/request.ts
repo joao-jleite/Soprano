@@ -1,4 +1,5 @@
 import { getRequestConfig } from 'next-intl/server';
+import type { AbstractIntlMessages } from 'next-intl';
 import { locales, type Locale } from './config';
 
 // Imports estáticos por locale — garante bundling correto no Vercel/webpack.
@@ -18,5 +19,5 @@ export default getRequestConfig(async ({ requestLocale }) => {
     .then((m) => m.default)
     .catch(() => messageLoaders['pt']().then((m) => m.default));
 
-  return { locale, messages };
+  return { locale, messages: messages as AbstractIntlMessages };
 });

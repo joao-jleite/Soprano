@@ -28,7 +28,7 @@ export default async function AppLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) redirect({ href: '/login', locale });
+  if (!user) return redirect({ href: '/login', locale });
 
   // Busca profile (RLS pode filtrar soft-deleted, por isso .maybeSingle)
   let { data: profile } = await supabase

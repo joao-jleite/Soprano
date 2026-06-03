@@ -23,7 +23,8 @@ async function getBrowser() {
     const executablePath = await chromium.executablePath(CHROMIUM_PACK_URL);
     return puppeteer.launch({
       args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
+      // chromium.defaultViewport existe em runtime mas não consta nos tipos TS
+      defaultViewport: (chromium as unknown as { defaultViewport: null }).defaultViewport,
       executablePath,
       headless: true,
     });
@@ -239,7 +240,7 @@ export async function GET(
         margin: { top: '0', right: '0', bottom: '14mm', left: '0' },
       });
       const dateStr = report.report_date.replace(/-/g, '');
-      return new NextResponse(pdf, {
+      return new NextResponse(Buffer.from(pdf), {
         headers: {
           'Content-Type': 'application/pdf',
           'Content-Disposition': `inline; filename="resumo-diario-${dateStr}.pdf"`,

@@ -3,6 +3,9 @@
 //
 // Tabelas adicionadas manualmente (ainda não migradas para o banco local):
 //   daily_reports, daily_report_activities, daily_report_signatures
+//
+// IMPORTANTE: os tipos de Update NÃO usam Partial<Omit<Database[...][Row], 'id'>>
+// para evitar referência circular que quebra a inferência de generics no TS 5.6+.
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -12,23 +15,165 @@ export type ActivityStatus = 'rascunho' | 'enviada' | 'rejeitada';
 export type DailyReportStatus = 'rascunho' | 'aguardando_assinatura' | 'assinado' | 'cancelado';
 export type AuditAction = 'insert' | 'update' | 'delete' | 'soft_delete' | 'restore';
 
+// ── Row types como aliases independentes (sem referência circular) ─────────────
+
+type ProfileRow = {
+  id: string;
+  full_name: string;
+  email: string;
+  role: Role;
+  avatar_url: string | null;
+  phone: string | null;
+  company: string | null;
+  preferred_locale: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+};
+
+type LocationRow = {
+  id: string;
+  name: string;
+  kind: LocationKind;
+  line: string;
+  sort_order: number;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  created_at: string;
+  created_by: string | null;
+  deleted_at: string | null;
+};
+
+type ActivityTypeRow = {
+  id: string;
+  slug: string;
+  label_pt: string;
+  label_en: string;
+  label_es: string;
+  icon: string | null;
+  created_at: string;
+  created_by: string | null;
+  deleted_at: string | null;
+};
+
+type ActivityRow = {
+  id: string;
+  location_id: string;
+  activity_type_id: string;
+  supervisor_id: string;
+  client_id: string | null;
+  description: string;
+  notes: string | null;
+  evolucao: string | null;
+  pendencias: string | null;
+  continuation_of: string | null;
+  status: ActivityStatus;
+  started_at: string;
+  ended_at: string | null;
+  submitted_at: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+};
+
+type ActivityParticipantRow = {
+  id: string;
+  activity_id: string;
+  name: string;
+  role: string | null;
+};
+
+type ActivityPhotoRow = {
+  id: string;
+  activity_id: string;
+  storage_path: string;
+  caption: string | null;
+  lat: number | null;
+  lng: number | null;
+  taken_at: string | null;
+  uploaded_at: string;
+};
+
+type SignatureRow = {
+  id: string;
+  activity_id: string;
+  signer_id: string;
+  signer_name: string;
+  svg_data: string;
+  verification_code: string;
+  signed_at: string;
+  ip_address: string | null;
+  user_agent: string | null;
+  rejected: boolean;
+  reject_reason: string | null;
+};
+
+type AuditLogRow = {
+  id: string;
+  table_name: string;
+  record_id: string | null;
+  action: AuditAction;
+  actor_id: string | null;
+  actor_email: string | null;
+  diff: Json | null;
+  created_at: string;
+};
+
+type ComplaintRow = {
+  id: string;
+  activity_id: string | null;
+  location_id: string | null;
+  author_id: string;
+  subject: string;
+  body: string;
+  status: string;
+  created_at: string;
+};
+
+type DailyReportRow = {
+  id: string;
+  report_date: string;
+  supervisor_id: string;
+  client_id: string | null;
+  notes: string | null;
+  status: DailyReportStatus;
+  sent_at: string | null;
+  signed_at: string | null;
+  cancellation_reason: string | null;
+  verification_code: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+};
+
+type DailyReportActivityRow = {
+  id: string;
+  daily_report_id: string;
+  activity_id: string;
+  created_at: string;
+};
+
+type DailyReportSignatureRow = {
+  id: string;
+  daily_report_id: string;
+  signer_id: string;
+  signer_name: string;
+  svg_data: string | null;
+  signed_at: string;
+  ip_address: string | null;
+  user_agent: string | null;
+  cancelled: boolean;
+  cancel_reason: string | null;
+};
+
+// ── Database interface ─────────────────────────────────────────────────────────
+
 export interface Database {
   public: {
     Tables: {
       profiles: {
-        Row: {
-          id: string;
-          full_name: string;
-          email: string;
-          role: Role;
-          avatar_url: string | null;
-          phone: string | null;
-          company: string | null;
-          preferred_locale: string;
-          created_at: string;
-          updated_at: string;
-          deleted_at: string | null;
-        };
+        Row: ProfileRow;
         Insert: {
           id: string;
           full_name: string;
@@ -40,23 +185,11 @@ export interface Database {
           preferred_locale?: string;
           deleted_at?: string | null;
         };
-        Update: Partial<Omit<Database['public']['Tables']['profiles']['Row'], 'id'>>;
+        Update: Partial<Omit<ProfileRow, 'id'>>;
         Relationships: [];
       };
       locations: {
-        Row: {
-          id: string;
-          name: string;
-          kind: LocationKind;
-          line: string;
-          sort_order: number;
-          address: string | null;
-          lat: number | null;
-          lng: number | null;
-          created_at: string;
-          created_by: string | null;
-          deleted_at: string | null;
-        };
+        Row: LocationRow;
         Insert: {
           id?: string;
           name: string;
@@ -69,21 +202,11 @@ export interface Database {
           created_by?: string | null;
           deleted_at?: string | null;
         };
-        Update: Partial<Omit<Database['public']['Tables']['locations']['Row'], 'id'>>;
+        Update: Partial<Omit<LocationRow, 'id'>>;
         Relationships: [];
       };
       activity_types: {
-        Row: {
-          id: string;
-          slug: string;
-          label_pt: string;
-          label_en: string;
-          label_es: string;
-          icon: string | null;
-          created_at: string;
-          created_by: string | null;
-          deleted_at: string | null;
-        };
+        Row: ActivityTypeRow;
         Insert: {
           id?: string;
           slug?: string;
@@ -94,29 +217,11 @@ export interface Database {
           created_by?: string | null;
           deleted_at?: string | null;
         };
-        Update: Partial<Omit<Database['public']['Tables']['activity_types']['Row'], 'id'>>;
+        Update: Partial<Omit<ActivityTypeRow, 'id'>>;
         Relationships: [];
       };
       activities: {
-        Row: {
-          id: string;
-          location_id: string;
-          activity_type_id: string;
-          supervisor_id: string;
-          client_id: string | null;
-          description: string;
-          notes: string | null;
-          evolucao: string | null;
-          pendencias: string | null;
-          continuation_of: string | null;
-          status: ActivityStatus;
-          started_at: string;
-          ended_at: string | null;
-          submitted_at: string | null;
-          created_at: string;
-          updated_at: string;
-          deleted_at: string | null;
-        };
+        Row: ActivityRow;
         Insert: {
           id?: string;
           location_id: string;
@@ -134,7 +239,7 @@ export interface Database {
           submitted_at?: string | null;
           deleted_at?: string | null;
         };
-        Update: Partial<Omit<Database['public']['Tables']['activities']['Row'], 'id'>>;
+        Update: Partial<Omit<ActivityRow, 'id'>>;
         Relationships: [
           {
             foreignKeyName: 'activities_location_id_fkey';
@@ -167,19 +272,14 @@ export interface Database {
         ];
       };
       activity_participants: {
-        Row: {
-          id: string;
-          activity_id: string;
-          name: string;
-          role: string | null;
-        };
+        Row: ActivityParticipantRow;
         Insert: {
           id?: string;
           activity_id: string;
           name: string;
           role?: string | null;
         };
-        Update: Partial<Omit<Database['public']['Tables']['activity_participants']['Row'], 'id'>>;
+        Update: Partial<Omit<ActivityParticipantRow, 'id'>>;
         Relationships: [
           {
             foreignKeyName: 'activity_participants_activity_id_fkey';
@@ -191,16 +291,7 @@ export interface Database {
         ];
       };
       activity_photos: {
-        Row: {
-          id: string;
-          activity_id: string;
-          storage_path: string;
-          caption: string | null;
-          lat: number | null;
-          lng: number | null;
-          taken_at: string | null;
-          uploaded_at: string;
-        };
+        Row: ActivityPhotoRow;
         Insert: {
           id?: string;
           activity_id: string;
@@ -210,7 +301,7 @@ export interface Database {
           lng?: number | null;
           taken_at?: string | null;
         };
-        Update: Partial<Omit<Database['public']['Tables']['activity_photos']['Row'], 'id'>>;
+        Update: Partial<Omit<ActivityPhotoRow, 'id'>>;
         Relationships: [
           {
             foreignKeyName: 'activity_photos_activity_id_fkey';
@@ -222,19 +313,7 @@ export interface Database {
         ];
       };
       signatures: {
-        Row: {
-          id: string;
-          activity_id: string;
-          signer_id: string;
-          signer_name: string;
-          svg_data: string;
-          verification_code: string;
-          signed_at: string;
-          ip_address: string | null;
-          user_agent: string | null;
-          rejected: boolean;
-          reject_reason: string | null;
-        };
+        Row: SignatureRow;
         Insert: {
           id?: string;
           activity_id: string;
@@ -247,20 +326,11 @@ export interface Database {
           rejected?: boolean;
           reject_reason?: string | null;
         };
-        Update: Partial<Omit<Database['public']['Tables']['signatures']['Row'], 'id'>>;
+        Update: Partial<Omit<SignatureRow, 'id'>>;
         Relationships: [];
       };
       audit_log: {
-        Row: {
-          id: string;
-          table_name: string;
-          record_id: string | null;
-          action: AuditAction;
-          actor_id: string | null;
-          actor_email: string | null;
-          diff: Json | null;
-          created_at: string;
-        };
+        Row: AuditLogRow;
         Insert: {
           id?: string;
           table_name: string;
@@ -270,20 +340,11 @@ export interface Database {
           actor_email?: string | null;
           diff?: Json | null;
         };
-        Update: Partial<Omit<Database['public']['Tables']['audit_log']['Row'], 'id'>>;
+        Update: Partial<Omit<AuditLogRow, 'id'>>;
         Relationships: [];
       };
       complaints: {
-        Row: {
-          id: string;
-          activity_id: string | null;
-          location_id: string | null;
-          author_id: string;
-          subject: string;
-          body: string;
-          status: string;
-          created_at: string;
-        };
+        Row: ComplaintRow;
         Insert: {
           id?: string;
           activity_id?: string | null;
@@ -293,24 +354,11 @@ export interface Database {
           body: string;
           status?: string;
         };
-        Update: Partial<Omit<Database['public']['Tables']['complaints']['Row'], 'id'>>;
+        Update: Partial<Omit<ComplaintRow, 'id'>>;
         Relationships: [];
       };
       daily_reports: {
-        Row: {
-          id: string;
-          report_date: string;
-          supervisor_id: string;
-          client_id: string | null;
-          notes: string | null;
-          status: DailyReportStatus;
-          sent_at: string | null;
-          signed_at: string | null;
-          cancellation_reason: string | null;
-          created_at: string;
-          updated_at: string;
-          deleted_at: string | null;
-        };
+        Row: DailyReportRow;
         Insert: {
           id?: string;
           report_date: string;
@@ -321,9 +369,10 @@ export interface Database {
           sent_at?: string | null;
           signed_at?: string | null;
           cancellation_reason?: string | null;
+          verification_code?: string;
           deleted_at?: string | null;
         };
-        Update: Partial<Omit<Database['public']['Tables']['daily_reports']['Row'], 'id'>>;
+        Update: Partial<Omit<DailyReportRow, 'id'>>;
         Relationships: [
           {
             foreignKeyName: 'daily_reports_supervisor_id_fkey';
@@ -342,18 +391,13 @@ export interface Database {
         ];
       };
       daily_report_activities: {
-        Row: {
-          id: string;
-          daily_report_id: string;
-          activity_id: string;
-          created_at: string;
-        };
+        Row: DailyReportActivityRow;
         Insert: {
           id?: string;
           daily_report_id: string;
           activity_id: string;
         };
-        Update: Partial<Omit<Database['public']['Tables']['daily_report_activities']['Row'], 'id'>>;
+        Update: Partial<Omit<DailyReportActivityRow, 'id'>>;
         Relationships: [
           {
             foreignKeyName: 'daily_report_activities_daily_report_id_fkey';
@@ -372,18 +416,7 @@ export interface Database {
         ];
       };
       daily_report_signatures: {
-        Row: {
-          id: string;
-          daily_report_id: string;
-          signer_id: string;
-          signer_name: string;
-          svg_data: string | null;
-          ip_address: string | null;
-          user_agent: string | null;
-          cancelled: boolean;
-          cancel_reason: string | null;
-          created_at: string;
-        };
+        Row: DailyReportSignatureRow;
         Insert: {
           id?: string;
           daily_report_id: string;
@@ -395,7 +428,7 @@ export interface Database {
           cancelled?: boolean;
           cancel_reason?: string | null;
         };
-        Update: Partial<Omit<Database['public']['Tables']['daily_report_signatures']['Row'], 'id'>>;
+        Update: Partial<Omit<DailyReportSignatureRow, 'id'>>;
         Relationships: [
           {
             foreignKeyName: 'daily_report_signatures_daily_report_id_fkey';
@@ -407,9 +440,10 @@ export interface Database {
         ];
       };
     };
-    Views: {
-      [_ in never]: never;
-    };
+    // Views e CompositeTypes usam Record<string, never> para satisfazer
+    // GenericSchema do @supabase/supabase-js v2.100+. A sintaxe { [K in never]: never }
+    // não tem assinatura de índice e não estende Record<string, T> no TS 5.6+.
+    Views: Record<string, never>;
     Functions: {
       verify_signature: {
         Args: {
@@ -424,8 +458,6 @@ export interface Database {
       activity_status: ActivityStatus;
       daily_report_status: DailyReportStatus;
     };
-    CompositeTypes: {
-      [_ in never]: never;
-    };
+    CompositeTypes: Record<string, Record<string, unknown>>;
   };
 }

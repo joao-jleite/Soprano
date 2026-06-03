@@ -26,7 +26,7 @@ export default async function ActivityDetailPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect({ href: '/login', locale });
+  if (!user) return redirect({ href: '/login', locale });
 
   const { data: profile } = await supabase
     .from('profiles')

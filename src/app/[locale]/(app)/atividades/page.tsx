@@ -1,4 +1,5 @@
 import { Plus } from 'lucide-react';
+import type { ActivityStatus } from '@/lib/supabase/database.types';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
 import { Link } from '@/i18n/navigation';
@@ -56,7 +57,7 @@ export default async function ActivitiesPage({
 
   if (sp.location) q = q.eq('location_id', sp.location);
   if (sp.type) q = q.eq('activity_type_id', sp.type);
-  if (sp.status) q = q.eq('status', sp.status);
+  if (sp.status) q = q.eq('status', sp.status as ActivityStatus);
   if (sp.from) q = q.gte('started_at', sp.from);
   if (sp.to) q = q.lte('started_at', sp.to);
   if (sp.q && sp.q.trim()) {
