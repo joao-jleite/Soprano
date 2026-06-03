@@ -4,7 +4,7 @@ import * as React from 'react';
 import { toast } from 'sonner';
 import { useRouter } from '@/i18n/navigation';
 import { SignatureTyped } from '@/components/signature/signature-typed';
-import { signDailyReport, cancelDailyReport } from '@/app/actions/daily-reports';
+import { cancelDailyReport } from '@/app/actions/daily-reports';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ShieldCheck, ShieldX, PenLine, AlertTriangle } from 'lucide-react';
@@ -25,9 +25,18 @@ export function SignDailyReportPanel({ reportId, signerName }: Props) {
   async function onSign(svg: string) {
     setSigning(true);
     try {
-      await signDailyReport({ reportId, svgData: svg });
+      const res = await fetch(`/api/resumo-diario/${reportId}/sign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ svgData: svg }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        toast.error(data.error ?? `Erro ${res.status}`);
+        return;
+      }
       toast.success('Resumo assinado com sucesso ✓');
-      router.refresh();
+      router.push('/resumo-diario');
     } catch (e: any) {
       toast.error(e?.message ?? 'Erro ao assinar');
     } finally {
@@ -39,7 +48,11 @@ export function SignDailyReportPanel({ reportId, signerName }: Props) {
     if (!reason.trim()) return;
     setCancelling(true);
     try {
-      await cancelDailyReport({ reportId, reason });
+      const result = await cancelDailyReport({ reportId, reason });
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
       toast.success('Cancelamento registrado — supervisor será notificado');
       router.refresh();
     } catch (e: any) {

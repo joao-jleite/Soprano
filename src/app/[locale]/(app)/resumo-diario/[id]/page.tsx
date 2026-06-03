@@ -357,7 +357,8 @@ export default async function DailyReportPage({
               />
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              {signature.signer_name} · {formatDateTime(signature.signed_at, localeStr)}
+              {signature.signer_name}
+              {signature.signed_at ? ` · ${formatDateTime(signature.signed_at, localeStr)}` : ''}
             </p>
           </CardContent>
         </Card>

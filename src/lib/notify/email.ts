@@ -128,6 +128,59 @@ export function activitySignedEmail(opts: {
   });
 }
 
+export function dailyReportSubmittedEmail(opts: {
+  clientEmail: string;
+  clientName: string;
+  reportDate: string;
+  reportUrl: string;
+  supervisorName: string;
+}) {
+  return sendEmail({
+    to: opts.clientEmail,
+    subject: `Soprano · Resumo diário de ${opts.reportDate} aguardando sua assinatura`,
+    html: shell(`
+      <div style="font-size:18px;font-weight:600;margin-bottom:8px">Olá, ${escapeHtml(opts.clientName)}</div>
+      <p style="font-size:14px;line-height:1.5;color:#d1d5db">
+        O supervisor <strong>${escapeHtml(opts.supervisorName)}</strong> enviou o resumo diário para sua assinatura:
+      </p>
+      <div style="background:#0b1220;border-left:3px solid ${PRIMARY};padding:12px;border-radius:4px;margin:16px 0;font-size:14px">
+        📋 Resumo de <strong>${escapeHtml(opts.reportDate)}</strong>
+      </div>
+      <p style="font-size:13px;color:${MUTED};margin-bottom:16px">
+        Por favor, revise as atividades registradas e confirme sua assinatura eletrônica.
+      </p>
+      <a href="${opts.reportUrl}" style="display:inline-block;background:${PRIMARY};color:white;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px">
+        Revisar e assinar →
+      </a>
+    `),
+  });
+}
+
+export function dailyReportSignedEmail(opts: {
+  supervisorEmail: string;
+  supervisorName: string;
+  reportDate: string;
+  clientName: string;
+  reportUrl: string;
+}) {
+  return sendEmail({
+    to: opts.supervisorEmail,
+    subject: `Soprano · Resumo de ${opts.reportDate} foi assinado`,
+    html: shell(`
+      <div style="font-size:18px;font-weight:600;margin-bottom:8px">Resumo assinado ✓</div>
+      <p style="font-size:14px;line-height:1.5;color:#d1d5db">
+        <strong>${escapeHtml(opts.clientName)}</strong> assinou o resumo diário:
+      </p>
+      <div style="background:#0b1220;border-left:3px solid #10b981;padding:12px;border-radius:4px;margin:16px 0;font-size:14px">
+        📋 Resumo de <strong>${escapeHtml(opts.reportDate)}</strong>
+      </div>
+      <a href="${opts.reportUrl}" style="display:inline-block;background:${PRIMARY};color:white;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px">
+        Ver detalhes →
+      </a>
+    `),
+  });
+}
+
 function escapeHtml(s: string) {
   return s
     .replace(/&/g, '&amp;')

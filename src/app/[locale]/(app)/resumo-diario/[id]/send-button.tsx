@@ -24,10 +24,12 @@ export function SendReportButton({ reportId, isCancelled, hasClient }: Props) {
     }
     setLoading(true);
     try {
-      if (isCancelled) {
-        await resendReport(reportId);
-      } else {
-        await sendReportForSignature(reportId);
+      const result = isCancelled
+        ? await resendReport(reportId)
+        : await sendReportForSignature(reportId);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
       }
       toast.success('Resumo enviado para assinatura');
       router.refresh();
