@@ -27,12 +27,22 @@ export default async function DailyReportsPage({
 
   const clientMap: Record<string, string> = {};
 
-  const { data: rawReports } = await (supabase as any)
+  let reportsQuery = (supabase as any)
     .from('daily_reports')
-    .select('id, report_date, status, notes, cancellation_reason, sent_at, signed_at, client_id')
+    .select('id, report_date, status, notes, cancellation_reason, sent_at, signed_at, client_id, supervisor_id')
     .is('deleted_at', null)
     .order('report_date', { ascending: false })
     .limit(60);
+
+  // Escopo por role: cliente só vê os seus; supervisor só vê os seus
+  if (role === 'cliente' && user) {
+    reportsQuery = reportsQuery.eq('client_id', user.id);
+  } else if (role === 'supervisor' && user) {
+    reportsQuery = reportsQuery.eq('supervisor_id', user.id);
+  }
+  // admin vê todos
+
+  const { data: rawReports } = await reportsQuery;
 
   const allClientIds = [...new Set((rawReports ?? []).map((r: any) => r.client_id).filter(Boolean))];
 

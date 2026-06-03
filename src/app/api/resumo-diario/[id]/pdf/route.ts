@@ -109,18 +109,8 @@ export async function GET(
 
     const includedIds: string[] = (reportActivities ?? []).map((r: any) => r.activity_id);
 
-    // Busca verification_code da tabela signatures (existe por atividade, não em daily_report_signatures)
-    let verificationCode: string | undefined;
-    if (includedIds.length && report.status === 'assinado') {
-      const { data: firstSig } = await (supabase as any)
-        .from('signatures')
-        .select('verification_code')
-        .in('activity_id', includedIds)
-        .eq('rejected', false)
-        .limit(1)
-        .maybeSingle();
-      verificationCode = firstSig?.verification_code;
-    }
+    // Código de verificação do resumo — usa o ID do próprio resumo como código único
+    const verificationCode: string | undefined = report.status === 'assinado' ? report.id : undefined;
 
     const [{ data: activities }, { data: allPhotos }] = await Promise.all([
       includedIds.length

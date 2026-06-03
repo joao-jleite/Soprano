@@ -165,55 +165,76 @@ export async function updateActivity(input: z.infer<typeof updateActivitySchema>
   return parsed.id;
 }
 
-export async function submitActivityForSignature(activityId: string) {
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from('activities')
-    .update({ status: 'enviada', submitted_at: new Date().toISOString() })
-    .eq('id', activityId);
-  if (error) throw error;
-
-  // Notifica cliente por email (se configurado)
+export async function submitActivityForSignature(activityId: string): Promise<{ error?: string }> {
   try {
-    const { data: act } = await supabase
-      .from('activities')
-      .select('description, client_id')
-      .eq('id', activityId)
-      .single();
-    if ((act as any)?.client_id) {
-      const { data: client } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', (act as any).client_id)
-        .single();
-      const email = await getUserEmail((act as any).client_id);
-      if (email) {
-        const h = await headers();
-        const origin = h.get('origin') ?? h.get('referer')?.replace(/\/[^/]*$/, '') ?? '';
-        await activitySubmittedEmail({
-          clientEmail: email,
-          clientName: (client as any)?.full_name ?? 'cliente',
-          description: (act as any).description,
-          activityUrl: `${origin}/pt/atividades/${activityId}`,
-        });
-      }
-    }
-  } catch (e) {
-    console.warn('[notify] submit email failed', e);
-  }
+    const aId = z.string().uuid().parse(activityId);
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: 'Não autenticado' };
 
-  revalidatePath(`/atividades/${activityId}`);
-  revalidatePath('/atividades');
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+    const role = (profile as any)?.role;
+    if (!['admin', 'supervisor'].includes(role)) return { error: 'Sem permissão' };
+
+    // Supervisor só pode submeter as próprias atividades
+    const { data: act } = await supabase.from('activities').select('supervisor_id, status').eq('id', aId).single();
+    if (!act) return { error: 'Atividade não encontrada' };
+    if (role === 'supervisor' && (act as any).supervisor_id !== user.id) return { error: 'Sem permissão para esta atividade' };
+
+    const { error } = await supabase
+      .from('activities')
+      .update({ status: 'enviada', submitted_at: new Date().toISOString() })
+      .eq('id', aId);
+    if (error) return { error: error.message };
+
+    // Notifica cliente por email (se configurado, silencioso)
+    try {
+      if ((act as any).supervisor_id && (act as any)) {
+        const { data: actDetail } = await supabase
+          .from('activities')
+          .select('description, client_id')
+          .eq('id', aId)
+          .single();
+        if ((actDetail as any)?.client_id) {
+          const { data: client } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', (actDetail as any).client_id)
+            .single();
+          const email = await getUserEmail((actDetail as any).client_id);
+          if (email) {
+            const h = await headers();
+            const origin = h.get('origin') ?? h.get('referer')?.replace(/\/[^/]*$/, '') ?? '';
+            await activitySubmittedEmail({
+              clientEmail: email,
+              clientName: (client as any)?.full_name ?? 'cliente',
+              description: (actDetail as any).description,
+              activityUrl: `${origin}/pt/atividades/${aId}`,
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[notify] submit email failed', e);
+    }
+
+    revalidatePath(`/atividades/${aId}`);
+    revalidatePath('/atividades');
+    return {};
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : 'Erro inesperado' };
+  }
 }
 
 export async function createLocation(name: string, kind: string) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Não autenticado');
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+  if (!['admin', 'supervisor'].includes((profile as any)?.role)) throw new Error('Sem permissão para criar locais');
   const { data, error } = await supabase
     .from('locations')
-    .insert({ name, kind: kind as any, created_by: user?.id ?? null, line: 'linha-6' })
+    .insert({ name, kind: kind as any, created_by: user.id, line: 'linha-6' })
     .select('id, name, kind')
     .single();
   if (error || !data) throw error ?? new Error('Failed to create location');
@@ -227,9 +248,10 @@ export async function createActivityType(input: {
   labelEs?: string;
 }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Não autenticado');
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+  if (!['admin', 'supervisor'].includes((profile as any)?.role)) throw new Error('Sem permissão para criar tipos de atividade');
   const slug = slugify(input.labelPt);
   const { data, error } = await supabase
     .from('activity_types')

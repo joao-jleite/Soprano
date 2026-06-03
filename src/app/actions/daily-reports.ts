@@ -42,6 +42,20 @@ export async function createDailyReport(input: z.infer<typeof createReportSchema
 
 // ── Adicionar / remover atividade do resumo ────────────────────────────────
 
+// Helper: verifica ownership do resumo (admin passa sempre, supervisor precisa ser dono)
+async function assertReportOwnership(supabase: any, rId: string, userId: string): Promise<string | null> {
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', userId).single();
+  const role = (profile as any)?.role;
+  if (!['admin', 'supervisor'].includes(role)) return 'Sem permissão para modificar resumos';
+  if (role === 'supervisor') {
+    const { data: rep } = await supabase.from('daily_reports').select('supervisor_id, status').eq('id', rId).single();
+    if (!rep) return 'Resumo não encontrado';
+    if (rep.supervisor_id !== userId) return 'Sem permissão para modificar este resumo';
+    if (!['rascunho', 'cancelado'].includes(rep.status)) return 'Resumo não pode ser modificado neste estado';
+  }
+  return null;
+}
+
 export async function addActivityToReport(reportId: string, activityId: string): Promise<{ error?: string }> {
   try {
     const rId = z.string().uuid().parse(reportId);
@@ -49,6 +63,8 @@ export async function addActivityToReport(reportId: string, activityId: string):
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { error: 'Não autenticado' };
+    const ownershipError = await assertReportOwnership(supabase, rId, user.id);
+    if (ownershipError) return { error: ownershipError };
     const { error } = await (supabase as any)
       .from('daily_report_activities')
       .insert({ daily_report_id: rId, activity_id: aId });
@@ -67,6 +83,8 @@ export async function addAllActivitiesToReport(reportId: string, activityIds: st
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { error: 'Não autenticado' };
+    const ownershipError = await assertReportOwnership(supabase, rId, user.id);
+    if (ownershipError) return { error: ownershipError };
     const rows = aIds.map((activity_id) => ({ daily_report_id: rId, activity_id }));
     const { error } = await (supabase as any)
       .from('daily_report_activities')
@@ -86,6 +104,8 @@ export async function removeActivityFromReport(reportId: string, activityId: str
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { error: 'Não autenticado' };
+    const ownershipError = await assertReportOwnership(supabase, rId, user.id);
+    if (ownershipError) return { error: ownershipError };
     const { error } = await (supabase as any)
       .from('daily_report_activities')
       .delete()
