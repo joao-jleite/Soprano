@@ -60,6 +60,25 @@ export async function addActivityToReport(reportId: string, activityId: string):
   }
 }
 
+export async function addAllActivitiesToReport(reportId: string, activityIds: string[]): Promise<{ error?: string }> {
+  try {
+    const rId = z.string().uuid().parse(reportId);
+    const aIds = z.array(z.string().uuid()).min(1).parse(activityIds);
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: 'Não autenticado' };
+    const rows = aIds.map((activity_id) => ({ daily_report_id: rId, activity_id }));
+    const { error } = await (supabase as any)
+      .from('daily_report_activities')
+      .insert(rows);
+    if (error) return { error: error.message };
+    revalidatePath('/resumo-diario');
+    return {};
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : 'Erro inesperado' };
+  }
+}
+
 export async function removeActivityFromReport(reportId: string, activityId: string): Promise<{ error?: string }> {
   try {
     const rId = z.string().uuid().parse(reportId);

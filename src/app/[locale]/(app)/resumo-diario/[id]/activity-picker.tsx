@@ -3,8 +3,8 @@
 import * as React from 'react';
 import { toast } from 'sonner';
 import { useRouter } from '@/i18n/navigation';
-import { Plus, X, ChevronDown, ChevronUp } from 'lucide-react';
-import { addActivityToReport, removeActivityFromReport } from '@/app/actions/daily-reports';
+import { Plus, X, ChevronDown, ChevronUp, ChevronsUpDown, Loader2 } from 'lucide-react';
+import { addActivityToReport, addAllActivitiesToReport, removeActivityFromReport } from '@/app/actions/daily-reports';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/lib/utils';
@@ -32,8 +32,9 @@ export function ActivityPicker({
   availableActivities,
 }: Props) {
   const router = useRouter();
-  const [open, setOpen]       = React.useState(false);
-  const [loading, setLoading] = React.useState<string | null>(null);
+  const [open, setOpen]         = React.useState(false);
+  const [loading, setLoading]   = React.useState<string | null>(null);
+  const [addingAll, setAddingAll] = React.useState(false);
 
   async function handleAdd(activityId: string) {
     setLoading(activityId);
@@ -46,6 +47,22 @@ export function ActivityPicker({
       toast.error(e?.message ?? 'Erro ao adicionar');
     } finally {
       setLoading(null);
+    }
+  }
+
+  async function handleAddAll() {
+    if (availableActivities.length === 0) return;
+    setAddingAll(true);
+    try {
+      const ids = availableActivities.map((a) => a.id);
+      const result = await addAllActivitiesToReport(reportId, ids);
+      if (result?.error) { toast.error(result.error); return; }
+      toast.success(`${ids.length} atividade${ids.length > 1 ? 's' : ''} adicionada${ids.length > 1 ? 's' : ''}`);
+      router.refresh();
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Erro ao adicionar todas');
+    } finally {
+      setAddingAll(false);
     }
   }
 
@@ -96,17 +113,33 @@ export function ActivityPicker({
 
       {/* Seletor de atividades disponíveis */}
       <div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setOpen((v) => !v)}
-          className="gap-1.5"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Adicionar atividades
-          {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setOpen((v) => !v)}
+            className="gap-1.5"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Adicionar atividades
+            {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          </Button>
+
+          {availableActivities.length > 0 && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={handleAddAll}
+              disabled={addingAll || loading !== null}
+              className="gap-1.5"
+            >
+              {addingAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ChevronsUpDown className="h-3.5 w-3.5" />}
+              Adicionar todas do dia ({availableActivities.length})
+            </Button>
+          )}
+        </div>
 
         {open && (
           <div className="mt-3 rounded-lg border border-border divide-y divide-border overflow-hidden">
