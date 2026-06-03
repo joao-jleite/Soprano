@@ -6,10 +6,12 @@ import { createClient } from '@/lib/supabase/server';
 import { getUserEmail } from '@/lib/supabase/service';
 import { activitySubmittedEmail } from '@/lib/notify/email';
 import { headers } from 'next/headers';
-import { requireAuth, requireAuthAndRole } from '@/guards/auth.guard';
+import { requireAuthAndRole } from '@/guards/auth.guard';
 import { logger } from '@/lib/logger';
 
 const log = logger.for('activities');
+
+// ── Schemas compartilhados ─────────────────────────────────────────────────
 
 const participantSchema = z.object({
   name: z.string().min(1),
@@ -23,9 +25,9 @@ const photoSchema = z.object({
   lng: z.number().optional(),
 });
 
-const createActivitySchema = z.object({
+/** Campos comuns a create e update (sem activityType — cada schema define o seu). */
+const baseActivitySchema = z.object({
   locationId: z.string().uuid(),
-  activityTypeId: z.string().uuid(),
   clientId: z.string().uuid().nullable().optional(),
   description: z.string().min(3),
   notes: z.string().optional(),
@@ -36,82 +38,117 @@ const createActivitySchema = z.object({
   endedAt: z.string().optional().nullable(),
   participants: z.array(participantSchema).default([]),
   photos: z.array(photoSchema).default([]),
-  submit: z.boolean().default(false),
+});
+
+/**
+ * Schema de criação: aceita múltiplos tipos.
+ * Cria uma atividade (rascunho) por tipo selecionado, compartilhando todos os outros campos.
+ */
+const createActivitySchema = baseActivitySchema.extend({
+  activityTypeIds: z
+    .array(z.string().uuid())
+    .min(1, 'Selecione ao menos um tipo de atividade'),
 });
 
 export type CreateActivityInput = z.infer<typeof createActivitySchema>;
 
-export async function createActivity(input: CreateActivityInput): Promise<{ id?: string; error?: string }> {
+/**
+ * Schema de atualização: mantém tipo único (editar uma atividade existente).
+ */
+const updateActivitySchema = baseActivitySchema.extend({
+  id: z.string().uuid(),
+  activityTypeId: z.string().uuid(),
+});
+
+export type UpdateActivityInput = z.infer<typeof updateActivitySchema>;
+
+// ── createActivity ─────────────────────────────────────────────────────────
+
+/**
+ * Cria uma atividade (rascunho) por tipo selecionado.
+ * Todos os outros campos (local, data, descrição, participantes, fotos) são compartilhados.
+ * Retorna `ids` — lista de IDs criados, na mesma ordem dos tipos.
+ */
+export async function createActivity(
+  input: CreateActivityInput,
+): Promise<{ ids?: string[]; error?: string }> {
   try {
     const parsed = createActivitySchema.parse(input);
     const supabase = await createClient();
     const { user } = await requireAuthAndRole(supabase, 'admin', 'supervisor');
 
-    const status = parsed.submit ? 'enviada' : 'rascunho';
-    const submittedAt = parsed.submit ? new Date().toISOString() : null;
+    // Cria uma atividade por tipo em paralelo
+    const insertResults = await Promise.all(
+      parsed.activityTypeIds.map((typeId) =>
+        supabase
+          .from('activities')
+          .insert({
+            location_id: parsed.locationId,
+            activity_type_id: typeId,
+            client_id: parsed.clientId ?? null,
+            supervisor_id: user.id,
+            description: parsed.description,
+            notes: parsed.notes ?? null,
+            evolucao: parsed.evolucao ?? null,
+            pendencias: parsed.pendencias ?? null,
+            continuation_of: parsed.continuationOf ?? null,
+            started_at: parsed.startedAt,
+            ended_at: parsed.endedAt ?? null,
+            status: 'rascunho',
+          })
+          .select('id')
+          .single(),
+      ),
+    );
 
-    const { data: activity, error } = await supabase
-      .from('activities')
-      .insert({
-        location_id: parsed.locationId,
-        activity_type_id: parsed.activityTypeId,
-        client_id: parsed.clientId ?? null,
-        supervisor_id: user.id,
-        description: parsed.description,
-        notes: parsed.notes ?? null,
-        evolucao: parsed.evolucao ?? null,
-        pendencias: parsed.pendencias ?? null,
-        continuation_of: parsed.continuationOf ?? null,
-        started_at: parsed.startedAt,
-        ended_at: parsed.endedAt ?? null,
-        status,
-        submitted_at: submittedAt,
-      })
-      .select('id')
-      .single();
-
-    if (error || !activity) {
-      log.error('Falha ao criar atividade', { error: error?.message });
-      return { error: error?.message ?? 'Falha ao criar atividade' };
+    // Verifica erros individuais
+    for (const { error } of insertResults) {
+      if (error) {
+        log.error('Falha ao criar atividade', { error: error.message });
+        return { error: error.message };
+      }
     }
 
-    if (parsed.participants.length) {
-      // NOTE: delete-then-insert não é transacional. Se o insert falhar,
-      // os participantes anteriores são perdidos. Mover para RPC Postgres para atomicidade.
-      await supabase.from('activity_participants').insert(
-        parsed.participants.map((p) => ({
-          activity_id: activity.id,
-          name: p.name,
-          role: p.role ?? null,
-        })),
-      );
-    }
+    const ids = insertResults.map((r) => r.data!.id);
 
-    if (parsed.photos.length) {
-      await supabase.from('activity_photos').insert(
-        parsed.photos.map((p) => ({
-          activity_id: activity.id,
-          storage_path: p.storagePath,
-          caption: p.caption ?? null,
-          lat: p.lat ?? null,
-          lng: p.lng ?? null,
-        })),
-      );
+    // Insere participantes e fotos para cada atividade criada
+    for (const activityId of ids) {
+      if (parsed.participants.length) {
+        // NOTE: insert sem transação — se falhar, a atividade fica sem participantes.
+        await supabase.from('activity_participants').insert(
+          parsed.participants.map((p) => ({
+            activity_id: activityId,
+            name: p.name,
+            role: p.role ?? null,
+          })),
+        );
+      }
+      if (parsed.photos.length) {
+        await supabase.from('activity_photos').insert(
+          parsed.photos.map((p) => ({
+            activity_id: activityId,
+            storage_path: p.storagePath,
+            caption: p.caption ?? null,
+            lat: p.lat ?? null,
+            lng: p.lng ?? null,
+          })),
+        );
+      }
     }
 
     revalidatePath('/atividades');
     revalidatePath('/');
-    return { id: activity.id };
+    return { ids };
   } catch (e: unknown) {
     return { error: e instanceof Error ? e.message : 'Erro inesperado' };
   }
 }
 
-const updateActivitySchema = createActivitySchema.extend({
-  id: z.string().uuid(),
-});
+// ── updateActivity ─────────────────────────────────────────────────────────
 
-export async function updateActivity(input: z.infer<typeof updateActivitySchema>): Promise<{ id?: string; error?: string }> {
+export async function updateActivity(
+  input: UpdateActivityInput,
+): Promise<{ id?: string; error?: string }> {
   try {
     const parsed = updateActivitySchema.parse(input);
     const supabase = await createClient();
@@ -127,9 +164,6 @@ export async function updateActivity(input: z.infer<typeof updateActivitySchema>
     if (existing.status !== 'rascunho') return { error: 'Só rascunhos podem ser editados' };
     if (role !== 'admin' && existing.supervisor_id !== user.id) return { error: 'Sem permissão' };
 
-    const status = parsed.submit ? 'enviada' : 'rascunho';
-    const submittedAt = parsed.submit ? new Date().toISOString() : null;
-
     const { error } = await supabase
       .from('activities')
       .update({
@@ -143,8 +177,6 @@ export async function updateActivity(input: z.infer<typeof updateActivitySchema>
         continuation_of: parsed.continuationOf ?? null,
         started_at: parsed.startedAt,
         ended_at: parsed.endedAt ?? null,
-        status,
-        submitted_at: submittedAt,
       })
       .eq('id', parsed.id);
 
@@ -153,9 +185,7 @@ export async function updateActivity(input: z.infer<typeof updateActivitySchema>
       return { error: error.message };
     }
 
-    // NOTE: delete-then-insert não é transacional. Se o insert falhar,
-    // os participantes ficam deletados sem substitutos.
-    // Mover para RPC Postgres para atomicidade completa.
+    // NOTE: delete-then-insert não é transacional. Mover para RPC Postgres para atomicidade.
     await supabase.from('activity_participants').delete().eq('activity_id', parsed.id);
     if (parsed.participants.length) {
       await supabase.from('activity_participants').insert(
@@ -174,6 +204,8 @@ export async function updateActivity(input: z.infer<typeof updateActivitySchema>
     return { error: e instanceof Error ? e.message : 'Erro inesperado' };
   }
 }
+
+// ── submitActivityForSignature ─────────────────────────────────────────────
 
 export async function submitActivityForSignature(activityId: string): Promise<{ error?: string }> {
   try {
@@ -199,7 +231,6 @@ export async function submitActivityForSignature(activityId: string): Promise<{ 
 
     if (error) return { error: error.message };
 
-    // Notifica cliente por email (silencioso)
     try {
       if (act.client_id) {
         const { data: client } = await supabase
@@ -215,11 +246,11 @@ export async function submitActivityForSignature(activityId: string): Promise<{ 
             clientEmail: email,
             clientName: client?.full_name ?? 'cliente',
             description: act.description,
-            activityUrl: `${origin}/pt/atividades/${aId}`,
+            activityUrl: `${origin}/atividades/${aId}`,
           });
         }
       }
-    } catch (e) {
+    } catch {
       log.warn('Falha ao enviar e-mail de notificação', { activityId: aId });
     }
 
@@ -231,7 +262,12 @@ export async function submitActivityForSignature(activityId: string): Promise<{ 
   }
 }
 
-export async function createLocation(name: string, kind: string): Promise<{ id: string; name: string; kind: string } | { error: string }> {
+// ── createLocation ─────────────────────────────────────────────────────────
+
+export async function createLocation(
+  name: string,
+  kind: string,
+): Promise<{ id: string; name: string; kind: string } | { error: string }> {
   try {
     const supabase = await createClient();
     const { user } = await requireAuthAndRole(supabase, 'admin', 'supervisor');
@@ -240,9 +276,7 @@ export async function createLocation(name: string, kind: string): Promise<{ id: 
       .insert({ name, kind: kind as any, created_by: user.id, line: 'linha-6' })
       .select('id, name, kind')
       .single();
-    if (error || !data) {
-      return { error: error?.message ?? 'Falha ao criar local' };
-    }
+    if (error || !data) return { error: error?.message ?? 'Falha ao criar local' };
     revalidatePath('/locais');
     return data;
   } catch (e: unknown) {
@@ -250,11 +284,16 @@ export async function createLocation(name: string, kind: string): Promise<{ id: 
   }
 }
 
+// ── createActivityType ─────────────────────────────────────────────────────
+
 export async function createActivityType(input: {
   labelPt: string;
   labelEn?: string;
   labelEs?: string;
-}): Promise<{ id: string; slug: string; label_pt: string; label_en: string; label_es: string } | { error: string }> {
+}): Promise<
+  | { id: string; slug: string; label_pt: string; label_en: string; label_es: string }
+  | { error: string }
+> {
   try {
     const supabase = await createClient();
     await requireAuthAndRole(supabase, 'admin', 'supervisor');
@@ -269,14 +308,14 @@ export async function createActivityType(input: {
       })
       .select('id, slug, label_pt, label_en, label_es')
       .single();
-    if (error || !data) {
-      return { error: error?.message ?? 'Falha ao criar tipo' };
-    }
+    if (error || !data) return { error: error?.message ?? 'Falha ao criar tipo' };
     return data;
   } catch (e: unknown) {
     return { error: e instanceof Error ? e.message : 'Erro inesperado' };
   }
 }
+
+// ── helpers ────────────────────────────────────────────────────────────────
 
 function slugify(s: string) {
   return s

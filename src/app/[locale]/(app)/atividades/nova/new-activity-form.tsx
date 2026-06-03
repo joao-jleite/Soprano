@@ -18,14 +18,21 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ExpandableSelect, type Option } from '@/components/activity/expandable-select';
+import { MultiExpandableSelect } from '@/components/activity/multi-expandable-select';
 import { ParticipantsEditor, type Participant } from '@/components/activity/participants-editor';
 import { PhotoUpload, type UploadedPhoto } from '@/components/activity/photo-upload';
-import { createActivity, createActivityType, createLocation, updateActivity } from '@/app/actions/activities';
+import {
+  createActivity,
+  createActivityType,
+  createLocation,
+  updateActivity,
+} from '@/app/actions/activities';
 import { formatDate } from '@/lib/utils';
 
 export type InitialActivity = {
   id: string;
   locationId: string;
+  /** Usado apenas no modo edit. No modo create, typeIds pode ter múltiplos valores. */
   activityTypeId: string;
   clientId: string | null;
   description: string;
@@ -56,7 +63,15 @@ type Props = {
   mode?: 'create' | 'edit';
 };
 
-export function NewActivityForm({ locations, types, clients, recentActivities = [], locale, initial, mode = 'create' }: Props) {
+export function NewActivityForm({
+  locations,
+  types,
+  clients,
+  recentActivities = [],
+  locale,
+  initial,
+  mode = 'create',
+}: Props) {
   const t = useTranslations('activities');
   const tLoc = useTranslations('locations');
   const router = useRouter();
@@ -78,14 +93,26 @@ export function NewActivityForm({ locations, types, clients, recentActivities = 
     })),
   );
 
-  const [locationId, setLocationId] = React.useState<string | null>(initial?.locationId ?? null);
-  const [typeId, setTypeId] = React.useState<string | null>(initial?.activityTypeId ?? null);
+  const [locationId, setLocationId] = React.useState<string | null>(
+    initial?.locationId ?? null,
+  );
+
+  /**
+   * Em modo create: array de tipos (multi-select).
+   * Em modo edit: array com exatamente 1 elemento (single-select representado como array).
+   */
+  const [typeIds, setTypeIds] = React.useState<string[]>(
+    initial?.activityTypeId ? [initial.activityTypeId] : [],
+  );
+
   const [clientId, setClientId] = React.useState<string | null>(initial?.clientId ?? null);
   const [description, setDescription] = React.useState(initial?.description ?? '');
   const [notes, setNotes] = React.useState(initial?.notes ?? '');
   const [evolucao, setEvolucao] = React.useState(initial?.evolucao ?? '');
   const [pendencias, setPendencias] = React.useState(initial?.pendencias ?? '');
-  const [continuationOf, setContinuationOf] = React.useState<string | null>(initial?.continuationOf ?? null);
+  const [continuationOf, setContinuationOf] = React.useState<string | null>(
+    initial?.continuationOf ?? null,
+  );
   const [startedAt, setStartedAt] = React.useState(() =>
     initial?.startedAt
       ? new Date(initial.startedAt).toISOString().slice(0, 10)
@@ -101,7 +128,9 @@ export function NewActivityForm({ locations, types, clients, recentActivities = 
     (initial?.photos ?? []).map((p) => ({ storagePath: p.storagePath, url: p.url ?? '' })),
   );
 
-  const [savingAs, setSavingAs] = React.useState<'draft' | null>(null);
+  const [saving, setSaving] = React.useState(false);
+
+  // ── Handlers de criação inline ───────────────────────────────────────────
 
   async function handleCreateLocation(name: string): Promise<Option> {
     const result = await createLocation(name, 'outro');
@@ -127,13 +156,15 @@ export function NewActivityForm({ locations, types, clients, recentActivities = 
     return opt;
   }
 
+  // ── Salvar ───────────────────────────────────────────────────────────────
+
   async function handleSave() {
-    if (!locationId || !typeId || !description.trim()) return;
-    setSavingAs('draft');
+    if (!locationId || typeIds.length === 0 || !description.trim()) return;
+    setSaving(true);
+
     try {
-      const payload = {
+      const base = {
         locationId,
-        activityTypeId: typeId,
         clientId,
         description,
         notes: notes || undefined,
@@ -144,29 +175,48 @@ export function NewActivityForm({ locations, types, clients, recentActivities = 
         endedAt: endedAt ? new Date(endedAt + 'T12:00:00').toISOString() : null,
         participants,
         photos: photos.map((p) => ({ storagePath: p.storagePath })),
-        submit: false,
       };
-      const result =
-        mode === 'edit' && initial
-          ? await updateActivity({ ...payload, id: initial.id })
-          : await createActivity(payload);
-      if (result.error) {
-        toast.error(result.error);
-        return;
+
+      if (mode === 'edit' && initial) {
+        // Edição — tipo único
+        const result = await updateActivity({
+          ...base,
+          id: initial.id,
+          activityTypeId: typeIds[0],
+        });
+        if (result.error) { toast.error(result.error); return; }
+        toast.success(t('toasts.draftSaved'));
+        router.push(`/atividades/${result.id!}`);
+      } else {
+        // Criação — múltiplos tipos
+        const result = await createActivity({ ...base, activityTypeIds: typeIds });
+        if (result.error) { toast.error(result.error); return; }
+
+        const ids = result.ids!;
+        if (ids.length === 1) {
+          toast.success(t('toasts.draftSaved'));
+          router.push(`/atividades/${ids[0]}`);
+        } else {
+          toast.success(
+            `${ids.length} atividades criadas como rascunho.`,
+          );
+          router.push('/atividades');
+        }
       }
-      toast.success(t('toasts.draftSaved'));
-      router.push(`/atividades/${result.id!}`);
     } catch (e: any) {
       toast.error(e?.message ?? t('errors.saveActivity'));
     } finally {
-      setSavingAs(null);
+      setSaving(false);
     }
   }
 
-  const canSave = !!(locationId && typeId && description.trim().length >= 3);
+  const canSave = !!(locationId && typeIds.length > 0 && description.trim().length >= 3);
+
+  // ── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6">
+      {/* Onde e o quê */}
       <Card className="surface-elevated">
         <CardHeader>
           <CardTitle className="text-base">{t('sections.whereWhat')}</CardTitle>
@@ -183,16 +233,41 @@ export function NewActivityForm({ locations, types, clients, recentActivities = 
               />
             </Field>
 
-            <Field label={t('fields.type')}>
-              <ExpandableSelect
-                options={typeOptions}
-                value={typeId}
-                onChange={setTypeId}
-                onCreate={handleCreateType}
-                placeholder={t('placeholders.selectType')}
-              />
+            <Field
+              label={t('fields.type')}
+              hint={
+                mode === 'create'
+                  ? 'Selecione um ou mais tipos para criar atividades em lote'
+                  : undefined
+              }
+            >
+              {mode === 'create' ? (
+                <MultiExpandableSelect
+                  options={typeOptions}
+                  value={typeIds}
+                  onChange={setTypeIds}
+                  onCreate={handleCreateType}
+                  placeholder={t('placeholders.selectType')}
+                />
+              ) : (
+                <ExpandableSelect
+                  options={typeOptions}
+                  value={typeIds[0] ?? null}
+                  onChange={(v) => setTypeIds([v])}
+                  onCreate={handleCreateType}
+                  placeholder={t('placeholders.selectType')}
+                />
+              )}
             </Field>
           </div>
+
+          {/* Aviso de lote */}
+          {mode === 'create' && typeIds.length > 1 && (
+            <p className="text-xs text-muted-foreground bg-muted/40 rounded-md px-3 py-2">
+              Serão criadas <strong>{typeIds.length} atividades</strong> independentes com os
+              mesmos dados (local, datas, participantes, fotos e observações).
+            </p>
+          )}
 
           <Field label={t('fields.description')}>
             <Textarea
@@ -205,6 +280,7 @@ export function NewActivityForm({ locations, types, clients, recentActivities = 
         </CardContent>
       </Card>
 
+      {/* Quando */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{t('sections.when')}</CardTitle>
@@ -227,6 +303,7 @@ export function NewActivityForm({ locations, types, clients, recentActivities = 
         </CardContent>
       </Card>
 
+      {/* Participantes */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{t('fields.participants')}</CardTitle>
@@ -236,6 +313,7 @@ export function NewActivityForm({ locations, types, clients, recentActivities = 
         </CardContent>
       </Card>
 
+      {/* Fotos */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{t('fields.photos')}</CardTitle>
@@ -245,7 +323,7 @@ export function NewActivityForm({ locations, types, clients, recentActivities = 
         </CardContent>
       </Card>
 
-      {/* Continuação de atividade anterior */}
+      {/* Continuação — apenas no modo create */}
       {mode === 'create' && recentActivities.length > 0 && (
         <Card>
           <CardHeader>
@@ -255,7 +333,10 @@ export function NewActivityForm({ locations, types, clients, recentActivities = 
             <p className="text-sm text-muted-foreground">
               Esta atividade é continuação de outra? Selecione a parte anterior para encadear.
             </p>
-            <Select value={continuationOf ?? '__none__'} onValueChange={(v) => setContinuationOf(v === '__none__' ? null : v)}>
+            <Select
+              value={continuationOf ?? '__none__'}
+              onValueChange={(v) => setContinuationOf(v === '__none__' ? null : v)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Não é continuação" />
               </SelectTrigger>
@@ -275,6 +356,7 @@ export function NewActivityForm({ locations, types, clients, recentActivities = 
         </Card>
       )}
 
+      {/* Cliente e observações */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{t('sections.clientAndNotes')}</CardTitle>
@@ -321,14 +403,13 @@ export function NewActivityForm({ locations, types, clients, recentActivities = 
         </CardContent>
       </Card>
 
+      {/* Ações */}
       <div className="flex flex-wrap gap-3 justify-end sticky bottom-4 z-10">
-        <Button
-          type="button"
-          onClick={handleSave}
-          disabled={!canSave || savingAs !== null}
-        >
-          {savingAs === 'draft' ? <Loader2 className="animate-spin" /> : <Save />}
-          {t('actions.save')}
+        <Button type="button" onClick={handleSave} disabled={!canSave || saving}>
+          {saving ? <Loader2 className="animate-spin" /> : <Save />}
+          {mode === 'create' && typeIds.length > 1
+            ? `Salvar ${typeIds.length} atividades`
+            : t('actions.save')}
         </Button>
         <p className="w-full text-right text-xs text-muted-foreground -mt-1">
           Para enviar para assinatura, adicione ao Resumo Diário após salvar.
@@ -338,10 +419,19 @@ export function NewActivityForm({ locations, types, clients, recentActivities = 
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="space-y-1.5">
       <Label>{label}</Label>
+      {hint && <p className="text-[11px] text-muted-foreground -mt-0.5">{hint}</p>}
       {children}
     </div>
   );
