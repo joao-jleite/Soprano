@@ -98,6 +98,12 @@
       radial-gradient(900px circle at 0% 100%, hsl(var(--zitron-cyan) / 0.04), transparent 60%);
     background-attachment: fixed;
   }
+
+  .light body {
+    background-image:
+      radial-gradient(1200px circle at 50% -10%, hsl(var(--zitron-blue) / 0.05), transparent 55%),
+      radial-gradient(900px circle at 0% 100%, hsl(var(--zitron-blue) / 0.02), transparent 60%);
+  }
   ::selection {
     background: hsl(var(--zitron-blue) / 0.4);
     color: hsl(var(--zitron-chrome));
@@ -124,6 +130,18 @@
     box-shadow:
       0 1px 0 0 hsl(var(--border)) inset,
       0 24px 48px -12px hsl(0 0% 0% / 0.6);
+  }
+
+  /* Modo claro: gradiente e sombra adaptados */
+  .light .surface-elevated {
+    background: linear-gradient(
+      180deg,
+      hsl(var(--card)) 0%,
+      hsl(220 14% 94%) 100%
+    );
+    box-shadow:
+      0 1px 0 0 hsl(var(--border)) inset,
+      0 8px 24px -8px hsl(0 0% 0% / 0.07);
   }
 
   /* Texto "data" — tipo indicador técnico */
