@@ -208,7 +208,6 @@ function StatusBadge({ status }: { status: string }) {
   const variantMap: Record<string, 'default' | 'warning' | 'success' | 'destructive' | 'secondary'> = {
     rascunho: 'secondary',
     enviada: 'warning',
-    assinada: 'success',
     rejeitada: 'destructive',
   };
   return (
