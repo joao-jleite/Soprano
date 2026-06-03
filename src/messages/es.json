@@ -331,5 +331,11 @@
     "error": "Ocurrió un error",
     "tryAgain": "Reintentar",
     "home": "Inicio"
+  },
+  "dailyReport": {
+    "title": "Resumen Diario",
+    "new": "Nuevo resumen",
+    "empty": "Aún no hay resúmenes diarios.",
+    "emptyCta": "Crear primer resumen"
   }
 }

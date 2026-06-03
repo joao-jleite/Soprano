@@ -333,5 +333,11 @@
     "error": "Something went wrong",
     "tryAgain": "Try again",
     "home": "Home"
+  },
+  "dailyReport": {
+    "title": "Daily Summary",
+    "new": "New summary",
+    "empty": "No daily summaries yet.",
+    "emptyCta": "Create first summary"
   }
 }
