@@ -39,6 +39,24 @@ export default async function DashboardPage({
   const applyScope = (qb: any) =>
     role === 'cliente' && user ? qb.eq('client_id', user.id) : qb;
 
+  const monthStartDate = monthStart.slice(0, 10); // 'YYYY-MM-DD' para comparar com report_date
+
+  const signedReportsQuery =
+    role === 'cliente' && user
+      ? (supabase as any)
+          .from('daily_reports')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'assinado')
+          .eq('client_id', user.id)
+          .gte('report_date', monthStartDate)
+          .is('deleted_at', null)
+      : (supabase as any)
+          .from('daily_reports')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'assinado')
+          .gte('report_date', monthStartDate)
+          .is('deleted_at', null);
+
   const [{ count: monthCount }, { count: signedCount }, { data: pending }, { data: recent }] =
     await Promise.all([
       applyScope(
@@ -47,13 +65,7 @@ export default async function DashboardPage({
           .select('*', { count: 'exact', head: true })
           .gte('started_at', monthStart),
       ),
-      applyScope(
-        supabase
-          .from('activities')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'assinada')
-          .gte('started_at', monthStart),
-      ),
+      signedReportsQuery,
       applyScope(
         supabase
           .from('activities')
