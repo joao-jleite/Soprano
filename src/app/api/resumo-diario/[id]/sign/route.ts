@@ -111,7 +111,7 @@ export async function POST(
             supervisorName: (supProfile.data as any)?.full_name ?? 'Supervisor',
             reportDate: report.report_date,
             clientName: (profile as any).full_name,
-            reportUrl: `${origin}/pt/resumo-diario/${reportId}`,
+            reportUrl: `${origin}/resumo-diario/${reportId}`,
           });
         }
       }

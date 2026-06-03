@@ -6,6 +6,10 @@ import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient, getUserEmail } from '@/lib/supabase/service';
 import { dailyReportSubmittedEmail, dailyReportSignedEmail } from '@/lib/notify/email';
+import { requireAuthAndRole } from '@/guards/auth.guard';
+import { logger } from '@/lib/logger';
+
+const log = logger.for('daily-reports');
 
 // ── Criar resumo diário ────────────────────────────────────────────────────
 
@@ -15,40 +19,54 @@ const createReportSchema = z.object({
   notes: z.string().optional(),
 });
 
-export async function createDailyReport(input: z.infer<typeof createReportSchema>) {
-  const parsed = createReportSchema.parse(input);
-  const supabase = await createClient();
+export async function createDailyReport(
+  input: z.infer<typeof createReportSchema>,
+): Promise<{ id?: string; error?: string }> {
+  try {
+    const parsed = createReportSchema.parse(input);
+    const supabase = await createClient();
+    const { user } = await requireAuthAndRole(supabase, 'admin', 'supervisor');
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
+    const { data, error } = await supabase
+      .from('daily_reports')
+      .insert({
+        report_date: parsed.reportDate,
+        client_id: parsed.clientId ?? null,
+        supervisor_id: user.id,
+        notes: parsed.notes ?? null,
+      })
+      .select('id')
+      .single();
 
-  const { data, error } = await (supabase as any)
-    .from('daily_reports')
-    .insert({
-      report_date: parsed.reportDate,
-      station_id: null,
-      client_id: parsed.clientId ?? null,
-      supervisor_id: user.id,
-      notes: parsed.notes ?? null,
-    })
-    .select('id')
-    .single();
+    if (error || !data) {
+      log.error('Falha ao criar resumo diário', { error: error?.message });
+      return { error: error?.message ?? 'Falha ao criar resumo' };
+    }
 
-  if (error || !data) throw error ?? new Error('Falha ao criar resumo');
-
-  revalidatePath('/resumo-diario');
-  return data.id as string;
+    revalidatePath('/resumo-diario');
+    return { id: data.id };
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : 'Erro inesperado' };
+  }
 }
 
 // ── Adicionar / remover atividade do resumo ────────────────────────────────
 
 // Helper: verifica ownership do resumo (admin passa sempre, supervisor precisa ser dono)
-async function assertReportOwnership(supabase: any, rId: string, userId: string): Promise<string | null> {
+async function assertReportOwnership(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  rId: string,
+  userId: string,
+): Promise<string | null> {
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', userId).single();
-  const role = (profile as any)?.role;
-  if (!['admin', 'supervisor'].includes(role)) return 'Sem permissão para modificar resumos';
+  const role = profile?.role;
+  if (!role || !['admin', 'supervisor'].includes(role)) return 'Sem permissão para modificar resumos';
   if (role === 'supervisor') {
-    const { data: rep } = await supabase.from('daily_reports').select('supervisor_id, status').eq('id', rId).single();
+    const { data: rep } = await supabase
+      .from('daily_reports')
+      .select('supervisor_id, status')
+      .eq('id', rId)
+      .single();
     if (!rep) return 'Resumo não encontrado';
     if (rep.supervisor_id !== userId) return 'Sem permissão para modificar este resumo';
     if (!['rascunho', 'cancelado'].includes(rep.status)) return 'Resumo não pode ser modificado neste estado';
@@ -65,10 +83,11 @@ export async function addActivityToReport(reportId: string, activityId: string):
     if (!user) return { error: 'Não autenticado' };
     const ownershipError = await assertReportOwnership(supabase, rId, user.id);
     if (ownershipError) return { error: ownershipError };
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from('daily_report_activities')
       .insert({ daily_report_id: rId, activity_id: aId });
     if (error) return { error: error.message };
+    revalidatePath(`/resumo-diario/${rId}`);
     revalidatePath('/resumo-diario');
     return {};
   } catch (e: unknown) {
@@ -86,10 +105,9 @@ export async function addAllActivitiesToReport(reportId: string, activityIds: st
     const ownershipError = await assertReportOwnership(supabase, rId, user.id);
     if (ownershipError) return { error: ownershipError };
     const rows = aIds.map((activity_id) => ({ daily_report_id: rId, activity_id }));
-    const { error } = await (supabase as any)
-      .from('daily_report_activities')
-      .insert(rows);
+    const { error } = await supabase.from('daily_report_activities').insert(rows);
     if (error) return { error: error.message };
+    revalidatePath(`/resumo-diario/${rId}`);
     revalidatePath('/resumo-diario');
     return {};
   } catch (e: unknown) {
@@ -106,12 +124,13 @@ export async function removeActivityFromReport(reportId: string, activityId: str
     if (!user) return { error: 'Não autenticado' };
     const ownershipError = await assertReportOwnership(supabase, rId, user.id);
     if (ownershipError) return { error: ownershipError };
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from('daily_report_activities')
       .delete()
       .eq('daily_report_id', rId)
       .eq('activity_id', aId);
     if (error) return { error: error.message };
+    revalidatePath(`/resumo-diario/${rId}`);
     revalidatePath('/resumo-diario');
     return {};
   } catch (e: unknown) {
@@ -125,24 +144,20 @@ export async function sendReportForSignature(reportId: string): Promise<{ error?
   try {
     const rId = z.string().uuid().parse(reportId);
     const supabase = await createClient();
+    const { user, role } = await requireAuthAndRole(supabase, 'admin', 'supervisor');
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { error: 'Não autenticado' };
-
-    // Verifica ownership: supervisor só pode enviar seus próprios resumos
-    const { data: existingReport } = await (supabase as any)
+    const { data: existingReport } = await supabase
       .from('daily_reports')
       .select('supervisor_id, client_id, report_date')
       .eq('id', rId)
       .single();
+
     if (!existingReport) return { error: 'Resumo não encontrado' };
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-    const userRole = (profile as any)?.role;
-    if (userRole === 'supervisor' && existingReport.supervisor_id !== user.id) {
+    if (role === 'supervisor' && existingReport.supervisor_id !== user.id) {
       return { error: 'Sem permissão para enviar este resumo' };
     }
 
-    const { count, error: countError } = await (supabase as any)
+    const { count, error: countError } = await supabase
       .from('daily_report_activities')
       .select('*', { count: 'exact', head: true })
       .eq('daily_report_id', rId);
@@ -150,28 +165,14 @@ export async function sendReportForSignature(reportId: string): Promise<{ error?
     if (countError) return { error: countError.message ?? 'Erro ao verificar atividades' };
     if (!count || count === 0) return { error: 'Adicione pelo menos uma atividade antes de enviar' };
 
-    // Tenta update com sent_at; se falhar (coluna não existe), tenta sem
-    let updatedReport: any = null;
-    const withSentAt = await (supabase as any)
+    const { data: updatedReport, error: updError } = await supabase
       .from('daily_reports')
       .update({ status: 'aguardando_assinatura', sent_at: new Date().toISOString() })
       .eq('id', rId)
       .select('client_id, report_date, supervisor_id')
       .single();
 
-    if (withSentAt.error) {
-      // Fallback sem sent_at
-      const withoutSentAt = await (supabase as any)
-        .from('daily_reports')
-        .update({ status: 'aguardando_assinatura' })
-        .eq('id', rId)
-        .select('client_id, report_date, supervisor_id')
-        .single();
-      if (withoutSentAt.error) return { error: withoutSentAt.error.message ?? 'Erro ao enviar resumo' };
-      updatedReport = withoutSentAt.data;
-    } else {
-      updatedReport = withSentAt.data;
-    }
+    if (updError) return { error: updError.message ?? 'Erro ao enviar resumo' };
 
     // Notifica cliente por email (silencioso)
     try {
@@ -186,15 +187,16 @@ export async function sendReportForSignature(reportId: string): Promise<{ error?
           const origin = h.get('origin') ?? h.get('x-forwarded-host') ?? process.env.NEXT_PUBLIC_APP_URL ?? '';
           await dailyReportSubmittedEmail({
             clientEmail,
-            clientName: (clientProfile.data as any)?.full_name ?? 'Cliente',
+            clientName: clientProfile.data?.full_name ?? 'Cliente',
             reportDate: updatedReport.report_date,
-            reportUrl: `${origin}/pt/resumo-diario/${rId}`,
-            supervisorName: (supervisorProfile.data as any)?.full_name ?? 'Supervisor',
+            reportUrl: `${origin}/resumo-diario/${rId}`,
+            supervisorName: supervisorProfile.data?.full_name ?? 'Supervisor',
           });
         }
       }
     } catch (_) { /* email nunca quebra */ }
 
+    revalidatePath(`/resumo-diario/${rId}`);
     revalidatePath('/resumo-diario');
     revalidatePath('/');
     return {};
@@ -227,14 +229,14 @@ export async function signDailyReport(
       .single();
 
     if (!profile) return { error: 'Perfil não encontrado' };
-    if ((profile as any).role !== 'cliente') return { error: 'Apenas clientes podem assinar' };
+    if (profile.role !== 'cliente') return { error: 'Apenas clientes podem assinar' };
 
-    // Verifica que o cliente é o designado e o resumo está aguardando
-    const { data: report } = await (supabase as any)
+    const { data: report } = await supabase
       .from('daily_reports')
       .select('client_id, status, supervisor_id, report_date')
       .eq('id', parsed.reportId)
       .single();
+
     if (!report) return { error: 'Resumo não encontrado' };
     if (report.client_id !== user.id) return { error: 'Sem permissão para assinar este resumo' };
     if (report.status !== 'aguardando_assinatura') return { error: 'Resumo não está aguardando assinatura' };
@@ -243,12 +245,12 @@ export async function signDailyReport(
     const ua = h.get('user-agent') ?? null;
     const ip = h.get('x-real-ip') ?? h.get('x-forwarded-for')?.split(',').at(-1)?.trim() ?? null;
 
-    const { error: sigError } = await (supabase as any)
+    const { error: sigError } = await supabase
       .from('daily_report_signatures')
       .insert({
         daily_report_id: parsed.reportId,
         signer_id: user.id,
-        signer_name: (profile as any).full_name,
+        signer_name: profile.full_name,
         svg_data: parsed.svgData,
         ip_address: ip,
         user_agent: ua,
@@ -260,7 +262,7 @@ export async function signDailyReport(
     const admin = createServiceClient();
     if (admin) {
       const now = new Date().toISOString();
-      const { error: updError } = await (admin as any)
+      const { error: updError } = await admin
         .from('daily_reports')
         .update({ status: 'assinado', signed_at: now })
         .eq('id', parsed.reportId);
@@ -278,18 +280,15 @@ export async function signDailyReport(
         if (supEmail) {
           await dailyReportSignedEmail({
             supervisorEmail: supEmail,
-            supervisorName: (supProfile.data as any)?.full_name ?? 'Supervisor',
+            supervisorName: supProfile.data?.full_name ?? 'Supervisor',
             reportDate: report.report_date,
-            clientName: (profile as any).full_name,
-            reportUrl: `${origin}/pt/resumo-diario/${parsed.reportId}`,
+            clientName: profile.full_name,
+            reportUrl: `${origin}/resumo-diario/${parsed.reportId}`,
           });
         }
       }
     } catch (_) { /* email nunca quebra o fluxo */ }
 
-    // Sem revalidatePath — todas as páginas são force-dynamic (buscam dados frescos a cada request).
-    // Qualquer revalidatePath inline pode falhar e vazar o erro genérico do Next.js para o cliente.
-    // A navegação com router.push já garante dados atualizados.
     return {};
   } catch (e: unknown) {
     return { error: e instanceof Error ? e.message : 'Erro inesperado ao assinar' };
@@ -319,13 +318,14 @@ export async function cancelDailyReport(
       .eq('id', user.id)
       .single();
 
-    if ((profile as any)?.role !== 'cliente') return { error: 'Apenas clientes podem cancelar' };
+    if (profile?.role !== 'cliente') return { error: 'Apenas clientes podem cancelar' };
 
-    const { data: report } = await (supabase as any)
+    const { data: report } = await supabase
       .from('daily_reports')
       .select('client_id, status')
       .eq('id', parsed.reportId)
       .single();
+
     if (!report) return { error: 'Resumo não encontrado' };
     if (report.client_id !== user.id) return { error: 'Sem permissão para cancelar este resumo' };
     if (report.status !== 'aguardando_assinatura') return { error: 'Resumo não está aguardando assinatura' };
@@ -334,37 +334,37 @@ export async function cancelDailyReport(
     const ua = h.get('user-agent') ?? null;
     const ip = h.get('x-real-ip') ?? h.get('x-forwarded-for')?.split(',').at(-1)?.trim() ?? null;
 
-    // Usa service role para DELETE+INSERT (bypass RLS e unique constraint)
     const adminForCancel = createServiceClient();
     if (!adminForCancel) return { error: 'Configuração de servidor ausente' };
 
-    // Remove assinatura anterior (evita 23505 em tentativas parciais)
-    await (adminForCancel as any)
+    // Remove assinatura anterior (evita unique constraint em tentativas parciais)
+    await adminForCancel
       .from('daily_report_signatures')
       .delete()
       .eq('daily_report_id', parsed.reportId);
 
-    const { error: cancelSigError } = await (adminForCancel as any)
+    const { error: cancelSigError } = await adminForCancel
       .from('daily_report_signatures')
       .insert({
         daily_report_id: parsed.reportId,
         signer_id: user.id,
-        signer_name: (profile as any).full_name,
+        signer_name: profile?.full_name ?? '',
         svg_data: null,
         cancelled: true,
         cancel_reason: parsed.reason,
         ip_address: ip,
         user_agent: ua,
-      });
+      } as any);
 
     if (cancelSigError) return { error: cancelSigError.message ?? 'Falha ao registrar cancelamento' };
 
-    await (adminForCancel as any)
+    await adminForCancel
       .from('daily_reports')
       .update({ status: 'cancelado', cancellation_reason: parsed.reason })
       .eq('id', parsed.reportId);
 
-
+    revalidatePath(`/resumo-diario/${parsed.reportId}`);
+    revalidatePath('/resumo-diario');
     return {};
   } catch (e: unknown) {
     return { error: e instanceof Error ? e.message : 'Erro inesperado ao cancelar' };
@@ -377,24 +377,25 @@ export async function updateReportNotes(reportId: string, notes: string): Promis
   try {
     const rId = z.string().uuid().parse(reportId);
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { error: 'Não autenticado' };
+    const { user, role } = await requireAuthAndRole(supabase, 'admin', 'supervisor');
 
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-    const role = (profile as any)?.role;
-    if (!['admin', 'supervisor'].includes(role)) return { error: 'Sem permissão para editar observações' };
-
-    // Supervisor só edita seus próprios resumos
     if (role === 'supervisor') {
-      const { data: rep } = await (supabase as any).from('daily_reports').select('supervisor_id').eq('id', rId).single();
+      const { data: rep } = await supabase
+        .from('daily_reports')
+        .select('supervisor_id')
+        .eq('id', rId)
+        .single();
       if (rep?.supervisor_id !== user.id) return { error: 'Sem permissão para editar este resumo' };
     }
 
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from('daily_reports')
       .update({ notes })
       .eq('id', rId);
+
     if (error) return { error: error.message ?? 'Falha ao salvar observações' };
+
+    revalidatePath(`/resumo-diario/${rId}`);
     revalidatePath('/resumo-diario');
     return {};
   } catch (e: unknown) {
@@ -408,52 +409,40 @@ export async function deleteDailyReport(reportId: string): Promise<{ error?: str
   try {
     const rId = z.string().uuid().parse(reportId);
     const supabase = await createClient();
+    const { user, role } = await requireAuthAndRole(supabase, 'admin', 'supervisor');
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { error: 'Não autenticado' };
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    const role = (profile as any)?.role;
-    if (!['admin', 'supervisor'].includes(role)) return { error: 'Sem permissão para excluir resumos' };
-
-    // Supervisores só podem excluir os próprios resumos
     if (role === 'supervisor') {
-      const { data: existingReport } = await (supabase as any)
+      const { data: existingReport } = await supabase
         .from('daily_reports')
         .select('supervisor_id')
         .eq('id', rId)
         .single();
-      if (existingReport?.supervisor_id !== user.id) return { error: 'Sem permissão para excluir este resumo' };
+      if (existingReport?.supervisor_id !== user.id) {
+        return { error: 'Sem permissão para excluir este resumo' };
+      }
     }
 
-    // Usa service role para bypassar RLS — permissões já validadas acima
     const adminClient = createServiceClient();
-    const { error: updateError, data: updated } = await (adminClient as any)
-      .from('daily_reports')
+    const { error: updateError, data: updated } = await adminClient
+      ?.from('daily_reports')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', rId)
       .is('deleted_at', null)
-      .select('id');
+      .select('id') ?? { error: new Error('Service client indisponível'), data: null };
 
     if (updateError) {
-      console.error('[delete] code=' + updateError.code + ' msg=' + updateError.message);
-      return { error: updateError.message ?? 'Falha ao excluir resumo' };
+      log.error('Falha ao excluir resumo', { id: rId, error: (updateError as any)?.message });
+      return { error: (updateError as any)?.message ?? 'Falha ao excluir resumo' };
     }
 
-    if (!updated || updated.length === 0) {
+    if (!updated || (updated as any[]).length === 0) {
       return { error: 'Resumo não encontrado ou já excluído' };
     }
 
     revalidatePath('/resumo-diario');
     return {};
-  } catch (e: any) {
-    console.error('[delete] unexpected:', e?.message);
-    return { error: e?.message ?? 'Erro inesperado' };
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : 'Erro inesperado' };
   }
 }
 
@@ -463,33 +452,28 @@ export async function resendReport(reportId: string): Promise<{ error?: string }
   try {
     const rId = z.string().uuid().parse(reportId);
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { error: 'Não autenticado' };
+    const { user, role } = await requireAuthAndRole(supabase, 'admin', 'supervisor');
 
-    // Verifica ownership
-    const { data: existingForResend } = await (supabase as any)
+    const { data: existingForResend } = await supabase
       .from('daily_reports')
       .select('supervisor_id, client_id, report_date')
       .eq('id', rId)
       .single();
+
     if (!existingForResend) return { error: 'Resumo não encontrado' };
-    const { data: profileForResend } = await supabase.from('profiles').select('role, full_name').eq('id', user.id).single();
-    const roleForResend = (profileForResend as any)?.role;
-    if (roleForResend === 'supervisor' && existingForResend.supervisor_id !== user.id) {
+    if (role === 'supervisor' && existingForResend.supervisor_id !== user.id) {
       return { error: 'Sem permissão para reenviar este resumo' };
     }
 
     const adminResend = createServiceClient();
     if (!adminResend) return { error: 'Configuração de servidor ausente' };
 
-    // Remove assinaturas do resumo (bypass RLS via service role)
-    await (adminResend as any)
+    await adminResend
       .from('daily_report_signatures')
       .delete()
       .eq('daily_report_id', rId);
 
-    // Reativa o resumo
-    const { error } = await (adminResend as any)
+    const { error } = await adminResend
       .from('daily_reports')
       .update({ status: 'aguardando_assinatura', cancellation_reason: null })
       .eq('id', rId);
@@ -509,15 +493,16 @@ export async function resendReport(reportId: string): Promise<{ error?: string }
           const origin = h.get('origin') ?? h.get('x-forwarded-host') ?? process.env.NEXT_PUBLIC_APP_URL ?? '';
           await dailyReportSubmittedEmail({
             clientEmail,
-            clientName: (clientProfile.data as any)?.full_name ?? 'Cliente',
+            clientName: clientProfile.data?.full_name ?? 'Cliente',
             reportDate: existingForResend.report_date,
-            reportUrl: `${origin}/pt/resumo-diario/${rId}`,
-            supervisorName: (supervisorProfile.data as any)?.full_name ?? 'Supervisor',
+            reportUrl: `${origin}/resumo-diario/${rId}`,
+            supervisorName: supervisorProfile.data?.full_name ?? 'Supervisor',
           });
         }
       }
     } catch (_) { /* email nunca quebra */ }
 
+    revalidatePath(`/resumo-diario/${rId}`);
     revalidatePath('/resumo-diario');
     return {};
   } catch (e: unknown) {

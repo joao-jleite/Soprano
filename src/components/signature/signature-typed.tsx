@@ -53,6 +53,9 @@ export function SignatureTyped({ signerName = '', onConfirm, disabled, className
     setSubmitting(true);
     try {
       await onConfirm(buildSignatureSvg(name.trim()));
+    } catch (e: any) {
+      // Propaga o erro para o caller (sign-panel) que exibe o toast
+      throw e;
     } finally {
       setSubmitting(false);
     }

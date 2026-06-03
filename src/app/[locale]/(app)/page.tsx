@@ -1,10 +1,11 @@
-import { ArrowUpRight, Activity, CheckCircle2, Users } from 'lucide-react';
+import { ArrowUpRight, Activity, CheckCircle2 } from 'lucide-react';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Link } from '@/i18n/navigation';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { formatDate, formatDateTime } from '@/lib/utils';
 
 // Força renderização dinâmica — evita que Vercel faça cache estático de uma
@@ -87,6 +88,7 @@ export default async function DashboardPage({
         supabase
           .from('activities')
           .select('id, description, status, started_at, locations(name), activity_types(label_pt)')
+          .is('deleted_at', null)
           .order('updated_at', { ascending: false })
           .limit(5),
       ),
@@ -103,7 +105,7 @@ export default async function DashboardPage({
         </h1>
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-3">
+      <section className="grid gap-4 sm:grid-cols-2">
         <StatCard
           label={t('dashboard.activitiesThisMonth')}
           value={monthCount ?? 0}
@@ -114,12 +116,6 @@ export default async function DashboardPage({
           value={signedCount ?? 0}
           icon={<CheckCircle2 className="h-4 w-4" />}
           accent
-        />
-        <StatCard
-          label={t('dashboard.teamOnSite')}
-          value="—"
-          icon={<Users className="h-4 w-4" />}
-          hint="Em breve"
         />
       </section>
 
@@ -215,15 +211,3 @@ function StatCard({
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const variantMap: Record<string, 'default' | 'warning' | 'success' | 'destructive' | 'secondary'> = {
-    rascunho: 'secondary',
-    enviada: 'warning',
-    rejeitada: 'destructive',
-  };
-  return (
-    <Badge variant={variantMap[status] ?? 'secondary'} className="shrink-0">
-      {status}
-    </Badge>
-  );
-}

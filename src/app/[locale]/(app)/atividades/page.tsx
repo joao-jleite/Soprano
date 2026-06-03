@@ -5,6 +5,7 @@ import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { ActivityFilters } from './filters';
 import { ActivityDeleteButton } from '@/components/activity/activity-actions';
 import { formatDate } from '@/lib/utils';
@@ -166,11 +167,3 @@ export default async function ActivitiesPage({
   );
 }
 
-function StatusBadge({ status, label }: { status: string; label?: string }) {
-  const map: Record<string, 'default' | 'warning' | 'success' | 'destructive' | 'secondary'> = {
-    rascunho: 'secondary',
-    enviada: 'warning',
-    rejeitada: 'destructive',
-  };
-  return <Badge variant={map[status] ?? 'secondary'}>{label ?? status}</Badge>;
-}

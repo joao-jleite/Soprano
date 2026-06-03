@@ -23,6 +23,7 @@ type Props = {
   reportDate: string;
   includedActivities: Activity[];
   availableActivities: Activity[];
+  locale: string;
 };
 
 export function ActivityPicker({
@@ -30,6 +31,7 @@ export function ActivityPicker({
   reportDate,
   includedActivities,
   availableActivities,
+  locale,
 }: Props) {
   const router = useRouter();
   const [open, setOpen]         = React.useState(false);
@@ -94,7 +96,7 @@ export function ActivityPicker({
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{a.description}</p>
                 <p className="text-xs text-muted-foreground">
-                  {a.locations?.name} · {a.activity_types?.label_pt} · {formatDate(a.started_at, 'pt-BR')}
+                  {a.locations?.name} · {a.activity_types?.label_pt} · {formatDate(a.started_at, locale === 'pt' ? 'pt-BR' : locale)}
                 </p>
               </div>
               <button
@@ -145,7 +147,7 @@ export function ActivityPicker({
           <div className="mt-3 rounded-lg border border-border divide-y divide-border overflow-hidden">
             {availableActivities.length === 0 ? (
               <p className="text-sm text-muted-foreground px-4 py-3">
-                Sem atividades disponíveis para {formatDate(reportDate + 'T12:00:00', 'pt-BR')}.
+                Sem atividades disponíveis para {formatDate(reportDate + 'T12:00:00', locale === 'pt' ? 'pt-BR' : locale)}.
                 Crie atividades primeiro na seção de Atividades.
               </p>
             ) : (

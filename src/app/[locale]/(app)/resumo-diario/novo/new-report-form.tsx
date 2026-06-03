@@ -29,19 +29,19 @@ export function NewDailyReportForm({ clients }: Props) {
     if (!date) { toast.error('Informe a data'); return; }
 
     setLoading(true);
-    try {
-      const id = await createDailyReport({
-        reportDate: date,
-        clientId: (clientId && clientId !== '__none__') ? clientId : null,
-        notes: notes || undefined,
-      });
-      toast.success('Resumo criado');
-      router.push(`/resumo-diario/${id}`);
-    } catch (err: any) {
-      toast.error(err?.message ?? 'Erro ao criar resumo');
-    } finally {
-      setLoading(false);
+    const result = await createDailyReport({
+      reportDate: date,
+      clientId: (clientId && clientId !== '__none__') ? clientId : null,
+      notes: notes || undefined,
+    });
+    setLoading(false);
+
+    if (result.error) {
+      toast.error(result.error);
+      return;
     }
+    toast.success('Resumo criado');
+    router.push(`/resumo-diario/${result.id!}`);
   }
 
   return (

@@ -32,9 +32,9 @@ export default async function DailyReportPage({
   const role = (me as any)?.role as 'admin' | 'supervisor' | 'cliente' | undefined;
 
   // Busca o resumo
-  const { data: report } = await (supabase as any)
+  const { data: report } = await supabase
     .from('daily_reports')
-    .select('*')
+    .select('id, report_date, notes, status, sent_at, signed_at, cancellation_reason, client_id, supervisor_id, deleted_at')
     .eq('id', id)
     .is('deleted_at', null)
     .single();
@@ -52,13 +52,13 @@ export default async function DailyReportPage({
       ? supabase.from('profiles').select('full_name').eq('id', report.client_id).single()
       : Promise.resolve({ data: null }),
     supabase.from('profiles').select('full_name').eq('id', report.supervisor_id).single(),
-    (supabase as any)
+    supabase
       .from('daily_report_activities')
       .select('activity_id')
       .eq('daily_report_id', id),
-    (supabase as any)
+    supabase
       .from('daily_report_signatures')
-      .select('*')
+      .select('id, signer_name, svg_data, cancelled')
       .eq('daily_report_id', id)
       .maybeSingle(),
   ]);
@@ -277,6 +277,7 @@ export default async function DailyReportPage({
               reportDate={report.report_date}
               includedActivities={(includedActivities ?? []) as any[]}
               availableActivities={availableActivities}
+              locale={localeStr}
             />
           ) : (
             <>

@@ -1,11 +1,15 @@
 // Tipos do banco — este arquivo é gerado automaticamente por `npm run db:types`
 // após aplicar as migrations. Enquanto o banco não estiver rodando, este é o contrato inicial.
+//
+// Tabelas adicionadas manualmente (ainda não migradas para o banco local):
+//   daily_reports, daily_report_activities, daily_report_signatures
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Role = 'admin' | 'supervisor' | 'cliente';
 export type LocationKind = 'estacao' | 'vse' | 'se' | 'escadaria' | 'patio' | 'outro';
 export type ActivityStatus = 'rascunho' | 'enviada' | 'rejeitada';
+export type DailyReportStatus = 'rascunho' | 'aguardando_assinatura' | 'assinado' | 'cancelado';
 export type AuditAction = 'insert' | 'update' | 'delete' | 'soft_delete' | 'restore';
 
 export interface Database {
@@ -292,6 +296,116 @@ export interface Database {
         Update: Partial<Omit<Database['public']['Tables']['complaints']['Row'], 'id'>>;
         Relationships: [];
       };
+      daily_reports: {
+        Row: {
+          id: string;
+          report_date: string;
+          supervisor_id: string;
+          client_id: string | null;
+          notes: string | null;
+          status: DailyReportStatus;
+          sent_at: string | null;
+          signed_at: string | null;
+          cancellation_reason: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          report_date: string;
+          supervisor_id: string;
+          client_id?: string | null;
+          notes?: string | null;
+          status?: DailyReportStatus;
+          sent_at?: string | null;
+          signed_at?: string | null;
+          cancellation_reason?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: Partial<Omit<Database['public']['Tables']['daily_reports']['Row'], 'id'>>;
+        Relationships: [
+          {
+            foreignKeyName: 'daily_reports_supervisor_id_fkey';
+            columns: ['supervisor_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'daily_reports_client_id_fkey';
+            columns: ['client_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      daily_report_activities: {
+        Row: {
+          id: string;
+          daily_report_id: string;
+          activity_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          daily_report_id: string;
+          activity_id: string;
+        };
+        Update: Partial<Omit<Database['public']['Tables']['daily_report_activities']['Row'], 'id'>>;
+        Relationships: [
+          {
+            foreignKeyName: 'daily_report_activities_daily_report_id_fkey';
+            columns: ['daily_report_id'];
+            isOneToOne: false;
+            referencedRelation: 'daily_reports';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'daily_report_activities_activity_id_fkey';
+            columns: ['activity_id'];
+            isOneToOne: false;
+            referencedRelation: 'activities';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      daily_report_signatures: {
+        Row: {
+          id: string;
+          daily_report_id: string;
+          signer_id: string;
+          signer_name: string;
+          svg_data: string | null;
+          ip_address: string | null;
+          user_agent: string | null;
+          cancelled: boolean;
+          cancel_reason: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          daily_report_id: string;
+          signer_id: string;
+          signer_name: string;
+          svg_data?: string | null;
+          ip_address?: string | null;
+          user_agent?: string | null;
+          cancelled?: boolean;
+          cancel_reason?: string | null;
+        };
+        Update: Partial<Omit<Database['public']['Tables']['daily_report_signatures']['Row'], 'id'>>;
+        Relationships: [
+          {
+            foreignKeyName: 'daily_report_signatures_daily_report_id_fkey';
+            columns: ['daily_report_id'];
+            isOneToOne: false;
+            referencedRelation: 'daily_reports';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -308,6 +422,7 @@ export interface Database {
       role: Role;
       location_kind: LocationKind;
       activity_status: ActivityStatus;
+      daily_report_status: DailyReportStatus;
     };
     CompositeTypes: {
       [_ in never]: never;

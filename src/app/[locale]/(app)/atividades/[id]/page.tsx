@@ -1,16 +1,16 @@
 import { notFound } from 'next/navigation';
-import { Calendar, MapPin, User, Users } from 'lucide-react';
+import { Calendar, MapPin, User, Users, Pencil, Copy } from 'lucide-react';
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from '@/i18n/navigation';
+import { Link } from '@/i18n/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { PhotoGallery } from '@/components/activity/photo-lightbox';
-import { Pencil, Copy } from 'lucide-react';
-import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
+import { PhotoGallery } from '@/components/activity/photo-lightbox';
 import { PdfDownloadButton } from '@/components/activity/pdf-download-button';
 import { ActivityDeleteButton } from '@/components/activity/activity-actions';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { formatDate } from '@/lib/utils';
 
 export default async function ActivityDetailPage({
@@ -37,13 +37,16 @@ export default async function ActivityDetailPage({
   const { data: activity } = await supabase
     .from('activities')
     .select(`
-      *,
+      id, description, status, notes, evolucao, pendencias,
+      started_at, ended_at, submitted_at,
+      supervisor_id, client_id, continuation_of,
       locations(name, kind),
       activity_types(label_pt, label_en, label_es),
       activity_participants(name, role),
       activity_photos(id, storage_path, caption)
     `)
     .eq('id', id)
+    .is('deleted_at', null)
     .single();
 
   if (!activity) notFound();
@@ -63,9 +66,9 @@ export default async function ActivityDetailPage({
       ? supabase.from('profiles').select('full_name').eq('id', act.client_id).maybeSingle()
       : Promise.resolve({ data: null }),
     act.continuation_of
-      ? (supabase as any).from('activities').select('id, description, started_at').eq('id', act.continuation_of).maybeSingle()
+      ? supabase.from('activities').select('id, description, started_at').eq('id', act.continuation_of).is('deleted_at', null).maybeSingle()
       : Promise.resolve({ data: null }),
-    (supabase as any)
+    supabase
       .from('activities')
       .select('id, description, started_at')
       .eq('continuation_of', id)
@@ -75,7 +78,7 @@ export default async function ActivityDetailPage({
   act.supervisor = supervisorProfile;
   act.client = clientProfile;
 
-  const localeKey = (locale === 'en' ? 'label_en' : locale === 'es' ? 'label_es' : 'label_pt') as any;
+  const localeKey = (locale === 'en' ? 'label_en' : locale === 'es' ? 'label_es' : 'label_pt') as 'label_pt' | 'label_en' | 'label_es';
   const typeLabel = act.activity_types?.[localeKey];
 
   // Bucket é privado → usar signed URLs (expiram em 1h)
@@ -152,7 +155,7 @@ export default async function ActivityDetailPage({
                 <Link href={`/atividades/${(parentActivity as any).id}`} className="text-primary hover:underline truncate">
                   {(parentActivity as any).description}
                   {' · '}
-                  {new Date((parentActivity as any).started_at).toLocaleDateString('pt-BR')}
+                  {formatDate((parentActivity as any).started_at, locale === 'pt' ? 'pt-BR' : locale)}
                 </Link>
               </div>
             )}
@@ -161,7 +164,7 @@ export default async function ActivityDetailPage({
                 <span className="shrink-0">→ Continua em:</span>
                 {continuations.map((c: any, i: number) => (
                   <Link key={c.id} href={`/atividades/${c.id}`} className="text-primary hover:underline">
-                    Parte {i + 2} · {new Date(c.started_at).toLocaleDateString('pt-BR')}
+                    Parte {i + 2} · {formatDate(c.started_at, locale === 'pt' ? 'pt-BR' : locale)}
                   </Link>
                 ))}
               </div>
@@ -262,11 +265,3 @@ function InfoBlock({
   );
 }
 
-function StatusBadge({ status, label }: { status: string; label?: string }) {
-  const map: Record<string, 'default' | 'warning' | 'success' | 'destructive' | 'secondary'> = {
-    rascunho: 'secondary',
-    enviada: 'warning',
-    rejeitada: 'destructive',
-  };
-  return <Badge variant={map[status] ?? 'secondary'}>{label ?? status}</Badge>;
-}

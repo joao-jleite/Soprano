@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Loader2, Save, Send } from 'lucide-react';
+import { Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
@@ -21,6 +21,7 @@ import { ExpandableSelect, type Option } from '@/components/activity/expandable-
 import { ParticipantsEditor, type Participant } from '@/components/activity/participants-editor';
 import { PhotoUpload, type UploadedPhoto } from '@/components/activity/photo-upload';
 import { createActivity, createActivityType, createLocation, updateActivity } from '@/app/actions/activities';
+import { formatDate } from '@/lib/utils';
 
 export type InitialActivity = {
   id: string;
@@ -100,42 +101,40 @@ export function NewActivityForm({ locations, types, clients, recentActivities = 
     (initial?.photos ?? []).map((p) => ({ storagePath: p.storagePath, url: p.url ?? '' })),
   );
 
-  const [savingAs, setSavingAs] = React.useState<'draft' | 'submit' | null>(null);
+  const [savingAs, setSavingAs] = React.useState<'draft' | null>(null);
 
   async function handleCreateLocation(name: string): Promise<Option> {
-    try {
-      const created = await createLocation(name, 'outro');
-      const opt: Option = { value: created.id, label: created.name, sublabel: tLoc('kinds.outro') };
-      setLocationOptions((prev) => [...prev, opt]);
-      toast.success(t('toasts.locationCreated', { name: created.name }));
-      return opt;
-    } catch (e: any) {
-      toast.error(e?.message ?? t('errors.createLocation'));
-      throw e;
+    const result = await createLocation(name, 'outro');
+    if ('error' in result) {
+      toast.error(result.error ?? t('errors.createLocation'));
+      throw new Error(result.error);
     }
+    const opt: Option = { value: result.id, label: result.name, sublabel: tLoc('kinds.outro') };
+    setLocationOptions((prev) => [...prev, opt]);
+    toast.success(t('toasts.locationCreated', { name: result.name }));
+    return opt;
   }
 
   async function handleCreateType(name: string): Promise<Option> {
-    try {
-      const created = await createActivityType({ labelPt: name });
-      const opt: Option = { value: created.id, label: created.label_pt };
-      setTypeOptions((prev) => [...prev, opt]);
-      toast.success(t('toasts.typeCreated', { name: created.label_pt }));
-      return opt;
-    } catch (e: any) {
-      toast.error(e?.message ?? t('errors.createType'));
-      throw e;
+    const result = await createActivityType({ labelPt: name });
+    if ('error' in result) {
+      toast.error(result.error ?? t('errors.createType'));
+      throw new Error(result.error);
     }
+    const opt: Option = { value: result.id, label: result.label_pt };
+    setTypeOptions((prev) => [...prev, opt]);
+    toast.success(t('toasts.typeCreated', { name: result.label_pt }));
+    return opt;
   }
 
-  async function submit(submitForSignature: boolean) {
+  async function handleSave() {
     if (!locationId || !typeId || !description.trim()) return;
-    setSavingAs(submitForSignature ? 'submit' : 'draft');
+    setSavingAs('draft');
     try {
       const payload = {
         locationId,
         activityTypeId: typeId,
-        clientId: clientId,
+        clientId,
         description,
         notes: notes || undefined,
         evolucao: evolucao || undefined,
@@ -145,14 +144,18 @@ export function NewActivityForm({ locations, types, clients, recentActivities = 
         endedAt: endedAt ? new Date(endedAt + 'T12:00:00').toISOString() : null,
         participants,
         photos: photos.map((p) => ({ storagePath: p.storagePath })),
-        submit: submitForSignature,
+        submit: false,
       };
-      const id =
+      const result =
         mode === 'edit' && initial
           ? await updateActivity({ ...payload, id: initial.id })
           : await createActivity(payload);
-      toast.success(submitForSignature ? t('toasts.submittedForSignature') : t('toasts.draftSaved'));
-      router.push(`/atividades/${id}`);
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(t('toasts.draftSaved'));
+      router.push(`/atividades/${result.id!}`);
     } catch (e: any) {
       toast.error(e?.message ?? t('errors.saveActivity'));
     } finally {
@@ -160,7 +163,7 @@ export function NewActivityForm({ locations, types, clients, recentActivities = 
     }
   }
 
-  const canSave = locationId && typeId && description.trim().length >= 3;
+  const canSave = !!(locationId && typeId && description.trim().length >= 3);
 
   return (
     <div className="space-y-6">
@@ -263,7 +266,7 @@ export function NewActivityForm({ locations, types, clients, recentActivities = 
                     {a.description}
                     {a.locations?.name ? ` · ${a.locations.name}` : ''}
                     {' · '}
-                    {new Date(a.started_at).toLocaleDateString('pt-BR')}
+                    {formatDate(a.started_at, locale === 'pt' ? 'pt-BR' : locale)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -321,27 +324,15 @@ export function NewActivityForm({ locations, types, clients, recentActivities = 
       <div className="flex flex-wrap gap-3 justify-end sticky bottom-4 z-10">
         <Button
           type="button"
-          variant="secondary"
-          onClick={() => submit(false)}
+          onClick={handleSave}
           disabled={!canSave || savingAs !== null}
         >
           {savingAs === 'draft' ? <Loader2 className="animate-spin" /> : <Save />}
           {t('actions.save')}
         </Button>
-        <Button
-          type="button"
-          onClick={() => submit(true)}
-          disabled={!canSave || !clientId || savingAs !== null}
-          title={!clientId ? t('placeholders.assignClientLater') : undefined}
-        >
-          {savingAs === 'submit' ? <Loader2 className="animate-spin" /> : <Send />}
-          {t('actions.submit')}
-        </Button>
-        {canSave && !clientId && (
-          <p className="w-full text-right text-xs text-muted-foreground -mt-1">
-            ↑ {t('fields.clientForSigning')} obrigatório para enviar
-          </p>
-        )}
+        <p className="w-full text-right text-xs text-muted-foreground -mt-1">
+          Para enviar para assinatura, adicione ao Resumo Diário após salvar.
+        </p>
       </div>
     </div>
   );

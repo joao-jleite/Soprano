@@ -8,8 +8,11 @@ import { PageTransition } from '@/components/layout/page-transition';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 
 // Seed: emails que viram admin automaticamente se não tiverem profile.
-// João é dono do sistema — tem que cair logado como admin direto, sem travar.
-const SEED_ADMINS = ['joaovitor.leite@zitron.com'];
+// Configurado via SEED_ADMIN_EMAILS no ambiente (vírgula-separado).
+const SEED_ADMINS = (process.env.SEED_ADMIN_EMAILS ?? '')
+  .split(',')
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
 
 export default async function AppLayout({
   children,

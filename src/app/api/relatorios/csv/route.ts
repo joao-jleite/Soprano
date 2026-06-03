@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { requireAuthAndRole } from '@/guards/auth.guard';
+import { logger } from '@/lib/logger';
+
+const log = logger.for('csv-export');
 
 export const dynamic = 'force-dynamic';
 
@@ -13,18 +17,9 @@ function csvEscape(v: unknown): string {
 export async function GET(req: Request) {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return new NextResponse('Unauthorized', { status: 401 });
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-  const role = (profile as any)?.role;
-  if (role !== 'admin' && role !== 'supervisor') {
+  try {
+    await requireAuthAndRole(supabase, 'admin', 'supervisor');
+  } catch {
     return new NextResponse('Forbidden', { status: 403 });
   }
 
@@ -40,8 +35,7 @@ export async function GET(req: Request) {
       locations(name),
       activity_types(label_pt),
       supervisor:profiles!activities_supervisor_id_fkey(full_name),
-      client:profiles!activities_client_id_fkey(full_name),
-      signatures(signed_at, verification_code, signer_name)
+      client:profiles!activities_client_id_fkey(full_name)
       `,
     )
     .is('deleted_at', null)
@@ -49,7 +43,38 @@ export async function GET(req: Request) {
     .order('started_at', { ascending: false })
     .limit(5000);
 
-  if (error) return new NextResponse(`Erro: ${error.message}`, { status: 500 });
+  if (error) {
+    log.error('Erro ao buscar atividades para CSV', { error: error.message });
+    return new NextResponse(`Erro: ${error.message}`, { status: 500 });
+  }
+
+  // Busca dados de assinatura via daily_reports para cada atividade
+  const activityIds = (data ?? []).map((r: any) => r.id);
+  const signatureMap: Record<string, { signed_at: string | null; signer_name: string; verification_code: string }> = {};
+
+  if (activityIds.length > 0) {
+    const { data: draData } = await supabase
+      .from('daily_report_activities')
+      .select(`
+        activity_id,
+        daily_reports(id, status, signed_at, daily_report_signatures(signer_name))
+      `)
+      .in('activity_id', activityIds);
+
+    for (const dra of (draData ?? []) as any[]) {
+      const report = dra.daily_reports;
+      if (report?.status === 'assinado') {
+        const sig = Array.isArray(report.daily_report_signatures)
+          ? report.daily_report_signatures[0]
+          : report.daily_report_signatures;
+        signatureMap[dra.activity_id] = {
+          signed_at: report.signed_at ?? null,
+          signer_name: sig?.signer_name ?? '',
+          verification_code: report.id,
+        };
+      }
+    }
+  }
 
   const header = [
     'id',
@@ -69,7 +94,7 @@ export async function GET(req: Request) {
   const lines: string[] = [header.join(',')];
 
   for (const row of (data ?? []) as any[]) {
-    const sig = row.signatures?.[0];
+    const sig = signatureMap[row.id];
     lines.push(
       [
         row.id,
@@ -92,7 +117,7 @@ export async function GET(req: Request) {
   }
 
   // BOM for Excel UTF-8 compatibility
-  const body = '\uFEFF' + lines.join('\n');
+  const body = '﻿' + lines.join('\n');
   const today = new Date().toISOString().slice(0, 10);
 
   return new NextResponse(body, {

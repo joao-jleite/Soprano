@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import QRCode from 'qrcode';
 import { createClient } from '@/lib/supabase/server';
 import { buildDailyReportHtml } from '@/lib/pdf/daily-report-html';
+import { logger } from '@/lib/logger';
+
+const log = logger.for('pdf-route');
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -64,15 +67,15 @@ export async function GET(
     if (!role) return new NextResponse('Forbidden', { status: 403 });
 
     // Busca o resumo
-    const { data: report, error: reportError } = await (supabase as any)
+    const { data: report, error: reportError } = await supabase
       .from('daily_reports')
-      .select('*')
+      .select('id, report_date, notes, status, signed_at, client_id, supervisor_id, deleted_at')
       .eq('id', id)
       .is('deleted_at', null)
       .single();
 
     if (reportError) {
-      console.error('[pdf] report query error:', reportError);
+      log.error('Erro ao buscar resumo para PDF', { reportId: id, error: reportError.message });
       return new NextResponse('Not found', { status: 404 });
     }
     if (!report) return new NextResponse('Not found', { status: 404 });
@@ -96,13 +99,13 @@ export async function GET(
       report.client_id
         ? supabase.from('profiles').select('full_name').eq('id', report.client_id).maybeSingle()
         : Promise.resolve({ data: null }),
-      (supabase as any)
+      supabase
         .from('daily_report_activities')
         .select('activity_id')
         .eq('daily_report_id', id),
-      (supabase as any)
+      supabase
         .from('daily_report_signatures')
-        .select('*')
+        .select('id, signer_name, svg_data, ip_address, cancelled')
         .eq('daily_report_id', id)
         .maybeSingle(),
     ]);
@@ -247,7 +250,7 @@ export async function GET(
       await browser.close();
     }
   } catch (err: any) {
-    console.error('[pdf] unhandled error:', err?.message ?? err);
+    log.error('Erro inesperado na geração de PDF', { error: err?.message ?? String(err) });
     return new NextResponse(
       JSON.stringify({ error: err?.message ?? 'Internal server error' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } },

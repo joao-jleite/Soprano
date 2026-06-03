@@ -43,10 +43,11 @@ export default async function NewActivityPage({
     const { data: src } = await supabase
       .from('activities')
       .select(`
-        location_id, activity_type_id, client_id, description, notes,
+        location_id, activity_type_id, client_id, description, notes, evolucao, pendencias,
         activity_participants(name, role)
       `)
       .eq('id', sp.from)
+      .is('deleted_at', null)
       .single();
     if (src) {
       duplicating = true;
@@ -57,7 +58,10 @@ export default async function NewActivityPage({
         activityTypeId: s.activity_type_id,
         clientId: s.client_id,
         description: s.description,
-        notes: s.notes,
+        notes: s.notes ?? null,
+        evolucao: s.evolucao ?? null,
+        pendencias: s.pendencias ?? null,
+        continuationOf: null,
         startedAt: new Date().toISOString(),
         endedAt: null,
         participants: (s.activity_participants ?? []).map((p: any) => ({ name: p.name, role: p.role })),
