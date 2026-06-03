@@ -90,6 +90,19 @@ export async function sendReportForSignature(reportId: string): Promise<{ error?
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { error: 'Não autenticado' };
 
+    // Verifica ownership: supervisor só pode enviar seus próprios resumos
+    const { data: existingReport } = await (supabase as any)
+      .from('daily_reports')
+      .select('supervisor_id, client_id, report_date')
+      .eq('id', rId)
+      .single();
+    if (!existingReport) return { error: 'Resumo não encontrado' };
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+    const userRole = (profile as any)?.role;
+    if (userRole === 'supervisor' && existingReport.supervisor_id !== user.id) {
+      return { error: 'Sem permissão para enviar este resumo' };
+    }
+
     const { count, error: countError } = await (supabase as any)
       .from('daily_report_activities')
       .select('*', { count: 'exact', head: true })
@@ -429,6 +442,19 @@ export async function resendReport(reportId: string): Promise<{ error?: string }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { error: 'Não autenticado' };
 
+    // Verifica ownership
+    const { data: existingForResend } = await (supabase as any)
+      .from('daily_reports')
+      .select('supervisor_id, client_id, report_date')
+      .eq('id', rId)
+      .single();
+    if (!existingForResend) return { error: 'Resumo não encontrado' };
+    const { data: profileForResend } = await supabase.from('profiles').select('role, full_name').eq('id', user.id).single();
+    const roleForResend = (profileForResend as any)?.role;
+    if (roleForResend === 'supervisor' && existingForResend.supervisor_id !== user.id) {
+      return { error: 'Sem permissão para reenviar este resumo' };
+    }
+
     const adminResend = createServiceClient();
     if (!adminResend) return { error: 'Configuração de servidor ausente' };
 
@@ -458,7 +484,6 @@ export async function resendReport(reportId: string): Promise<{ error?: string }
           .from('activities')
           .update({ status: 'enviada' })
           .in('id', activityIds);
-        // Remove assinaturas individuais anteriores
         await (adminResend as any)
           .from('signatures')
           .delete()
@@ -466,6 +491,28 @@ export async function resendReport(reportId: string): Promise<{ error?: string }
           .eq('rejected', false);
       }
     } catch (_) { /* silencioso */ }
+
+    // Notifica cliente por email (silencioso)
+    try {
+      if (existingForResend.client_id) {
+        const [clientEmail, clientProfile, supervisorProfile, h] = await Promise.all([
+          getUserEmail(existingForResend.client_id),
+          supabase.from('profiles').select('full_name').eq('id', existingForResend.client_id).single(),
+          supabase.from('profiles').select('full_name').eq('id', existingForResend.supervisor_id).single(),
+          headers(),
+        ]);
+        if (clientEmail) {
+          const origin = h.get('origin') ?? h.get('x-forwarded-host') ?? process.env.NEXT_PUBLIC_APP_URL ?? '';
+          await dailyReportSubmittedEmail({
+            clientEmail,
+            clientName: (clientProfile.data as any)?.full_name ?? 'Cliente',
+            reportDate: existingForResend.report_date,
+            reportUrl: `${origin}/pt/resumo-diario/${rId}`,
+            supervisorName: (supervisorProfile.data as any)?.full_name ?? 'Supervisor',
+          });
+        }
+      }
+    } catch (_) { /* email nunca quebra */ }
 
     revalidatePath('/resumo-diario');
     return {};

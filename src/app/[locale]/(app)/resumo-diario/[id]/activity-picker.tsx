@@ -38,7 +38,8 @@ export function ActivityPicker({
   async function handleAdd(activityId: string) {
     setLoading(activityId);
     try {
-      await addActivityToReport(reportId, activityId);
+      const result = await addActivityToReport(reportId, activityId);
+      if (result?.error) { toast.error(result.error); return; }
       toast.success('Atividade adicionada');
       router.refresh();
     } catch (e: any) {
@@ -51,7 +52,8 @@ export function ActivityPicker({
   async function handleRemove(activityId: string) {
     setLoading(activityId);
     try {
-      await removeActivityFromReport(reportId, activityId);
+      const result = await removeActivityFromReport(reportId, activityId);
+      if (result?.error) { toast.error(result.error); return; }
       toast.success('Atividade removida');
       router.refresh();
     } catch (e: any) {

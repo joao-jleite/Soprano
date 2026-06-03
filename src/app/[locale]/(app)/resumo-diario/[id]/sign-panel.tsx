@@ -36,6 +36,7 @@ export function SignDailyReportPanel({ reportId, signerName }: Props) {
         return;
       }
       toast.success('Resumo assinado com sucesso ✓');
+      router.refresh(); // Invalida cache do router para esta rota
       router.push('/resumo-diario');
     } catch (e: any) {
       toast.error(e?.message ?? 'Erro ao assinar');

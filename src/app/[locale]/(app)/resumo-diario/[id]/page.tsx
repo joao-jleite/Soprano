@@ -151,7 +151,8 @@ export default async function DailyReportPage({
 
   const localeStr = locale === 'pt' ? 'pt-BR' : locale;
   const isClient  = role === 'cliente';
-  const canSign   = report.status === 'aguardando_assinatura' && isClient;
+  // Verifica que o cliente logado é o cliente designado neste resumo
+  const canSign   = report.status === 'aguardando_assinatura' && isClient && user?.id === report.client_id;
   const isSigned  = report.status === 'assinado';
   const isCancelled = report.status === 'cancelado';
 
@@ -358,7 +359,7 @@ export default async function DailyReportPage({
             </div>
             <p className="text-xs text-muted-foreground mt-2">
               {signature.signer_name}
-              {signature.signed_at ? ` · ${formatDateTime(signature.signed_at, localeStr)}` : ''}
+              {report.signed_at ? ` · ${formatDateTime(report.signed_at, localeStr)}` : ''}
             </p>
           </CardContent>
         </Card>
