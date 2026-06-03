@@ -54,14 +54,28 @@ export default async function ActivityDetailPage({
   if (!activity) notFound();
   const act = activity as any;
 
-  // Busca supervisor e cliente separadamente para evitar ambiguidade de FK
-  const [{ data: supervisorProfile }, { data: clientProfile }] = await Promise.all([
+  // Busca supervisor, cliente, atividade pai e continuações em paralelo
+  const [
+    { data: supervisorProfile },
+    { data: clientProfile },
+    { data: parentActivity },
+    { data: continuations },
+  ] = await Promise.all([
     act.supervisor_id
       ? supabase.from('profiles').select('full_name').eq('id', act.supervisor_id).maybeSingle()
       : Promise.resolve({ data: null }),
     act.client_id
       ? supabase.from('profiles').select('full_name').eq('id', act.client_id).maybeSingle()
       : Promise.resolve({ data: null }),
+    act.continuation_of
+      ? (supabase as any).from('activities').select('id, description, started_at').eq('id', act.continuation_of).maybeSingle()
+      : Promise.resolve({ data: null }),
+    (supabase as any)
+      .from('activities')
+      .select('id, description, started_at')
+      .eq('continuation_of', id)
+      .is('deleted_at', null)
+      .order('started_at'),
   ]);
   act.supervisor = supervisorProfile;
   act.client = clientProfile;
@@ -143,9 +157,57 @@ export default async function ActivityDetailPage({
         </InfoBlock>
       </section>
 
-      {act.notes && (
+      {/* Cadeia de continuações */}
+      {(parentActivity || (continuations && continuations.length > 0)) && (
         <Card>
-          <CardContent className="p-4 text-sm whitespace-pre-wrap">{act.notes}</CardContent>
+          <CardContent className="p-4 space-y-2">
+            {parentActivity && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="shrink-0">← Continua:</span>
+                <Link href={`/atividades/${(parentActivity as any).id}`} className="text-primary hover:underline truncate">
+                  {(parentActivity as any).description}
+                  {' · '}
+                  {new Date((parentActivity as any).started_at).toLocaleDateString('pt-BR')}
+                </Link>
+              </div>
+            )}
+            {continuations && continuations.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                <span className="shrink-0">→ Continua em:</span>
+                {continuations.map((c: any, i: number) => (
+                  <Link key={c.id} href={`/atividades/${c.id}`} className="text-primary hover:underline">
+                    Parte {i + 2} · {new Date(c.started_at).toLocaleDateString('pt-BR')}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Evolução, Observações, Pendências */}
+      {(act.evolucao || act.notes || act.pendencias) && (
+        <Card>
+          <CardContent className="p-4 space-y-4">
+            {act.evolucao && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Evolução</p>
+                <p className="text-sm whitespace-pre-wrap">{act.evolucao}</p>
+              </div>
+            )}
+            {act.notes && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Observações</p>
+                <p className="text-sm whitespace-pre-wrap">{act.notes}</p>
+              </div>
+            )}
+            {act.pendencias && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Pendências</p>
+                <p className="text-sm whitespace-pre-wrap">{act.pendencias}</p>
+              </div>
+            )}
+          </CardContent>
         </Card>
       )}
 

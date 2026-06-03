@@ -25,6 +25,7 @@ export default async function EditActivityPage({
       .from('activities')
       .select(`
         id, location_id, activity_type_id, client_id, description, notes,
+        evolucao, pendencias, continuation_of,
         started_at, ended_at, status, supervisor_id,
         activity_participants(name, role),
         activity_photos(storage_path)
@@ -54,6 +55,9 @@ export default async function EditActivityPage({
     clientId: act.client_id,
     description: act.description,
     notes: act.notes,
+    evolucao: act.evolucao ?? null,
+    pendencias: act.pendencias ?? null,
+    continuationOf: act.continuation_of ?? null,
     startedAt: act.started_at,
     endedAt: act.ended_at,
     participants: (act.activity_participants ?? []).map((p: any) => ({

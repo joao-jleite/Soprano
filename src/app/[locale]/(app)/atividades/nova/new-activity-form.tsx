@@ -29,22 +29,33 @@ export type InitialActivity = {
   clientId: string | null;
   description: string;
   notes: string | null;
+  evolucao: string | null;
+  pendencias: string | null;
+  continuationOf: string | null;
   startedAt: string;
   endedAt: string | null;
   participants: { name: string; role: string | null }[];
   photos: { storagePath: string; url?: string }[];
 };
 
+type RecentActivity = {
+  id: string;
+  description: string;
+  started_at: string;
+  locations?: { name: string } | null;
+};
+
 type Props = {
   locations: { id: string; name: string; kind: string }[];
   types: { id: string; slug: string; label_pt: string; label_en: string; label_es: string }[];
   clients: { id: string; full_name: string }[];
+  recentActivities?: RecentActivity[];
   locale: string;
   initial?: InitialActivity;
   mode?: 'create' | 'edit';
 };
 
-export function NewActivityForm({ locations, types, clients, locale, initial, mode = 'create' }: Props) {
+export function NewActivityForm({ locations, types, clients, recentActivities = [], locale, initial, mode = 'create' }: Props) {
   const t = useTranslations('activities');
   const tLoc = useTranslations('locations');
   const router = useRouter();
@@ -71,6 +82,9 @@ export function NewActivityForm({ locations, types, clients, locale, initial, mo
   const [clientId, setClientId] = React.useState<string | null>(initial?.clientId ?? null);
   const [description, setDescription] = React.useState(initial?.description ?? '');
   const [notes, setNotes] = React.useState(initial?.notes ?? '');
+  const [evolucao, setEvolucao] = React.useState(initial?.evolucao ?? '');
+  const [pendencias, setPendencias] = React.useState(initial?.pendencias ?? '');
+  const [continuationOf, setContinuationOf] = React.useState<string | null>(initial?.continuationOf ?? null);
   const [startedAt, setStartedAt] = React.useState(() =>
     initial?.startedAt
       ? new Date(initial.startedAt).toISOString().slice(0, 10)
@@ -124,6 +138,9 @@ export function NewActivityForm({ locations, types, clients, locale, initial, mo
         clientId: clientId,
         description,
         notes: notes || undefined,
+        evolucao: evolucao || undefined,
+        pendencias: pendencias || undefined,
+        continuationOf: continuationOf || undefined,
         startedAt: new Date(startedAt + 'T12:00:00').toISOString(),
         endedAt: endedAt ? new Date(endedAt + 'T12:00:00').toISOString() : null,
         participants,
@@ -225,6 +242,36 @@ export function NewActivityForm({ locations, types, clients, locale, initial, mo
         </CardContent>
       </Card>
 
+      {/* Continuação de atividade anterior */}
+      {mode === 'create' && recentActivities.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Continuação</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Esta atividade é continuação de outra? Selecione a parte anterior para encadear.
+            </p>
+            <Select value={continuationOf ?? '__none__'} onValueChange={(v) => setContinuationOf(v === '__none__' ? null : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Não é continuação" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Não é continuação</SelectItem>
+                {recentActivities.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.description}
+                    {a.locations?.name ? ` · ${a.locations.name}` : ''}
+                    {' · '}
+                    {new Date(a.started_at).toLocaleDateString('pt-BR')}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{t('sections.clientAndNotes')}</CardTitle>
@@ -244,10 +291,27 @@ export function NewActivityForm({ locations, types, clients, locale, initial, mo
               </SelectContent>
             </Select>
           </Field>
+          <Field label="Evolução">
+            <Textarea
+              value={evolucao}
+              onChange={(e) => setEvolucao(e.target.value)}
+              placeholder="O que avançou / foi executado nesta atividade..."
+              rows={3}
+            />
+          </Field>
           <Field label={t('fields.notes')}>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
+              placeholder="Observações gerais, condições, intercorrências..."
+              rows={3}
+            />
+          </Field>
+          <Field label="Pendências">
+            <Textarea
+              value={pendencias}
+              onChange={(e) => setPendencias(e.target.value)}
+              placeholder="O que ficou pendente para os próximos dias..."
               rows={3}
             />
           </Field>

@@ -17,10 +17,23 @@ export default async function NewActivityPage({
   const t = await getTranslations('activities');
   const supabase = await createClient();
 
-  const [{ data: locations }, { data: types }, { data: clients }] = await Promise.all([
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const [{ data: locations }, { data: types }, { data: clients }, { data: recentActivities }] = await Promise.all([
     supabase.from('locations').select('id, name, kind').eq('line', 'linha-6').is('deleted_at', null).order('sort_order'),
     supabase.from('activity_types').select('id, slug, label_pt, label_en, label_es').is('deleted_at', null).order('label_pt'),
     supabase.from('profiles').select('id, full_name').eq('role', 'cliente').is('deleted_at', null).order('full_name'),
+    // Atividades recentes para o picker de continuação (últimos 60 dias, do próprio supervisor)
+    user
+      ? supabase
+          .from('activities')
+          .select('id, description, started_at, locations(name)')
+          .eq('supervisor_id', user.id)
+          .is('deleted_at', null)
+          .gte('started_at', new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString())
+          .order('started_at', { ascending: false })
+          .limit(50)
+      : Promise.resolve({ data: [] }),
   ]);
 
   // Duplicar a partir de outra atividade
@@ -67,6 +80,7 @@ export default async function NewActivityPage({
         locations={locations ?? []}
         types={types ?? []}
         clients={clients ?? []}
+        recentActivities={(recentActivities ?? []) as any[]}
         locale={locale}
         initial={initial}
         mode="create"
