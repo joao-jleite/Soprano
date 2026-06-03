@@ -163,7 +163,7 @@ export async function GET(
     const pdf = await page.pdf({
       format: 'A4',
       printBackground: true,
-      margin: { top: '0', right: '0', bottom: '24pt', left: '0' },
+      margin: { top: '0', right: '0', bottom: '8mm', left: '0' },
     });
     return new NextResponse(pdf, {
       headers: {
