@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { LocaleSwitcher } from './locale-switcher';
 import { ThemeToggle } from './theme-toggle';
+import { ChangePasswordDialog } from './change-password-dialog';
 import { createClient } from '@/lib/supabase/client';
 import { initials } from '@/lib/utils';
 
@@ -50,6 +51,7 @@ export function Topbar({ fullName, role }: Props) {
               </span>
             </div>
           </div>
+          <ChangePasswordDialog />
           <Button variant="ghost" size="icon" onClick={handleLogout} aria-label={t('nav.logout')}>
             <LogOut />
           </Button>
