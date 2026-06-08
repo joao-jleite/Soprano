@@ -37,20 +37,21 @@ export function ProfileRow({ profile, editable }: { profile: Profile; editable: 
 
   async function save() {
     setSaving(true);
-    try {
-      await updateProfile({
-        id: profile.id,
-        full_name: fullName,
-        company: company || null,
-        role,
-      });
-      toast.success(t('profileUpdated'));
-      setEditing(false);
-    } catch (e: any) {
-      toast.error(e?.message ?? t('profileUpdateError'));
-    } finally {
-      setSaving(false);
+    const result = await updateProfile({
+      id: profile.id,
+      full_name: fullName,
+      company: company || null,
+      role,
+    });
+    setSaving(false);
+
+    if (result.error) {
+      toast.error(result.error);
+      return;
     }
+
+    toast.success(t('profileUpdated'));
+    setEditing(false);
   }
 
   function cancel() {

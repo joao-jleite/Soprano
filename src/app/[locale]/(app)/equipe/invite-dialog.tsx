@@ -38,24 +38,31 @@ export function InviteDialog() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    try {
-      await inviteUser({
-        email: email.trim().toLowerCase(),
-        full_name: fullName.trim(),
-        role,
-        company: company.trim() || null,
-      });
-      toast.success(t('inviteSent', { email }));
-      setEmail('');
-      setFullName('');
-      setCompany('');
-      setRole('supervisor');
-      setOpen(false);
-    } catch (err: any) {
-      toast.error(err?.message ?? t('inviteError'));
-    } finally {
-      setLoading(false);
+    const result = await inviteUser({
+      email: email.trim().toLowerCase(),
+      full_name: fullName.trim(),
+      role,
+      company: company.trim() || null,
+    });
+    setLoading(false);
+
+    if (result.error && !result.ok) {
+      // Erro total — convite não foi enviado
+      toast.error(result.error);
+      return;
     }
+
+    // Convite enviado (ok=true), mesmo que perfil tenha tido aviso parcial
+    toast.success(t('inviteSent', { email }));
+    if (result.error) {
+      // Aviso: convite foi mas houve problema no perfil
+      toast.warning(result.error);
+    }
+    setEmail('');
+    setFullName('');
+    setCompany('');
+    setRole('supervisor');
+    setOpen(false);
   }
 
   return (
