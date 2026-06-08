@@ -80,7 +80,7 @@ export default async function EquipePage({
       <ul className="grid gap-3 sm:grid-cols-2">
         {(profiles ?? []).map((p: any) => (
           <li key={p.id}>
-            <ProfileRow profile={p} editable={isAdmin} />
+            <ProfileRow profile={p} editable={isAdmin} isSelf={p.id === user?.id} />
           </li>
         ))}
       </ul>

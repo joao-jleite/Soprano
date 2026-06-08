@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RestoreRow } from './restore-row';
+import { RestoreUserRow } from './restore-user-row';
 import { formatDateTime } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -29,7 +30,7 @@ export default async function LixeiraPage({
     : { data: null };
   if ((me as any)?.role !== 'admin') redirect({ href: '/equipe', locale });
 
-  const [{ data: acts }, { data: locs }, { data: types }] = await Promise.all([
+  const [{ data: acts }, { data: locs }, { data: types }, { data: users }] = await Promise.all([
     supabase
       .from('activities')
       .select('id, description, deleted_at, status, locations(name)')
@@ -45,6 +46,12 @@ export default async function LixeiraPage({
     supabase
       .from('activity_types')
       .select('id, label_pt, slug, deleted_at')
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false })
+      .limit(200),
+    supabase
+      .from('profiles')
+      .select('id, full_name, email, role, deleted_at')
       .not('deleted_at', 'is', null)
       .order('deleted_at', { ascending: false })
       .limit(200),
@@ -70,6 +77,7 @@ export default async function LixeiraPage({
           <TabsTrigger value="activities">{t('tabs.activities')} ({acts?.length ?? 0})</TabsTrigger>
           <TabsTrigger value="locations">{t('tabs.locations')} ({locs?.length ?? 0})</TabsTrigger>
           <TabsTrigger value="types">{t('tabs.types')} ({types?.length ?? 0})</TabsTrigger>
+          <TabsTrigger value="users">Usuários ({users?.length ?? 0})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="activities" className="space-y-2 mt-4">
@@ -118,6 +126,23 @@ export default async function LixeiraPage({
                   </p>
                 </div>
                 <RestoreRow table="activity_types" id={tp.id} />
+              </CardContent>
+            </Card>
+          ))}
+        </TabsContent>
+
+        <TabsContent value="users" className="space-y-2 mt-4">
+          {(!users || users.length === 0) && <Empty label="Nenhum usuário desativado" />}
+          {(users ?? []).map((u: any) => (
+            <Card key={u.id}>
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium truncate">{u.full_name}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {u.email} · {u.role} · desativado em {formatDateTime(u.deleted_at, loc)}
+                  </p>
+                </div>
+                <RestoreUserRow id={u.id} />
               </CardContent>
             </Card>
           ))}

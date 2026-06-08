@@ -4,6 +4,7 @@ import * as React from 'react';
 import { toast } from 'sonner';
 import { Check, Pencil, X, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { updateProfile } from '@/app/actions/team';
+import { ConfirmDeleteButton } from '@/components/ui/confirm-delete-button';
+import { updateProfile, deleteUser } from '@/app/actions/team';
 import { initials } from '@/lib/utils';
 
 type Profile = {
@@ -26,9 +28,16 @@ type Profile = {
   company: string | null;
 };
 
-export function ProfileRow({ profile, editable }: { profile: Profile; editable: boolean }) {
+type Props = {
+  profile: Profile;
+  editable: boolean;
+  isSelf: boolean;
+};
+
+export function ProfileRow({ profile, editable, isSelf }: Props) {
   const t = useTranslations('team');
   const tr = useTranslations('roles');
+  const router = useRouter();
   const [editing, setEditing] = React.useState(false);
   const [fullName, setFullName] = React.useState(profile.full_name);
   const [company, setCompany] = React.useState(profile.company ?? '');
@@ -86,7 +95,14 @@ export function ProfileRow({ profile, editable }: { profile: Profile; editable: 
             </>
           ) : (
             <>
-              <p className="font-medium truncate">{profile.full_name}</p>
+              <p className="font-medium truncate">
+                {profile.full_name}
+                {isSelf && (
+                  <span className="ml-2 text-[10px] font-normal text-muted-foreground uppercase tracking-wider">
+                    você
+                  </span>
+                )}
+              </p>
               <p className="text-xs text-muted-foreground truncate">{profile.email}</p>
               {profile.company && (
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
@@ -124,9 +140,26 @@ export function ProfileRow({ profile, editable }: { profile: Profile; editable: 
               {tr(profile.role)}
             </Badge>
             {editable && (
-              <Button size="icon" variant="ghost" onClick={() => setEditing(true)} className="h-7 w-7">
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
+              <>
+                <Button size="icon" variant="ghost" onClick={() => setEditing(true)} className="h-7 w-7">
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                {!isSelf && (
+                  <ConfirmDeleteButton
+                    onConfirm={async () => {
+                      const result = await deleteUser(profile.id);
+                      if (result.error) throw new Error(result.error);
+                      router.refresh();
+                    }}
+                    title="Desativar usuário"
+                    description={`Desativar "${profile.full_name}"? O acesso ao sistema será bloqueado imediatamente. O usuário pode ser reativado pela lixeira.`}
+                    triggerLabel=""
+                    iconOnly
+                    size="icon"
+                    variant="ghost"
+                  />
+                )}
+              </>
             )}
           </div>
         )}
