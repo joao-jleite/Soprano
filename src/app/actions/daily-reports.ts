@@ -74,6 +74,33 @@ async function assertReportOwnership(
   return null;
 }
 
+// Helper: garante que as atividades pertencem ao mesmo supervisor/cliente do resumo.
+// Evita que um supervisor adicione atividade de outro supervisor/cliente ao seu resumo.
+async function assertActivitiesBelongToReport(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  rId: string,
+  activityIds: string[],
+  userId: string,
+): Promise<string | null> {
+  const [{ data: rep }, { data: acts }, { data: me }] = await Promise.all([
+    supabase.from('daily_reports').select('supervisor_id, client_id').eq('id', rId).single(),
+    supabase.from('activities').select('id, supervisor_id, client_id').in('id', activityIds),
+    supabase.from('profiles').select('role').eq('id', userId).single(),
+  ]);
+  if (!rep) return 'Resumo não encontrado';
+  if (!acts || acts.length !== activityIds.length) return 'Atividade não encontrada';
+  const isAdmin = me?.role === 'admin';
+  for (const a of acts) {
+    if (!isAdmin && a.supervisor_id !== rep.supervisor_id) {
+      return 'Atividade não pertence ao supervisor deste resumo';
+    }
+    if (rep.client_id && a.client_id && a.client_id !== rep.client_id) {
+      return 'Atividade pertence a outro cliente';
+    }
+  }
+  return null;
+}
+
 export async function addActivityToReport(reportId: string, activityId: string): Promise<{ error?: string }> {
   try {
     const rId = z.string().uuid().parse(reportId);
@@ -83,6 +110,8 @@ export async function addActivityToReport(reportId: string, activityId: string):
     if (!user) return { error: 'Não autenticado' };
     const ownershipError = await assertReportOwnership(supabase, rId, user.id);
     if (ownershipError) return { error: ownershipError };
+    const activityError = await assertActivitiesBelongToReport(supabase, rId, [aId], user.id);
+    if (activityError) return { error: activityError };
     const { error } = await supabase
       .from('daily_report_activities')
       .insert({ daily_report_id: rId, activity_id: aId });
@@ -104,6 +133,8 @@ export async function addAllActivitiesToReport(reportId: string, activityIds: st
     if (!user) return { error: 'Não autenticado' };
     const ownershipError = await assertReportOwnership(supabase, rId, user.id);
     if (ownershipError) return { error: ownershipError };
+    const activityError = await assertActivitiesBelongToReport(supabase, rId, aIds, user.id);
+    if (activityError) return { error: activityError };
     const rows = aIds.map((activity_id) => ({ daily_report_id: rId, activity_id }));
     const { error } = await supabase.from('daily_report_activities').insert(rows);
     if (error) return { error: error.message };
@@ -243,7 +274,7 @@ export async function signDailyReport(
 
     const h = await headers();
     const ua = h.get('user-agent') ?? null;
-    const ip = h.get('x-real-ip') ?? h.get('x-forwarded-for')?.split(',').at(-1)?.trim() ?? null;
+    const ip = h.get('x-real-ip') ?? h.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
 
     const { error: sigError } = await supabase
       .from('daily_report_signatures')
@@ -258,15 +289,25 @@ export async function signDailyReport(
 
     if (sigError) return { error: sigError.message ?? 'Falha ao registrar assinatura' };
 
-    // Atualiza status via service role (bypass RLS — autorização já verificada acima)
+    // Garante status 'assinado'. Em bancos com o trigger (migration 0013) isso já
+    // ocorreu no insert acima; o update via service role é defesa redundante.
     const admin = createServiceClient();
     if (admin) {
-      const now = new Date().toISOString();
-      const { error: updError } = await admin
+      await admin
         .from('daily_reports')
-        .update({ status: 'assinado', signed_at: now })
+        .update({ status: 'assinado', signed_at: new Date().toISOString() })
         .eq('id', parsed.reportId);
-      if (updError) return { error: updError.message ?? 'Falha ao atualizar status' };
+    }
+
+    // Confirma que o resumo ficou de fato assinado (via trigger OU service role).
+    // Evita retornar sucesso silencioso quando o status não pôde ser atualizado.
+    const { data: confirm } = await supabase
+      .from('daily_reports')
+      .select('status')
+      .eq('id', parsed.reportId)
+      .single();
+    if (confirm?.status !== 'assinado') {
+      return { error: 'Assinatura registrada, mas o status não pôde ser confirmado. Contate o suporte.' };
     }
 
     // Notifica supervisor por email (silencioso)
@@ -332,7 +373,7 @@ export async function cancelDailyReport(
 
     const h = await headers();
     const ua = h.get('user-agent') ?? null;
-    const ip = h.get('x-real-ip') ?? h.get('x-forwarded-for')?.split(',').at(-1)?.trim() ?? null;
+    const ip = h.get('x-real-ip') ?? h.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
 
     const adminForCancel = createServiceClient();
     if (!adminForCancel) return { error: 'Configuração de servidor ausente' };

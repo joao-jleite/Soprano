@@ -1,7 +1,10 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { logger } from '@/lib/logger';
 import type { Locale } from '@/i18n/config';
+
+const log = logger.for('auth/login');
 
 /**
  * Login via Server Action — garante que os cookies de sessão são gravados
@@ -30,7 +33,7 @@ export async function loginAction(
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    console.error('[loginAction] Supabase error:', error.status, error.message);
+    log.warn('Login falhou', { status: error.status, msg: error.message });
     const msg = error.message?.toLowerCase() ?? '';
     if (msg.includes('rate') || error.status === 429) {
       return { ok: false, error: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' };

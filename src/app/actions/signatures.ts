@@ -6,6 +6,9 @@ import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { getUserEmail } from '@/lib/supabase/service';
 import { activitySignedEmail } from '@/lib/notify/email';
+import { logger } from '@/lib/logger';
+
+const log = logger.for('signatures');
 
 const signSchema = z.object({
   activityId: z.string().uuid(),
@@ -56,7 +59,7 @@ export async function signActivity(input: z.infer<typeof signSchema>) {
       .select('description, supervisor_id')
       .eq('id', parsed.activityId)
       .single();
-    const supId = (act as any)?.supervisor_id;
+    const supId = act?.supervisor_id;
     if (supId) {
       const { data: sup } = await supabase
         .from('profiles')
@@ -68,15 +71,15 @@ export async function signActivity(input: z.infer<typeof signSchema>) {
         const origin = h.get('origin') ?? '';
         await activitySignedEmail({
           supervisorEmail: email,
-          supervisorName: (sup as any)?.full_name ?? 'supervisor',
-          description: (act as any).description,
+          supervisorName: sup?.full_name ?? 'supervisor',
+          description: act?.description ?? '',
           clientName: profile.full_name,
           activityUrl: `${origin}/pt/atividades/${parsed.activityId}`,
         });
       }
     }
-  } catch (e) {
-    console.warn('[notify] sign email failed', e);
+  } catch (e: unknown) {
+    log.warn('Email de notificação falhou', { msg: e instanceof Error ? e.message : String(e) });
   }
 
   revalidatePath(`/atividades/${parsed.activityId}`);

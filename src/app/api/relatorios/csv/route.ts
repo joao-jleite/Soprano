@@ -9,7 +9,9 @@ export const dynamic = 'force-dynamic';
 
 function csvEscape(v: unknown): string {
   if (v === null || v === undefined) return '';
-  const s = String(v);
+  let s = String(v);
+  // Anti formula-injection: neutraliza fórmulas executadas ao abrir no Excel/Sheets
+  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
   if (/[",\n;]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
 }
@@ -57,7 +59,7 @@ export async function GET(req: Request) {
       .from('daily_report_activities')
       .select(`
         activity_id,
-        daily_reports(id, status, signed_at, daily_report_signatures(signer_name))
+        daily_reports(id, status, signed_at, verification_code, daily_report_signatures(signer_name))
       `)
       .in('activity_id', activityIds);
 
@@ -70,7 +72,7 @@ export async function GET(req: Request) {
         signatureMap[dra.activity_id] = {
           signed_at: report.signed_at ?? null,
           signer_name: sig?.signer_name ?? '',
-          verification_code: report.id,
+          verification_code: report.verification_code ?? '',
         };
       }
     }

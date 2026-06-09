@@ -5,8 +5,6 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  typescript: { ignoreBuildErrors: true },
-  eslint: { ignoreDuringBuilds: true },
 
   // Puppeteer + Chromium fora do bundle webpack
   serverExternalPackages: ['puppeteer-core', '@sparticuz/chromium-min'],

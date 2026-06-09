@@ -45,6 +45,16 @@ function fmt(iso: string) {
   } catch { return iso; }
 }
 
+/** Escapa texto do usuário antes de interpolar no HTML renderizado pelo Puppeteer. */
+function escapeHtml(s: unknown): string {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function statusMeta(s: string): { label: string; color: string; bg: string } {
   if (s === 'assinada')  return { label: 'Assinada',  color: '#166534', bg: '#dcfce7' };
   if (s === 'rejeitada') return { label: 'Rejeitada', color: '#991b1b', bg: '#fee2e2' };
@@ -59,26 +69,26 @@ export function buildActivityHtml(opts: BuildHtmlOptions): string {
   /* ── helpers ─────────────────────────────────────────────────── */
   const field = (label: string, value: string) => `
     <div class="field">
-      <div class="field-label">${label}</div>
-      <div class="field-value">${value || '—'}</div>
+      <div class="field-label">${escapeHtml(label)}</div>
+      <div class="field-value">${value ? escapeHtml(value) : '—'}</div>
     </div>`;
 
   const participantsHtml = (activity.participants ?? []).map(p => `
     <div class="chip">
-      <span class="chip-name">${p.name}</span>
-      ${p.role ? `<span class="chip-role">${p.role}</span>` : ''}
+      <span class="chip-name">${escapeHtml(p.name)}</span>
+      ${p.role ? `<span class="chip-role">${escapeHtml(p.role)}</span>` : ''}
     </div>`).join('');
 
   const photosHtml = photos.map(p => `
     <div class="photo-cell">
-      <img src="${p.signedUrl}" alt="${p.caption ?? ''}" />
-      ${p.caption ? `<div class="photo-caption">${p.caption}</div>` : ''}
+      <img src="${p.signedUrl}" alt="${escapeHtml(p.caption ?? '')}" />
+      ${p.caption ? `<div class="photo-caption">${escapeHtml(p.caption)}</div>` : ''}
     </div>`).join('');
 
   const sigHtml = signature ? `
     <div class="sig-box">
-      <div class="sig-name">${signature.signer_name}</div>
-      ${signature.svg_data ? `<div class="sig-drawing">${signature.svg_data}</div>` : ''}
+      <div class="sig-name">${escapeHtml(signature.signer_name)}</div>
+      ${signature.svg_data ? `<div class="sig-drawing"><img src="data:image/svg+xml;base64,${Buffer.from(signature.svg_data).toString('base64')}" /></div>` : ''}
       <div class="sig-meta">
         <span>Assinado em ${fmt(signature.signed_at)}</span>
         ${signature.ip_address ? `<span>IP: ${signature.ip_address}</span>` : ''}
@@ -249,10 +259,10 @@ export function buildActivityHtml(opts: BuildHtmlOptions): string {
     <div class="body">
       <div class="status-row">
         <span class="badge" style="color:${sm.color};background:${sm.bg}">${sm.label}</span>
-        ${activity.type_label ? `<span class="type-label">${activity.type_label}</span>` : ''}
+        ${activity.type_label ? `<span class="type-label">${escapeHtml(activity.type_label)}</span>` : ''}
       </div>
-      <div class="title">${activity.description}</div>
-      <div class="id-line">${activity.id}</div>
+      <div class="title">${escapeHtml(activity.description)}</div>
+      <div class="id-line">${escapeHtml(activity.id)}</div>
 
       <div class="section-title">Identificação</div>
       <div class="fields">
@@ -273,7 +283,7 @@ export function buildActivityHtml(opts: BuildHtmlOptions): string {
 
       ${activity.notes ? `
       <div class="section-title">Observações</div>
-      <div class="notes-box">${activity.notes}</div>` : ''}
+      <div class="notes-box">${escapeHtml(activity.notes)}</div>` : ''}
 
       <div class="section-title">Assinatura do cliente</div>
       ${sigHtml}

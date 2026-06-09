@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import QRCode from 'qrcode';
 import { createClient } from '@/lib/supabase/server';
 import { buildActivityHtml } from '@/lib/pdf/activity-html';
+import { logger } from '@/lib/logger';
+
+const log = logger.for('pdf/atividade');
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -73,6 +76,8 @@ export async function GET(
     .single();
 
   if (!activity) return new NextResponse('Not found', { status: 404 });
+  // activity tem joins (locations, activity_types, etc.) que Supabase não infere automaticamente
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const act = activity as any;
 
   // Supervisor e cliente separados (evita ambiguidade FK)
@@ -135,8 +140,8 @@ export async function GET(
       status: act.status,
       location_name: act.locations?.name,
       type_label: act.activity_types?.label_pt,
-      supervisor_name: (supervisorProfile as any)?.full_name,
-      client_name: (clientProfile as any)?.full_name,
+      supervisor_name: supervisorProfile?.full_name,
+      client_name: clientProfile?.full_name,
       participants: act.activity_participants ?? [],
     },
     signature: signature
@@ -182,12 +187,10 @@ export async function GET(
         'Cache-Control': 'no-store',
       },
     });
-  } catch (err: any) {
-    console.error('[pdf/atividade] erro ao gerar PDF:', err?.message ?? err);
-    return new NextResponse(
-      `Erro ao gerar PDF: ${err?.message ?? 'erro desconhecido'}`,
-      { status: 500 },
-    );
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.error('Erro ao gerar PDF', { msg });
+    return new NextResponse(`Erro ao gerar PDF: ${msg}`, { status: 500 });
   } finally {
     await browser?.close();
   }

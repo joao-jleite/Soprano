@@ -358,9 +358,12 @@ export default async function DailyReportPage({
           </CardHeader>
           <CardContent className="px-5 pb-5">
             <div className="rounded-lg border border-border bg-background p-3 flex justify-center">
-              <div
+              {/* SVG via base64 — evita XSS por injeção de eventos no SVG */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(signature.svg_data)))}`}
+                alt="Assinatura digital"
                 className="max-w-xs"
-                dangerouslySetInnerHTML={{ __html: signature.svg_data }}
               />
             </div>
             <p className="text-xs text-muted-foreground mt-2">

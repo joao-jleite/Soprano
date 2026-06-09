@@ -29,11 +29,11 @@ export async function POST(
       .single();
 
     if (!profile) return NextResponse.json({ error: 'Perfil não encontrado' }, { status: 403 });
-    if ((profile as any).role !== 'cliente') {
+    if (profile.role !== 'cliente') {
       return NextResponse.json({ error: 'Apenas clientes podem assinar' }, { status: 403 });
     }
 
-    const { data: report } = await (supabase as any)
+    const { data: report } = await supabase
       .from('daily_reports')
       .select('client_id, status, supervisor_id, report_date')
       .eq('id', reportId)
@@ -49,7 +49,7 @@ export async function POST(
 
     const h = await headers();
     const ua = h.get('user-agent') ?? null;
-    const ip = h.get('x-real-ip') ?? h.get('x-forwarded-for')?.split(',').at(-1)?.trim() ?? null;
+    const ip = h.get('x-real-ip') ?? h.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
 
     // Usa service role para tudo (bypass RLS)
     const admin = createServiceClient();
@@ -58,18 +58,18 @@ export async function POST(
     }
 
     // Remove assinatura anterior via service role (evita unique constraint 23505)
-    await (admin as any)
+    await admin
       .from('daily_report_signatures')
       .delete()
       .eq('daily_report_id', reportId);
 
     // Insere nova assinatura do resumo
-    const { error: sigError } = await (admin as any)
+    const { error: sigError } = await admin
       .from('daily_report_signatures')
       .insert({
         daily_report_id: reportId,
         signer_id: user.id,
-        signer_name: (profile as any).full_name,
+        signer_name: profile.full_name,
         svg_data: svgData,
         ip_address: ip,
         user_agent: ua,
@@ -81,14 +81,14 @@ export async function POST(
 
     // Atualiza status do resumo
     const now = new Date().toISOString();
-    const { error: updError } = await (admin as any)
+    const { error: updError } = await admin
       .from('daily_reports')
       .update({ status: 'assinado', signed_at: now })
       .eq('id', reportId);
 
     if (updError) {
       // Fallback sem signed_at (coluna pode não existir)
-      const { error: updError2 } = await (admin as any)
+      const { error: updError2 } = await admin
         .from('daily_reports')
         .update({ status: 'assinado' })
         .eq('id', reportId);
@@ -108,9 +108,9 @@ export async function POST(
         if (supEmail) {
           await dailyReportSignedEmail({
             supervisorEmail: supEmail,
-            supervisorName: (supProfile.data as any)?.full_name ?? 'Supervisor',
+            supervisorName: supProfile.data?.full_name ?? 'Supervisor',
             reportDate: report.report_date,
-            clientName: (profile as any).full_name,
+            clientName: profile.full_name,
             reportUrl: `${origin}/resumo-diario/${reportId}`,
           });
         }

@@ -173,23 +173,25 @@ export function ChangePasswordDialog() {
               </div>
             )}
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={loading || password !== confirm || password.length < 8}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Salvando…
-                </>
-              ) : (
-                <>
-                  <KeyRound className="h-4 w-4" />
-                  Salvar nova senha
-                </>
-              )}
-            </Button>
+            <div className={!loading && (password !== confirm || password.length < 8) ? 'cursor-not-allowed' : ''}>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={loading || password !== confirm || password.length < 8}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Salvando…
+                  </>
+                ) : (
+                  <>
+                    <KeyRound className="h-4 w-4" />
+                    Salvar nova senha
+                  </>
+                )}
+              </Button>
+            </div>
           </form>
         )}
       </DialogContent>

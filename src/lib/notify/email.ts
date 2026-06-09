@@ -9,6 +9,10 @@
  *   3. Pronto — todas as chamadas abaixo passam a disparar email real
  */
 
+import { logger } from '@/lib/logger';
+
+const log = logger.for('email');
+
 export type EmailPayload = {
   to: string | string[];
   subject: string;
@@ -21,10 +25,7 @@ export async function sendEmail(payload: EmailPayload): Promise<{ ok: boolean; s
   const from = process.env.RESEND_FROM ?? 'Soprano <noreply@soprano.local>';
 
   if (!apiKey) {
-    // Dev / preview sem chave — só loga
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[email:skip]', payload.subject, '→', payload.to);
-    }
+    log.debug('Email ignorado (sem RESEND_API_KEY)', { subject: payload.subject });
     return { ok: true, skipped: true };
   }
 
@@ -46,13 +47,14 @@ export async function sendEmail(payload: EmailPayload): Promise<{ ok: boolean; s
 
     if (!res.ok) {
       const body = await res.text().catch(() => '');
-      console.error('[email:error]', res.status, body);
+      log.error('Erro ao enviar email', { status: res.status, body });
       return { ok: false, error: `${res.status} ${body}` };
     }
     return { ok: true };
-  } catch (e: any) {
-    console.error('[email:exception]', e?.message);
-    return { ok: false, error: e?.message };
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    log.error('Exceção ao enviar email', { msg });
+    return { ok: false, error: msg };
   }
 }
 

@@ -59,6 +59,16 @@ function fmtTime(iso: string) {
   } catch { return ''; }
 }
 
+/** Escapa texto do usuário antes de interpolar no HTML renderizado pelo Puppeteer. */
+function escapeHtml(s: unknown): string {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // Agrupa atividades por local (sort_order → name) e ordena
 function groupByLocation(activities: PdfReportActivity[]) {
   const sorted = [...activities].sort((a, b) => {
@@ -321,7 +331,7 @@ export function buildDailyReportHtml(opts: BuildDailyReportHtmlOptions): string 
 
   let globalNum = 0;
   const activityRows = groups.map(group => {
-    const locRow = `<tr class="loc-header"><td></td><td>📍 ${group.locName}</td></tr>`;
+    const locRow = `<tr class="loc-header"><td></td><td>📍 ${escapeHtml(group.locName)}</td></tr>`;
     const itemRows = group.items.map(a => {
       globalNum++;
       const teamStr = (a.participants ?? [])
@@ -333,7 +343,7 @@ export function buildDailyReportHtml(opts: BuildDailyReportHtmlOptions): string 
             ${(a.photos ?? []).slice(0, 4).map(ph =>
               `<div class="photo-item">
                 <img class="photo-img" src="${ph.url}" />
-                ${ph.caption ? `<div class="photo-caption">${ph.caption}</div>` : ''}
+                ${ph.caption ? `<div class="photo-caption">${escapeHtml(ph.caption)}</div>` : ''}
               </div>`
             ).join('')}
           </div>`
@@ -343,13 +353,13 @@ export function buildDailyReportHtml(opts: BuildDailyReportHtmlOptions): string 
         <tr>
           <td class="act-num">${globalNum}</td>
           <td>
-            <div class="act-desc">${a.description}</div>
+            <div class="act-desc">${escapeHtml(a.description)}</div>
             <div class="act-sub">
-              ${a.type_label ? `${a.type_label}` : ''}
+              ${a.type_label ? `${escapeHtml(a.type_label)}` : ''}
               ${a.started_at ? ` · ${fmtTime(a.started_at)}` : ''}
             </div>
-            ${teamStr ? `<div class="act-team">Equipe: ${teamStr}</div>` : ''}
-            ${a.notes ? `<div class="act-notes">${a.notes}</div>` : ''}
+            ${teamStr ? `<div class="act-team">Equipe: ${escapeHtml(teamStr)}</div>` : ''}
+            ${a.notes ? `<div class="act-notes">${escapeHtml(a.notes)}</div>` : ''}
             ${photosHtml}
           </td>
         </tr>`;
@@ -364,8 +374,8 @@ export function buildDailyReportHtml(opts: BuildDailyReportHtmlOptions): string 
         <div class="sig-verified-dot"></div>
         Documento assinado eletronicamente
       </div>
-      <div class="sig-name">${signature.signer_name}</div>
-      ${signature.svg_data ? `<div class="sig-drawing">${signature.svg_data}</div>` : ''}
+      <div class="sig-name">${escapeHtml(signature.signer_name)}</div>
+      ${signature.svg_data ? `<div class="sig-drawing"><img src="data:image/svg+xml;base64,${Buffer.from(signature.svg_data).toString('base64')}" /></div>` : ''}
       <div class="sig-meta">
         <span>Assinado em ${fmt(signature.signed_at)}</span>
         ${signature.ip_address ? `<span>IP: ${signature.ip_address}</span>` : ''}
@@ -433,11 +443,11 @@ export function buildDailyReportHtml(opts: BuildDailyReportHtmlOptions): string 
       <div class="meta-grid">
         <div class="meta-card">
           <div class="meta-label">Supervisor</div>
-          <div class="meta-value">${supervisorName ?? '—'}</div>
+          <div class="meta-value">${supervisorName ? escapeHtml(supervisorName) : '—'}</div>
         </div>
         <div class="meta-card">
           <div class="meta-label">Cliente</div>
-          <div class="meta-value">${clientName ?? '—'}</div>
+          <div class="meta-value">${clientName ? escapeHtml(clientName) : '—'}</div>
         </div>
         <div class="meta-card">
           <div class="meta-label">Total de atividades</div>
@@ -447,7 +457,7 @@ export function buildDailyReportHtml(opts: BuildDailyReportHtmlOptions): string 
 
       ${report.notes ? `
       <div class="section-title">Observações gerais do dia</div>
-      <div class="notes-box">${report.notes}</div>` : ''}
+      <div class="notes-box">${escapeHtml(report.notes)}</div>` : ''}
 
       <div class="section-title">Atividades realizadas</div>
       ${activities.length === 0

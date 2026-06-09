@@ -19,7 +19,7 @@ async function requireAuth() {
   } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
   const { data: me } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-  return { supabase, user, role: (me as any)?.role as 'admin' | 'supervisor' | 'cliente' | undefined };
+  return { supabase, user, role: me?.role };
 }
 
 export async function softDelete(arg: z.infer<typeof input>) {

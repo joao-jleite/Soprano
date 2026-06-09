@@ -309,6 +309,8 @@ export async function createActivityType(input: {
       .select('id, slug, label_pt, label_en, label_es')
       .single();
     if (error || !data) return { error: error?.message ?? 'Falha ao criar tipo' };
+    revalidatePath('/configuracoes');
+    revalidatePath('/atividades/nova');
     return data;
   } catch (e: unknown) {
     return { error: e instanceof Error ? e.message : 'Erro inesperado' };
