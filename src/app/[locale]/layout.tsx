@@ -29,7 +29,7 @@ export async function generateMetadata({
     manifest: '/manifest.webmanifest',
     icons: {
       icon: '/favicon.svg',
-      apple: '/icons/icon.svg',
+      apple: '/icons/apple-icon-180.png',
     },
     appleWebApp: {
       capable: true,
