@@ -18,7 +18,6 @@ export async function createClient() {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
               // CookieOptions (Partial<CookieSerializeOptions>) é compatível com Next.js
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               cookieStore.set(name, value, options as any),
             );
           } catch {

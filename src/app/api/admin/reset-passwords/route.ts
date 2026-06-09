@@ -29,6 +29,8 @@ export async function POST(request: Request) {
   }
 
   const admin = createServiceClient();
+  if (!admin) return NextResponse.json({ error: 'Service key não configurada' }, { status: 500 });
+
   const results: { email: string; ok: boolean; error?: string }[] = [];
 
   // Busca todos os usuários de uma vez

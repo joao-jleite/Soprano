@@ -77,7 +77,6 @@ export async function GET(
 
   if (!activity) return new NextResponse('Not found', { status: 404 });
   // activity tem joins (locations, activity_types, etc.) que Supabase não infere automaticamente
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const act = activity as any;
 
   // Supervisor e cliente separados (evita ambiguidade FK)
