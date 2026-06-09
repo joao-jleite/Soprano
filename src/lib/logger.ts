@@ -1,8 +1,8 @@
 /**
  * Logger estruturado para Soprano.
  *
- * Em produção, cada linha é JSON → indexável no Vercel Log Drain e no Sentry.
- * Em dev, formata de forma legível no terminal.
+ * Toda linha é JSON de uma linha → indexável no Vercel Log Drain.
+ * `debug` só é emitido fora de produção; os demais níveis sempre.
  */
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';

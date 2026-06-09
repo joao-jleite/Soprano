@@ -5,6 +5,8 @@ import { MonthlyReportPdf, type MonthlyActivity } from '@/lib/pdf/monthly-report
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+// react-pdf pode renderizar centenas/milhares de atividades — evita 504 no default de 10s
+export const maxDuration = 60;
 
 const MONTH_PT = [
   'Janeiro',
@@ -44,15 +46,18 @@ export async function GET(
     .from('profiles')
     .select('role')
     .eq('id', user.id)
-    .single();
-  const role = (profile as any)?.role;
+    .maybeSingle();
+  const role = profile?.role;
   if (role !== 'admin' && role !== 'supervisor') {
     return new NextResponse('Forbidden', { status: 403 });
   }
 
-  // Período: primeiro dia do mês até primeiro dia do mês seguinte
-  const start = new Date(Date.UTC(year, month - 1, 1));
-  const end = new Date(Date.UTC(year, month, 1));
+  // Período: 1º dia do mês até 1º dia do mês seguinte, em horário de São Paulo.
+  // SP é UTC-3 fixo (Brasil aboliu o horário de verão em 2019), então 00:00 BRT
+  // = 03:00 UTC. Sem este ajuste, atividades do fim do mês (ex: 30/06 23h BRT)
+  // cairiam no mês seguinte.
+  const start = new Date(Date.UTC(year, month - 1, 1, 3, 0, 0));
+  const end = new Date(Date.UTC(year, month, 1, 3, 0, 0));
 
   const { data, error } = await supabase
     .from('activities')
@@ -62,8 +67,7 @@ export async function GET(
       locations(name),
       activity_types(label_pt),
       supervisor:profiles!activities_supervisor_id_fkey(full_name),
-      client:profiles!activities_client_id_fkey(full_name),
-      signatures(signed_at)
+      client:profiles!activities_client_id_fkey(full_name)
       `,
     )
     .is('deleted_at', null)
@@ -74,6 +78,22 @@ export async function GET(
 
   if (error) return new NextResponse(`Erro: ${error.message}`, { status: 500 });
 
+  // Assinatura vem do resumo diário (a tabela `signatures` de atividade é legada).
+  const activityIds = (data ?? []).map((a: any) => a.id);
+  const signedAtMap: Record<string, string | null> = {};
+  if (activityIds.length > 0) {
+    const { data: draData } = await supabase
+      .from('daily_report_activities')
+      .select(`activity_id, daily_reports(status, signed_at)`)
+      .in('activity_id', activityIds);
+    for (const dra of (draData ?? []) as any[]) {
+      const report = dra.daily_reports;
+      if (report?.status === 'assinado') {
+        signedAtMap[dra.activity_id] = report.signed_at ?? null;
+      }
+    }
+  }
+
   const activities: MonthlyActivity[] = (data ?? []).map((a: any) => ({
     id: a.id,
     description: a.description,
@@ -83,7 +103,7 @@ export async function GET(
     type_label: a.activity_types?.label_pt,
     supervisor_name: a.supervisor?.full_name,
     client_name: a.client?.full_name,
-    signed_at: a.signatures?.[0]?.signed_at ?? null,
+    signed_at: signedAtMap[a.id] ?? null,
   }));
 
   const periodLabel = `${MONTH_PT[month - 1]} de ${year}`;

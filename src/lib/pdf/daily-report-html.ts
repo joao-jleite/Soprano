@@ -36,11 +36,14 @@ export type BuildDailyReportHtmlOptions = {
   generatedAt: string;
 };
 
+const TZ = 'America/Sao_Paulo'; // servidor Vercel roda em UTC
+
 function fmt(iso: string) {
   try {
     return new Date(iso).toLocaleString('pt-BR', {
       day: '2-digit', month: 'short', year: 'numeric',
       hour: '2-digit', minute: '2-digit',
+      timeZone: TZ,
     });
   } catch { return iso; }
 }
@@ -49,13 +52,14 @@ function fmtDate(iso: string) {
   try {
     return new Date(iso).toLocaleDateString('pt-BR', {
       weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
+      timeZone: TZ,
     });
   } catch { return iso; }
 }
 
 function fmtTime(iso: string) {
   try {
-    return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: TZ });
   } catch { return ''; }
 }
 

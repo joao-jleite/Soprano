@@ -8,6 +8,7 @@ import { activitySubmittedEmail } from '@/lib/notify/email';
 import { headers } from 'next/headers';
 import { requireAuthAndRole } from '@/guards/auth.guard';
 import { logger } from '@/lib/logger';
+import type { LocationKind } from '@/lib/supabase/database.types';
 
 const log = logger.for('activities');
 
@@ -44,21 +45,31 @@ const baseActivitySchema = z.object({
  * Schema de criação: aceita múltiplos tipos.
  * Cria uma atividade (rascunho) por tipo selecionado, compartilhando todos os outros campos.
  */
-const createActivitySchema = baseActivitySchema.extend({
-  activityTypeIds: z
-    .array(z.string().uuid())
-    .min(1, 'Selecione ao menos um tipo de atividade'),
-});
+const createActivitySchema = baseActivitySchema
+  .extend({
+    activityTypeIds: z
+      .array(z.string().uuid())
+      .min(1, 'Selecione ao menos um tipo de atividade'),
+  })
+  .refine((d) => !d.endedAt || new Date(d.endedAt) >= new Date(d.startedAt), {
+    message: 'A data de término não pode ser anterior ao início',
+    path: ['endedAt'],
+  });
 
 export type CreateActivityInput = z.infer<typeof createActivitySchema>;
 
 /**
  * Schema de atualização: mantém tipo único (editar uma atividade existente).
  */
-const updateActivitySchema = baseActivitySchema.extend({
-  id: z.string().uuid(),
-  activityTypeId: z.string().uuid(),
-});
+const updateActivitySchema = baseActivitySchema
+  .extend({
+    id: z.string().uuid(),
+    activityTypeId: z.string().uuid(),
+  })
+  .refine((d) => !d.endedAt || new Date(d.endedAt) >= new Date(d.startedAt), {
+    message: 'A data de término não pode ser anterior ao início',
+    path: ['endedAt'],
+  });
 
 export type UpdateActivityInput = z.infer<typeof updateActivitySchema>;
 
@@ -101,15 +112,21 @@ export async function createActivity(
       ),
     );
 
-    // Verifica erros individuais
-    for (const { error } of insertResults) {
-      if (error) {
-        log.error('Falha ao criar atividade', { error: error.message });
-        return { error: error.message };
+    // Coleta as criadas e, se alguma falhou, faz rollback compensatório das demais.
+    // Sem isto, uma falha parcial deixava rascunhos órfãos e o retry duplicava tudo.
+    const createdIds = insertResults
+      .map((r) => r.data?.id)
+      .filter((id): id is string => !!id);
+    const failed = insertResults.find((r) => r.error);
+    if (failed) {
+      if (createdIds.length) {
+        await supabase.from('activities').delete().in('id', createdIds);
       }
+      log.error('Falha ao criar atividade em lote', { error: failed.error!.message });
+      return { error: failed.error!.message };
     }
 
-    const ids = insertResults.map((r) => r.data!.id);
+    const ids = createdIds;
 
     // Insere participantes e fotos para cada atividade criada
     for (const activityId of ids) {
@@ -266,14 +283,14 @@ export async function submitActivityForSignature(activityId: string): Promise<{ 
 
 export async function createLocation(
   name: string,
-  kind: string,
+  kind: LocationKind,
 ): Promise<{ id: string; name: string; kind: string } | { error: string }> {
   try {
     const supabase = await createClient();
     const { user } = await requireAuthAndRole(supabase, 'admin', 'supervisor');
     const { data, error } = await supabase
       .from('locations')
-      .insert({ name, kind: kind as any, created_by: user.id, line: 'linha-6' })
+      .insert({ name, kind, created_by: user.id, line: 'linha-6' })
       .select('id, name, kind')
       .single();
     if (error || !data) return { error: error?.message ?? 'Falha ao criar local' };

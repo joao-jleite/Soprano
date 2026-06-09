@@ -1,6 +1,13 @@
 {
+  "regions": ["gru1"],
   "functions": {
     "src/app/api/atividades/[id]/pdf/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/resumo-diario/[id]/pdf/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/relatorios/mensal/[yyyymm]/route.ts": {
       "maxDuration": 60
     }
   }

@@ -147,11 +147,14 @@ export type MonthlyReportPdfProps = {
   periodLabel: string;
 };
 
+const TZ = 'America/Sao_Paulo'; // servidor Vercel roda em UTC
+
 function fmtDate(iso: string) {
   try {
     return new Date(iso).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
+      timeZone: TZ,
     });
   } catch {
     return iso;
@@ -160,7 +163,7 @@ function fmtDate(iso: string) {
 
 function fmtDateTime(iso: string) {
   try {
-    return new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    return new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: TZ });
   } catch {
     return iso;
   }

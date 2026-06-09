@@ -38,7 +38,7 @@ export async function middleware(request: NextRequest) {
   // Não autenticado tentando acessar área privada
   if (!isPublic && !user) {
     const url = request.nextUrl.clone();
-    url.pathname = '/pt/login';
+    url.pathname = `/${locale}/login`;
     url.searchParams.set('next', pathname);
     return redirectWithCookies(url, supaResponse);
   }
@@ -46,7 +46,7 @@ export async function middleware(request: NextRequest) {
   // Autenticado caindo em /login (mas /verify é acessível sempre)
   if (isPublic && user && pathWithoutLocale.startsWith('/login')) {
     const url = request.nextUrl.clone();
-    url.pathname = '/pt';
+    url.pathname = `/${locale}`;
     url.searchParams.delete('next');
     return redirectWithCookies(url, supaResponse);
   }
