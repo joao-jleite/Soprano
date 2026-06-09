@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none">
+  <!-- Maskable: fundo cobre todo o quadrado; logo dentro da safe zone (~66%) -->
+  <rect width="40" height="40" fill="#050710"/>
+  <g transform="translate(20 20) scale(0.66) translate(-20 -20)">
+    <path d="M27.5 12.5c-1.6-2.2-4.6-3.5-7.5-3.5-4.4 0-8 3-8 6.5 0 3.6 3 5.5 7 6.5 4 1 7 2.9 7 6.5 0 3.5-3.6 6.5-8 6.5-2.9 0-5.9-1.3-7.5-3.5" stroke="#0959C8" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="12.5" cy="32.5" r="1.25" fill="#2E8CFF"/>
+    <circle cx="27.5" cy="7.5" r="1.25" fill="#2E8CFF"/>
+  </g>
+</svg>

@@ -119,7 +119,8 @@
       "locationCreated": "Local criado: {name}",
       "typeCreated": "Tipo criado: {name}",
       "submittedForSignature": "Atividade enviada para assinatura",
-      "draftSaved": "Rascunho salvo"
+      "draftSaved": "Rascunho salvo",
+      "savedOffline": "Salvo offline — será sincronizado quando houver internet"
     },
     "errors": {
       "createLocation": "Erro ao criar local",
@@ -189,11 +190,20 @@
     "upload": "Enviar foto",
     "uploading": "Enviando...",
     "remove": "Remover",
+    "captionPlaceholder": "Legenda (opcional)",
     "capturedAt": "Tirada em",
     "view": "Visualizar foto",
     "previous": "Anterior",
     "next": "Próxima",
     "close": "Fechar"
+  },
+  "offline": {
+    "banner": "Sem conexão — as atividades ficam salvas no aparelho e sobem sozinhas depois",
+    "syncing": "Sincronizando…",
+    "pending": "{count} para enviar",
+    "error": "Falha ao enviar — toque para tentar de novo",
+    "retry": "Tentar enviar agora",
+    "allSynced": "Tudo sincronizado"
   },
   "participants": {
     "name": "Nome",

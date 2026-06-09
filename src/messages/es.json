@@ -119,7 +119,8 @@
       "locationCreated": "Ubicación creada: {name}",
       "typeCreated": "Tipo creado: {name}",
       "submittedForSignature": "Actividad enviada a firma",
-      "draftSaved": "Borrador guardado"
+      "draftSaved": "Borrador guardado",
+      "savedOffline": "Guardado sin conexión — se sincronizará al recuperar internet"
     },
     "errors": {
       "createLocation": "Error al crear la ubicación",
@@ -189,11 +190,20 @@
     "upload": "Subir foto",
     "uploading": "Subiendo...",
     "remove": "Quitar",
+    "captionPlaceholder": "Leyenda (opcional)",
     "capturedAt": "Tomada el",
     "view": "Ver foto",
     "previous": "Anterior",
     "next": "Siguiente",
     "close": "Cerrar"
+  },
+  "offline": {
+    "banner": "Sin conexión — las actividades se guardan en el dispositivo y se suben solas después",
+    "syncing": "Sincronizando…",
+    "pending": "{count} para subir",
+    "error": "Error al subir — toca para reintentar",
+    "retry": "Subir ahora",
+    "allSynced": "Todo sincronizado"
   },
   "participants": {
     "name": "Nombre",

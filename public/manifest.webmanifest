@@ -1,0 +1,28 @@
+{
+  "name": "Soprano — Registro de Atividades",
+  "short_name": "Soprano",
+  "description": "Registro de atividades de obra da Zitrón Brasil — Linha 6 do Metrô SP. Funciona offline.",
+  "id": "/",
+  "start_url": "/pt",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#050710",
+  "theme_color": "#050710",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

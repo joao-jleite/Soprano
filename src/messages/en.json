@@ -119,7 +119,8 @@
       "locationCreated": "Location created: {name}",
       "typeCreated": "Type created: {name}",
       "submittedForSignature": "Activity submitted for signature",
-      "draftSaved": "Draft saved"
+      "draftSaved": "Draft saved",
+      "savedOffline": "Saved offline — will sync when back online"
     },
     "errors": {
       "createLocation": "Failed to create location",
@@ -189,11 +190,20 @@
     "upload": "Upload photo",
     "uploading": "Uploading...",
     "remove": "Remove",
+    "captionPlaceholder": "Caption (optional)",
     "capturedAt": "Taken",
     "view": "View photo",
     "previous": "Previous",
     "next": "Next",
     "close": "Close"
+  },
+  "offline": {
+    "banner": "No connection — activities are saved on the device and upload automatically later",
+    "syncing": "Syncing…",
+    "pending": "{count} to upload",
+    "error": "Upload failed — tap to retry",
+    "retry": "Upload now",
+    "allSynced": "All synced"
   },
   "participants": {
     "name": "Name",

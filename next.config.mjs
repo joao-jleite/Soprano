@@ -1,6 +1,17 @@
 import createNextIntlPlugin from 'next-intl/plugin';
+import withSerwistInit from '@serwist/next';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
+
+// PWA / service worker — compila src/app/sw.ts → public/sw.js.
+// Desativado em dev para não interferir no hot-reload do Next.
+const withSerwist = withSerwistInit({
+  swSrc: 'src/app/sw.ts',
+  swDest: 'public/sw.js',
+  disable: process.env.NODE_ENV === 'development',
+  // Garante que navegações offline caiam no app shell em vez de erro de rede.
+  cacheOnNavigation: true,
+});
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -83,4 +94,4 @@ const nextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+export default withSerwist(withNextIntl(nextConfig));

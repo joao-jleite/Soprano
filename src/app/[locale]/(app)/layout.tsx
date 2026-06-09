@@ -6,6 +6,8 @@ import { Topbar } from '@/components/layout/topbar';
 import { MobileNav } from '@/components/layout/mobile-nav';
 import { PageTransition } from '@/components/layout/page-transition';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
+import { SyncEngine } from '@/components/offline/sync-engine';
+import { OfflineIndicator } from '@/components/offline/offline-indicator';
 
 // Seed: emails que viram admin automaticamente se não tiverem profile.
 // Configurado via SEED_ADMIN_EMAILS no ambiente (vírgula-separado).
@@ -122,6 +124,8 @@ export default async function AppLayout({
 
   return (
     <div className="flex min-h-screen overflow-x-hidden">
+      <SyncEngine />
+      <OfflineIndicator />
       <Sidebar role={profile.role} />
       <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
         <Topbar fullName={profile.full_name} role={profile.role} />

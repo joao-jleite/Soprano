@@ -21,6 +21,7 @@ import { ExpandableSelect, type Option } from '@/components/activity/expandable-
 import { MultiExpandableSelect } from '@/components/activity/multi-expandable-select';
 import { ParticipantsEditor, type Participant } from '@/components/activity/participants-editor';
 import { PhotoUpload, type UploadedPhoto } from '@/components/activity/photo-upload';
+import { PhotoCapture, type CapturedPhoto } from '@/components/activity/photo-capture';
 import {
   createActivity,
   createActivityType,
@@ -28,6 +29,9 @@ import {
   updateActivity,
 } from '@/app/actions/activities';
 import { formatDate } from '@/lib/utils';
+import { useOnline } from '@/lib/offline/use-online';
+import { uploadPhotoBlob } from '@/lib/offline/photo-storage';
+import { enqueueActivity, type NewActivityInput } from '@/lib/offline/queue';
 
 export type InitialActivity = {
   id: string;
@@ -124,10 +128,13 @@ export function NewActivityForm({
   const [participants, setParticipants] = React.useState<Participant[]>(
     (initial?.participants ?? []) as any,
   );
+  // Modo edit: fotos já no Storage (PhotoUpload). Modo create: blobs locais (PhotoCapture).
   const [photos, setPhotos] = React.useState<UploadedPhoto[]>(
     (initial?.photos ?? []).map((p) => ({ storagePath: p.storagePath, url: p.url ?? '' })),
   );
+  const [captured, setCaptured] = React.useState<CapturedPhoto[]>([]);
 
+  const online = useOnline();
   const [saving, setSaving] = React.useState(false);
 
   // ── Handlers de criação inline ───────────────────────────────────────────
@@ -158,38 +165,83 @@ export function NewActivityForm({
 
   // ── Salvar ───────────────────────────────────────────────────────────────
 
+  /** Campos comuns (sem fotos), compartilhados por edit/create/offline. */
+  function buildBase() {
+    return {
+      locationId: locationId!,
+      clientId,
+      description,
+      notes: notes || undefined,
+      evolucao: evolucao || undefined,
+      pendencias: pendencias || undefined,
+      continuationOf: continuationOf || undefined,
+      startedAt: new Date(startedAt + 'T12:00:00').toISOString(),
+      endedAt: endedAt ? new Date(endedAt + 'T12:00:00').toISOString() : null,
+      participants,
+    };
+  }
+
+  /** Enfileira a atividade + fotos no banco local para sync posterior. */
+  async function saveOffline() {
+    const payload: NewActivityInput = { ...buildBase(), activityTypeIds: typeIds };
+    await enqueueActivity(
+      payload,
+      captured.map((p) => ({
+        blob: p.blob,
+        fileType: p.fileType,
+        caption: p.caption || undefined,
+        lat: p.lat,
+        lng: p.lng,
+      })),
+    );
+    toast.success(t('toasts.savedOffline'));
+    router.push('/atividades');
+  }
+
   async function handleSave() {
     if (!locationId || typeIds.length === 0 || !description.trim()) return;
     setSaving(true);
 
     try {
-      const base = {
-        locationId,
-        clientId,
-        description,
-        notes: notes || undefined,
-        evolucao: evolucao || undefined,
-        pendencias: pendencias || undefined,
-        continuationOf: continuationOf || undefined,
-        startedAt: new Date(startedAt + 'T12:00:00').toISOString(),
-        endedAt: endedAt ? new Date(endedAt + 'T12:00:00').toISOString() : null,
-        participants,
-        photos: photos.map((p) => ({ storagePath: p.storagePath })),
-      };
-
+      // ── Modo edição (online apenas) ──
       if (mode === 'edit' && initial) {
-        // Edição — tipo único
         const result = await updateActivity({
-          ...base,
+          ...buildBase(),
+          photos: photos.map((p) => ({ storagePath: p.storagePath })),
           id: initial.id,
           activityTypeId: typeIds[0],
         });
         if (result.error) { toast.error(result.error); return; }
         toast.success(t('toasts.draftSaved'));
         router.push(`/atividades/${result.id!}`);
-      } else {
-        // Criação — múltiplos tipos
-        const result = await createActivity({ ...base, activityTypeIds: typeIds });
+        return;
+      }
+
+      // ── Modo criação ──
+      // Sem rede: grava local e sincroniza depois.
+      if (!online) {
+        await saveOffline();
+        return;
+      }
+
+      // Com rede: sobe as fotos e cria via Server Action. Se a rede cair no
+      // meio (upload/action lançam), cai no enfileiramento offline.
+      try {
+        const folder = `draft/${draftIdRef.current}`;
+        const uploadedPhotos = await Promise.all(
+          captured.map(async (p) => ({
+            storagePath: await uploadPhotoBlob(p.blob, p.fileType, folder),
+            caption: p.caption || undefined,
+            lat: p.lat,
+            lng: p.lng,
+          })),
+        );
+
+        const result = await createActivity({
+          ...buildBase(),
+          photos: uploadedPhotos,
+          activityTypeIds: typeIds,
+        });
         if (result.error) { toast.error(result.error); return; }
 
         const ids = result.ids!;
@@ -197,11 +249,12 @@ export function NewActivityForm({
           toast.success(t('toasts.draftSaved'));
           router.push(`/atividades/${ids[0]}`);
         } else {
-          toast.success(
-            `${ids.length} atividades criadas como rascunho.`,
-          );
+          toast.success(`${ids.length} atividades criadas como rascunho.`);
           router.push('/atividades');
         }
+      } catch {
+        // Falha de rede no meio do envio online → guarda offline.
+        await saveOffline();
       }
     } catch (e: any) {
       toast.error(e?.message ?? t('errors.saveActivity'));
@@ -319,7 +372,11 @@ export function NewActivityForm({
           <CardTitle className="text-base">{t('fields.photos')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <PhotoUpload value={photos} onChange={setPhotos} draftId={draftIdRef.current} />
+          {mode === 'edit' ? (
+            <PhotoUpload value={photos} onChange={setPhotos} draftId={draftIdRef.current} />
+          ) : (
+            <PhotoCapture value={captured} onChange={setCaptured} />
+          )}
         </CardContent>
       </Card>
 

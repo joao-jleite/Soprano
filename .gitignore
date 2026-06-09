@@ -24,6 +24,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# PWA — artefatos gerados pelo Serwist no build
+public/sw.js
+public/sw.js.map
+public/swe-worker-*.js
+
 # supabase
 supabase/.branches
 supabase/.temp
