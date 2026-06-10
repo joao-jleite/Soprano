@@ -131,3 +131,10 @@ export async function retryAllNow(): Promise<void> {
   notify();
   await syncPending();
 }
+
+/** Reenvio manual de UM item específico (botão na tela de pendentes). */
+export async function retryItem(localId: string): Promise<void> {
+  await patchActivity(localId, { status: 'pending', attempts: 0, error: undefined });
+  notify();
+  await syncPending();
+}

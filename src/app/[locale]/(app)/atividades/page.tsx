@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { ActivityFilters } from './filters';
 import { ActivityDeleteButton } from '@/components/activity/activity-actions';
+import { PendingLink } from './pending-link';
 import { formatDate } from '@/lib/utils';
 
 type SearchParams = Promise<{
@@ -100,12 +101,15 @@ export default async function ActivitiesPage({
             {activities?.length ?? 0} {t('activities.title').toLowerCase()}
           </p>
         </div>
-        <Button asChild>
-          <Link href="/atividades/nova">
-            <Plus />
-            {t('activities.newActivity')}
-          </Link>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {role !== 'cliente' && <PendingLink />}
+          <Button asChild>
+            <Link href="/atividades/nova">
+              <Plus />
+              {t('activities.newActivity')}
+            </Link>
+          </Button>
+        </div>
       </header>
 
       <ActivityFilters locations={locations ?? []} types={types ?? []} localeKey={localeKey} />

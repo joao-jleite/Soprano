@@ -189,6 +189,11 @@ export function NewActivityForm({
       // Mesma chave do caminho online (draftId): se o envio começou online e
       // caiu aqui, o servidor dedupe pelo clientKey e não cria atividade dobrada.
       clientKey: draftIdRef.current,
+      // Rótulos só para a tela "Pendentes" ficar legível offline (não vão ao servidor).
+      locationLabel: locationOptions.find((o) => o.value === locationId)?.label,
+      typeLabels: typeIds
+        .map((id) => typeOptions.find((o) => o.value === id)?.label)
+        .filter((l): l is string => !!l),
     };
     await enqueueActivity(
       payload,

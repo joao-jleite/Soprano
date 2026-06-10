@@ -43,6 +43,14 @@ export interface PendingActivity {
   /** Cada tipo vira uma atividade (rascunho) no servidor, como no create online. */
   activityTypeIds: string[];
 
+  // ── rótulos só para exibição na tela "Pendentes" (não vão ao servidor) ──
+  /** Nome do local escolhido, capturado no save para a lista ficar legível. */
+  locationLabel?: string;
+  /** Rótulos dos tipos selecionados. */
+  typeLabels?: string[];
+  /** Quantas fotos acompanham a atividade (preenchido no enqueue). */
+  photoCount?: number;
+
   // ── metadados de sincronização ──
   status: SyncStatus;
   /** Última mensagem de erro do sync, se houver. */

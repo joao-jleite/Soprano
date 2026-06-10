@@ -1,11 +1,10 @@
 'use client';
 
-import * as React from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { AlertTriangle, CloudOff, Loader2, RefreshCw, Clock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { listUnsynced, removeActivity } from '@/lib/offline/queue';
-import { retryAllNow } from '@/lib/offline/sync';
+import { Link } from '@/i18n/navigation';
+import { listUnsynced } from '@/lib/offline/queue';
 import { useOnline } from '@/lib/offline/use-online';
 import { cn } from '@/lib/utils';
 
@@ -13,7 +12,8 @@ import { cn } from '@/lib/utils';
  * Indicadores de estado offline/sync (estilo WhatsApp):
  *  - banner fixo no topo quando sem conexão;
  *  - pílula no rodapé com a fila: 🕓 pendentes, spinner sincronizando ou
- *    ⚠️ erro (toque para reenviar). Some quando online e sem pendências.
+ *    ⚠️ erro. Toque abre a tela "Aguardando envio" (ver/reenviar/descartar).
+ *  Some quando online e sem pendências.
  */
 export function OfflineIndicator() {
   const t = useTranslations('offline');
@@ -23,16 +23,7 @@ export function OfflineIndicator() {
   const items = useLiveQuery(() => listUnsynced(), [], undefined);
   const count = items?.length ?? 0;
   const syncing = !!items?.some((i) => i.status === 'syncing');
-  const errorItem = items?.find((i) => i.status === 'error');
-  const hasError = !!errorItem;
-
-  // Descarta os itens travados em erro (ex.: payload inválido que nunca sobe).
-  async function discardErrored() {
-    const all = await listUnsynced();
-    await Promise.all(
-      all.filter((i) => i.status === 'error').map((i) => removeActivity(i.localId)),
-    );
-  }
+  const hasError = !!items?.some((i) => i.status === 'error');
 
   return (
     <>
@@ -44,58 +35,40 @@ export function OfflineIndicator() {
       )}
 
       {count > 0 && (
-        <div className="fixed bottom-24 right-4 z-50 flex max-w-[80vw] flex-col items-end gap-1.5 lg:bottom-6">
-          {/* Mostra o motivo real da falha para diagnóstico em campo. */}
-          {hasError && errorItem?.error && (
-            <div className="flex max-w-xs flex-col items-end gap-1 rounded-md bg-destructive/10 px-2.5 py-1.5 shadow-sm">
-              <p className="text-right text-[11px] leading-snug text-destructive">
-                {errorItem.error}
-              </p>
-              <button
-                type="button"
-                onClick={() => void discardErrored()}
-                className="text-[11px] font-medium text-destructive underline underline-offset-2"
-              >
-                Descartar
-              </button>
-            </div>
+        <Link
+          href="/atividades/pendentes"
+          className={cn(
+            'fixed bottom-24 right-4 z-50 lg:bottom-6',
+            'inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-medium shadow-lg',
+            'transition-colors',
+            hasError
+              ? 'bg-destructive text-destructive-foreground'
+              : 'bg-foreground text-background',
           )}
-          <button
-            type="button"
-            onClick={() => void retryAllNow()}
-            disabled={syncing || !online}
-            className={cn(
-              'inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-medium shadow-lg',
-              'transition-colors disabled:cursor-default',
-              hasError
-                ? 'bg-destructive text-destructive-foreground'
-                : 'bg-foreground text-background',
-            )}
-            aria-live="polite"
-          >
-            {syncing ? (
-              <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                {t('syncing')}
-              </>
-            ) : hasError ? (
-              <>
-                <AlertTriangle className="h-3.5 w-3.5" />
-                {t('error')}
-              </>
-            ) : online ? (
-              <>
-                <RefreshCw className="h-3.5 w-3.5" />
-                {t('pending', { count })}
-              </>
-            ) : (
-              <>
-                <Clock className="h-3.5 w-3.5" />
-                {t('pending', { count })}
-              </>
-            )}
-          </button>
-        </div>
+          aria-live="polite"
+        >
+          {syncing ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              {t('syncing')}
+            </>
+          ) : hasError ? (
+            <>
+              <AlertTriangle className="h-3.5 w-3.5" />
+              {t('error')}
+            </>
+          ) : online ? (
+            <>
+              <RefreshCw className="h-3.5 w-3.5" />
+              {t('pending', { count })}
+            </>
+          ) : (
+            <>
+              <Clock className="h-3.5 w-3.5" />
+              {t('pending', { count })}
+            </>
+          )}
+        </Link>
       )}
     </>
   );

@@ -41,6 +41,8 @@ export async function enqueueActivity(
     localId,
     status: 'pending',
     attempts: 0,
+    // Contagem de fotos para a tela "Pendentes" — sempre derivada do que entra.
+    photoCount: photos.length,
     createdAt: now,
     updatedAt: now,
   };
