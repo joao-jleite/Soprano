@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 
-const PUBLIC_ROUTES = ['/login', '/verify', '/nova-senha', '/esqueci-senha'];
+// '/~offline' é o fallback de navegação do service worker — precisa responder
+// 200 sem sessão, senão o SW guarda a tela de login como página offline.
+const PUBLIC_ROUTES = ['/login', '/verify', '/nova-senha', '/esqueci-senha', '/~offline'];
 
 // Propaga cookies do supaResponse (refresh tokens etc) para qualquer redirect
 // que a gente faça no middleware — senão a sessão é perdida e vira loop.
