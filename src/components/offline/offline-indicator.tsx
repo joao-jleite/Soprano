@@ -23,7 +23,8 @@ export function OfflineIndicator() {
   const items = useLiveQuery(() => listUnsynced(), [], undefined);
   const count = items?.length ?? 0;
   const syncing = !!items?.some((i) => i.status === 'syncing');
-  const hasError = !!items?.some((i) => i.status === 'error');
+  const errorItem = items?.find((i) => i.status === 'error');
+  const hasError = !!errorItem;
 
   return (
     <>
@@ -35,42 +36,49 @@ export function OfflineIndicator() {
       )}
 
       {count > 0 && (
-        <button
-          type="button"
-          onClick={() => void retryAllNow()}
-          disabled={syncing || !online}
-          className={cn(
-            'fixed bottom-24 right-4 z-50 lg:bottom-6',
-            'inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-medium shadow-lg',
-            'transition-colors disabled:cursor-default',
-            hasError
-              ? 'bg-destructive text-destructive-foreground'
-              : 'bg-foreground text-background',
+        <div className="fixed bottom-24 right-4 z-50 flex max-w-[80vw] flex-col items-end gap-1.5 lg:bottom-6">
+          {/* Mostra o motivo real da falha para diagnóstico em campo. */}
+          {hasError && errorItem?.error && (
+            <p className="max-w-xs rounded-md bg-destructive/10 px-2.5 py-1.5 text-right text-[11px] leading-snug text-destructive shadow-sm">
+              {errorItem.error}
+            </p>
           )}
-          aria-live="polite"
-        >
-          {syncing ? (
-            <>
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              {t('syncing')}
-            </>
-          ) : hasError ? (
-            <>
-              <AlertTriangle className="h-3.5 w-3.5" />
-              {t('error')}
-            </>
-          ) : online ? (
-            <>
-              <RefreshCw className="h-3.5 w-3.5" />
-              {t('pending', { count })}
-            </>
-          ) : (
-            <>
-              <Clock className="h-3.5 w-3.5" />
-              {t('pending', { count })}
-            </>
-          )}
-        </button>
+          <button
+            type="button"
+            onClick={() => void retryAllNow()}
+            disabled={syncing || !online}
+            className={cn(
+              'inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-medium shadow-lg',
+              'transition-colors disabled:cursor-default',
+              hasError
+                ? 'bg-destructive text-destructive-foreground'
+                : 'bg-foreground text-background',
+            )}
+            aria-live="polite"
+          >
+            {syncing ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                {t('syncing')}
+              </>
+            ) : hasError ? (
+              <>
+                <AlertTriangle className="h-3.5 w-3.5" />
+                {t('error')}
+              </>
+            ) : online ? (
+              <>
+                <RefreshCw className="h-3.5 w-3.5" />
+                {t('pending', { count })}
+              </>
+            ) : (
+              <>
+                <Clock className="h-3.5 w-3.5" />
+                {t('pending', { count })}
+              </>
+            )}
+          </button>
+        </div>
       )}
     </>
   );
