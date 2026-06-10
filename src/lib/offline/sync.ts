@@ -23,6 +23,9 @@ import {
 } from './queue';
 import type { PendingActivity } from './db';
 
+/** Máximo de tentativas automáticas antes de o item exigir retry manual. */
+export const MAX_SYNC_ATTEMPTS = 5;
+
 type Listener = () => void;
 const listeners = new Set<Listener>();
 let running = false;
@@ -67,6 +70,8 @@ async function syncOne(activity: PendingActivity): Promise<void> {
     participants: activity.participants,
     photos: photoPayload,
     activityTypeIds: activity.activityTypeIds,
+    // Idempotência: o servidor dedupe pelo clientKey, então re-tentar é seguro.
+    clientKey: activity.clientKey,
   });
 
   if (result.error) throw new Error(result.error);
@@ -89,6 +94,10 @@ export async function syncPending(): Promise<void> {
     const items = await listUnsynced();
     for (const item of items) {
       if (typeof navigator !== 'undefined' && !navigator.onLine) break;
+      // Item esgotou as tentativas automáticas → espera retry manual do usuário.
+      // Sem isto, um item com erro permanente re-tentaria a cada evento online /
+      // foco de aba, gastando banda e bateria em campo.
+      if (item.attempts >= MAX_SYNC_ATTEMPTS) continue;
       try {
         await syncOne(item);
       } catch (e) {
@@ -105,4 +114,20 @@ export async function syncPending(): Promise<void> {
     running = false;
     notify();
   }
+}
+
+/**
+ * Retry manual disparado pelo usuário (toque na pílula de erro). Zera o contador
+ * de tentativas dos itens em erro — inclusive os que esgotaram o limite — e roda
+ * o sync de novo, dando a eles um orçamento novo de tentativas.
+ */
+export async function retryAllNow(): Promise<void> {
+  const items = await listUnsynced();
+  await Promise.all(
+    items
+      .filter((i) => i.status === 'error')
+      .map((i) => patchActivity(i.localId, { status: 'pending', attempts: 0, error: undefined })),
+  );
+  notify();
+  await syncPending();
 }

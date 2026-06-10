@@ -183,7 +183,13 @@ export function NewActivityForm({
 
   /** Enfileira a atividade + fotos no banco local para sync posterior. */
   async function saveOffline() {
-    const payload: NewActivityInput = { ...buildBase(), activityTypeIds: typeIds };
+    const payload: NewActivityInput = {
+      ...buildBase(),
+      activityTypeIds: typeIds,
+      // Mesma chave do caminho online (draftId): se o envio começou online e
+      // caiu aqui, o servidor dedupe pelo clientKey e não cria atividade dobrada.
+      clientKey: draftIdRef.current,
+    };
     await enqueueActivity(
       payload,
       captured.map((p) => ({
@@ -241,6 +247,7 @@ export function NewActivityForm({
           ...buildBase(),
           photos: uploadedPhotos,
           activityTypeIds: typeIds,
+          clientKey: draftIdRef.current,
         });
         if (result.error) { toast.error(result.error); return; }
 

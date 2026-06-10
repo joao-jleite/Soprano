@@ -27,29 +27,27 @@ export function SignActivityPanel({ activityId, signerName }: Props) {
 
   async function onConfirm(svg: string) {
     setSigning(true);
-    try {
-      await signActivity({ activityId, svgData: svg });
-      toast.success('Atividade assinada com sucesso ✓');
-      router.refresh();
-    } catch (e: any) {
-      toast.error(e?.message ?? 'Erro ao assinar');
-    } finally {
-      setSigning(false);
+    const result = await signActivity({ activityId, svgData: svg });
+    setSigning(false);
+    if (result.error) {
+      toast.error(result.error);
+      return;
     }
+    toast.success('Atividade assinada com sucesso ✓');
+    router.refresh();
   }
 
   async function onReject() {
     if (!reason.trim()) return;
     setRejecting(true);
-    try {
-      await rejectActivity({ activityId, reason, svgData: '<svg/>' });
-      toast.success('Atividade recusada');
-      router.refresh();
-    } catch (e: any) {
-      toast.error(e?.message ?? 'Erro ao recusar');
-    } finally {
-      setRejecting(false);
+    const result = await rejectActivity({ activityId, reason, svgData: '<svg/>' });
+    setRejecting(false);
+    if (result.error) {
+      toast.error(result.error);
+      return;
     }
+    toast.success('Atividade recusada');
+    router.refresh();
   }
 
   return (

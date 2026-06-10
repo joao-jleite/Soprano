@@ -11,7 +11,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
-  const next = searchParams.get('next') ?? '/pt/nova-senha';
+  // Só aceita caminho interno: começa com '/' mas não com '//' (que seria
+  // protocol-relative → redirect externo). Bloqueia open redirect via ?next=.
+  const rawNext = searchParams.get('next') ?? '/pt/nova-senha';
+  const next =
+    rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/pt/nova-senha';
   const error = searchParams.get('error');
   const errorDescription = searchParams.get('error_description');
 
@@ -28,11 +32,8 @@ export async function GET(request: NextRequest) {
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!exchangeError) {
-      // Redireciona para onde o link mandou (default: /pt/nova-senha)
-      const redirectUrl = next.startsWith('/')
-        ? `${origin}${next}`
-        : next;
-      return NextResponse.redirect(redirectUrl);
+      // `next` já foi validado como caminho interno acima.
+      return NextResponse.redirect(`${origin}${next}`);
     }
   }
 

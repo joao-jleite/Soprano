@@ -5,7 +5,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { AlertTriangle, CloudOff, Loader2, RefreshCw, Clock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { listUnsynced } from '@/lib/offline/queue';
-import { syncPending } from '@/lib/offline/sync';
+import { retryAllNow } from '@/lib/offline/sync';
 import { useOnline } from '@/lib/offline/use-online';
 import { cn } from '@/lib/utils';
 
@@ -37,7 +37,7 @@ export function OfflineIndicator() {
       {count > 0 && (
         <button
           type="button"
-          onClick={() => void syncPending()}
+          onClick={() => void retryAllNow()}
           disabled={syncing || !online}
           className={cn(
             'fixed bottom-24 right-4 z-50 lg:bottom-6',

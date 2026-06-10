@@ -19,8 +19,15 @@ export interface PendingParticipant {
 
 /** Uma atividade registrada offline, aguardando sync. */
 export interface PendingActivity {
-  /** UUID gerado no cliente — chave primária e idempotência do retry. */
+  /** UUID gerado no cliente — chave primária local (IndexedDB). */
   localId: string;
+  /**
+   * Chave de idempotência estável da submissão (o draftId do formulário).
+   * Vai ao servidor no sync para impedir duplicatas — é a MESMA usada se o
+   * envio começou online e caiu para a fila, garantindo dedupe entre os dois
+   * caminhos. Distinta de `localId` (que é só a PK local).
+   */
+  clientKey: string;
 
   // ── payload espelhando CreateActivityInput (fotos à parte) ──
   locationId: string;

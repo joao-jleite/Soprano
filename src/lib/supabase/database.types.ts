@@ -72,6 +72,7 @@ type ActivityRow = {
   started_at: string;
   ended_at: string | null;
   submitted_at: string | null;
+  client_key: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -237,6 +238,7 @@ export interface Database {
           started_at: string;
           ended_at?: string | null;
           submitted_at?: string | null;
+          client_key?: string | null;
           deleted_at?: string | null;
         };
         Update: Partial<Omit<ActivityRow, 'id'>>;

@@ -50,6 +50,12 @@ const createActivitySchema = baseActivitySchema
     activityTypeIds: z
       .array(z.string().uuid())
       .min(1, 'Selecione ao menos um tipo de atividade'),
+    /**
+     * Chave de idempotência gerada no dispositivo (estável por submissão).
+     * Combinada com cada tipo vira a `client_key` única da atividade, evitando
+     * duplicatas quando o create é re-tentado (resposta perdida / fila offline).
+     */
+    clientKey: z.string().min(1).optional(),
   })
   .refine((d) => !d.endedAt || new Date(d.endedAt) >= new Date(d.startedAt), {
     message: 'A data de término não pode ser anterior ao início',
@@ -79,6 +85,12 @@ export type UpdateActivityInput = z.infer<typeof updateActivitySchema>;
  * Cria uma atividade (rascunho) por tipo selecionado.
  * Todos os outros campos (local, data, descrição, participantes, fotos) são compartilhados.
  * Retorna `ids` — lista de IDs criados, na mesma ordem dos tipos.
+ *
+ * Idempotente: cada atividade recebe uma `client_key` = `${clientKey}:${typeId}`.
+ * Se a chamada for re-tentada (resposta perdida ou sync da fila offline), as
+ * atividades já existentes são reaproveitadas em vez de duplicadas. Cada
+ * atividade só é confirmada com seus participantes e fotos — se algo falhar no
+ * meio, ela é desfeita (rollback compensatório), nunca ficando pela metade.
  */
 export async function createActivity(
   input: CreateActivityInput,
@@ -88,69 +100,113 @@ export async function createActivity(
     const supabase = await createClient();
     const { user } = await requireAuthAndRole(supabase, 'admin', 'supervisor');
 
-    // Cria uma atividade por tipo em paralelo
-    const insertResults = await Promise.all(
-      parsed.activityTypeIds.map((typeId) =>
-        supabase
-          .from('activities')
-          .insert({
-            location_id: parsed.locationId,
-            activity_type_id: typeId,
-            client_id: parsed.clientId ?? null,
-            supervisor_id: user.id,
-            description: parsed.description,
-            notes: parsed.notes ?? null,
-            evolucao: parsed.evolucao ?? null,
-            pendencias: parsed.pendencias ?? null,
-            continuation_of: parsed.continuationOf ?? null,
-            started_at: parsed.startedAt,
-            ended_at: parsed.endedAt ?? null,
-            status: 'rascunho',
-          })
-          .select('id')
-          .single(),
-      ),
-    );
+    // Base estável da chave de idempotência. Sem clientKey (chamada legada),
+    // gera uma aleatória — não duplica, mas também não deduplica entre chamadas.
+    const baseKey = parsed.clientKey ?? crypto.randomUUID();
+    const typeKeys = parsed.activityTypeIds.map((typeId) => ({
+      typeId,
+      key: `${baseKey}:${typeId}`,
+    }));
 
-    // Coleta as criadas e, se alguma falhou, faz rollback compensatório das demais.
-    // Sem isto, uma falha parcial deixava rascunhos órfãos e o retry duplicava tudo.
-    const createdIds = insertResults
-      .map((r) => r.data?.id)
-      .filter((id): id is string => !!id);
-    const failed = insertResults.find((r) => r.error);
-    if (failed) {
-      if (createdIds.length) {
-        await supabase.from('activities').delete().in('id', createdIds);
-      }
-      log.error('Falha ao criar atividade em lote', { error: failed.error!.message });
-      return { error: failed.error!.message };
+    // Idempotência: atividades já criadas para estas chaves num retry anterior.
+    const { data: existingRows, error: existErr } = await supabase
+      .from('activities')
+      .select('id, client_key')
+      .in('client_key', typeKeys.map((t) => t.key));
+
+    if (existErr) {
+      log.error('Falha ao verificar idempotência', { error: existErr.message });
+      return { error: existErr.message };
     }
 
-    const ids = createdIds;
+    const existingByKey = new Map(
+      (existingRows ?? []).map((r) => [r.client_key as string, r.id as string]),
+    );
 
-    // Insere participantes e fotos para cada atividade criada
-    for (const activityId of ids) {
+    // IDs criados NESTA chamada — alvo do rollback se algo falhar adiante.
+    const createdHere: string[] = [];
+    const ids: string[] = [];
+
+    const rollback = async () => {
+      if (createdHere.length) {
+        await supabase.from('activities').delete().in('id', createdHere);
+      }
+    };
+
+    for (const { typeId, key } of typeKeys) {
+      // Já existe de um retry anterior → reaproveita, não recria.
+      const already = existingByKey.get(key);
+      if (already) {
+        ids.push(already);
+        continue;
+      }
+
+      const { data: inserted, error: insErr } = await supabase
+        .from('activities')
+        .insert({
+          location_id: parsed.locationId,
+          activity_type_id: typeId,
+          client_id: parsed.clientId ?? null,
+          supervisor_id: user.id,
+          description: parsed.description,
+          notes: parsed.notes ?? null,
+          evolucao: parsed.evolucao ?? null,
+          pendencias: parsed.pendencias ?? null,
+          continuation_of: parsed.continuationOf ?? null,
+          started_at: parsed.startedAt,
+          ended_at: parsed.endedAt ?? null,
+          status: 'rascunho',
+          client_key: key,
+        })
+        .select('id')
+        .single();
+
+      if (insErr || !inserted) {
+        await rollback();
+        log.error('Falha ao criar atividade', { error: insErr?.message });
+        return { error: insErr?.message ?? 'Falha ao criar atividade' };
+      }
+
+      const activityId = inserted.id;
+
+      // Participantes e fotos em paralelo, com erro propagado (sem perda silenciosa).
+      const childOps: PromiseLike<{ error: { message: string } | null }>[] = [];
       if (parsed.participants.length) {
-        // NOTE: insert sem transação — se falhar, a atividade fica sem participantes.
-        await supabase.from('activity_participants').insert(
-          parsed.participants.map((p) => ({
-            activity_id: activityId,
-            name: p.name,
-            role: p.role ?? null,
-          })),
+        childOps.push(
+          supabase.from('activity_participants').insert(
+            parsed.participants.map((p) => ({
+              activity_id: activityId,
+              name: p.name,
+              role: p.role ?? null,
+            })),
+          ),
         );
       }
       if (parsed.photos.length) {
-        await supabase.from('activity_photos').insert(
-          parsed.photos.map((p) => ({
-            activity_id: activityId,
-            storage_path: p.storagePath,
-            caption: p.caption ?? null,
-            lat: p.lat ?? null,
-            lng: p.lng ?? null,
-          })),
+        childOps.push(
+          supabase.from('activity_photos').insert(
+            parsed.photos.map((p) => ({
+              activity_id: activityId,
+              storage_path: p.storagePath,
+              caption: p.caption ?? null,
+              lat: p.lat ?? null,
+              lng: p.lng ?? null,
+            })),
+          ),
         );
       }
+
+      const childResults = await Promise.all(childOps);
+      const childErr = childResults.find((r) => r.error);
+      if (childErr) {
+        // Desfaz esta atividade (cascade apaga participantes/fotos) + as desta chamada.
+        await supabase.from('activities').delete().in('id', [activityId, ...createdHere]);
+        log.error('Falha ao salvar participantes/fotos', { error: childErr.error!.message });
+        return { error: childErr.error!.message };
+      }
+
+      createdHere.push(activityId);
+      ids.push(activityId);
     }
 
     revalidatePath('/atividades');

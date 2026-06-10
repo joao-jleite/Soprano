@@ -21,26 +21,39 @@ const rejectSchema = z.object({
   svgData: z.string().default('<svg/>'),
 });
 
-export async function signActivity(input: z.infer<typeof signSchema>) {
+export async function signActivity(
+  input: z.infer<typeof signSchema>,
+): Promise<{ error?: string }> {
+  try {
   const parsed = signSchema.parse(input);
   const supabase = await createClient();
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
+  if (!user) return { error: 'Não autenticado' };
 
   const { data: profile } = await supabase
     .from('profiles')
     .select('full_name, role')
     .eq('id', user.id)
     .single();
-  if (!profile) throw new Error('Profile not found');
-  if (profile.role !== 'cliente') throw new Error('Only clients can sign');
+  if (!profile) return { error: 'Perfil não encontrado' };
+  if (profile.role !== 'cliente') return { error: 'Apenas clientes podem assinar' };
+
+  // Confere ownership e estado antes de assinar (defesa em app, além da RLS).
+  const { data: target } = await supabase
+    .from('activities')
+    .select('client_id, status')
+    .eq('id', parsed.activityId)
+    .single();
+  if (!target) return { error: 'Atividade não encontrada' };
+  if (target.client_id !== user.id) return { error: 'Sem permissão para assinar esta atividade' };
+  if (target.status !== 'enviada') return { error: 'Atividade não está aguardando assinatura' };
 
   const h = await headers();
   const ua = h.get('user-agent') ?? null;
-  const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
+  const ip = h.get('x-real-ip') ?? h.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
 
   const { error } = await supabase.from('signatures').insert({
     activity_id: parsed.activityId,
@@ -50,7 +63,7 @@ export async function signActivity(input: z.infer<typeof signSchema>) {
     user_agent: ua,
     ip_address: ip,
   });
-  if (error) throw error;
+  if (error) return { error: error.message };
 
   // Notifica supervisor
   try {
@@ -85,23 +98,40 @@ export async function signActivity(input: z.infer<typeof signSchema>) {
   revalidatePath(`/atividades/${parsed.activityId}`);
   revalidatePath('/atividades');
   revalidatePath('/');
+  return {};
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : 'Erro inesperado ao assinar' };
+  }
 }
 
-export async function rejectActivity(input: z.infer<typeof rejectSchema>) {
+export async function rejectActivity(
+  input: z.infer<typeof rejectSchema>,
+): Promise<{ error?: string }> {
+  try {
   const parsed = rejectSchema.parse(input);
   const supabase = await createClient();
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
+  if (!user) return { error: 'Não autenticado' };
 
   const { data: profile } = await supabase
     .from('profiles')
     .select('full_name, role')
     .eq('id', user.id)
     .single();
-  if (profile?.role !== 'cliente') throw new Error('Only clients can reject');
+  if (!profile) return { error: 'Perfil não encontrado' };
+  if (profile.role !== 'cliente') return { error: 'Apenas clientes podem recusar' };
+
+  const { data: target } = await supabase
+    .from('activities')
+    .select('client_id, status')
+    .eq('id', parsed.activityId)
+    .single();
+  if (!target) return { error: 'Atividade não encontrada' };
+  if (target.client_id !== user.id) return { error: 'Sem permissão para recusar esta atividade' };
+  if (target.status !== 'enviada') return { error: 'Atividade não está aguardando assinatura' };
 
   const { error } = await supabase.from('signatures').insert({
     activity_id: parsed.activityId,
@@ -111,6 +141,10 @@ export async function rejectActivity(input: z.infer<typeof rejectSchema>) {
     rejected: true,
     reject_reason: parsed.reason,
   });
-  if (error) throw error;
+  if (error) return { error: error.message };
   revalidatePath(`/atividades/${parsed.activityId}`);
+  return {};
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : 'Erro inesperado ao recusar' };
+  }
 }
