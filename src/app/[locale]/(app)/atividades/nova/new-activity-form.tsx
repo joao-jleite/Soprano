@@ -206,6 +206,13 @@ export function NewActivityForm({
 
   async function handleSave() {
     if (!locationId || typeIds.length === 0 || !description.trim()) return;
+    // Valida a ordem das datas no cliente. Sem isto, no offline a atividade era
+    // enfileirada e só falhava no sync (a regra só existia no servidor) — virava
+    // um item travado que nunca subia.
+    if (datesInvalid) {
+      toast.error('A data de término não pode ser anterior ao início.');
+      return;
+    }
     setSaving(true);
 
     try {
@@ -270,7 +277,9 @@ export function NewActivityForm({
     }
   }
 
-  const canSave = !!(locationId && typeIds.length > 0 && description.trim().length >= 3);
+  const datesInvalid = !!(endedAt && new Date(endedAt) < new Date(startedAt));
+  const canSave =
+    !!(locationId && typeIds.length > 0 && description.trim().length >= 3) && !datesInvalid;
 
   // ── Render ───────────────────────────────────────────────────────────────
 
@@ -359,6 +368,11 @@ export function NewActivityForm({
               value={endedAt}
               onChange={(e) => setEndedAt(e.target.value)}
             />
+            {datesInvalid && (
+              <p className="text-[11px] text-destructive">
+                A data de término não pode ser anterior ao início.
+              </p>
+            )}
           </Field>
         </CardContent>
       </Card>

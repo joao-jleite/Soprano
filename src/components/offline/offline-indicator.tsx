@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { AlertTriangle, CloudOff, Loader2, RefreshCw, Clock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { listUnsynced } from '@/lib/offline/queue';
+import { listUnsynced, removeActivity } from '@/lib/offline/queue';
 import { retryAllNow } from '@/lib/offline/sync';
 import { useOnline } from '@/lib/offline/use-online';
 import { cn } from '@/lib/utils';
@@ -26,6 +26,14 @@ export function OfflineIndicator() {
   const errorItem = items?.find((i) => i.status === 'error');
   const hasError = !!errorItem;
 
+  // Descarta os itens travados em erro (ex.: payload inválido que nunca sobe).
+  async function discardErrored() {
+    const all = await listUnsynced();
+    await Promise.all(
+      all.filter((i) => i.status === 'error').map((i) => removeActivity(i.localId)),
+    );
+  }
+
   return (
     <>
       {!online && (
@@ -39,9 +47,18 @@ export function OfflineIndicator() {
         <div className="fixed bottom-24 right-4 z-50 flex max-w-[80vw] flex-col items-end gap-1.5 lg:bottom-6">
           {/* Mostra o motivo real da falha para diagnóstico em campo. */}
           {hasError && errorItem?.error && (
-            <p className="max-w-xs rounded-md bg-destructive/10 px-2.5 py-1.5 text-right text-[11px] leading-snug text-destructive shadow-sm">
-              {errorItem.error}
-            </p>
+            <div className="flex max-w-xs flex-col items-end gap-1 rounded-md bg-destructive/10 px-2.5 py-1.5 shadow-sm">
+              <p className="text-right text-[11px] leading-snug text-destructive">
+                {errorItem.error}
+              </p>
+              <button
+                type="button"
+                onClick={() => void discardErrored()}
+                className="text-[11px] font-medium text-destructive underline underline-offset-2"
+              >
+                Descartar
+              </button>
+            </div>
           )}
           <button
             type="button"
