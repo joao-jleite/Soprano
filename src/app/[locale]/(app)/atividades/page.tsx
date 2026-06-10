@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import type { ActivityStatus } from '@/lib/supabase/database.types';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
@@ -105,6 +105,14 @@ export default async function ActivitiesPage({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {role !== 'cliente' && <PendingLink />}
+          {role === 'admin' && (
+            <Button asChild variant="outline">
+              <Link href="/equipe/lixeira">
+                <Trash2 className="h-4 w-4" />
+                Lixeira
+              </Link>
+            </Button>
+          )}
           <Button asChild>
             <Link href="/atividades/nova">
               <Plus />

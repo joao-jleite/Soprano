@@ -85,7 +85,7 @@ export function NewActivityForm({
   locale,
   initial,
   mode = 'create',
-  pendingLocalId,
+  pendingLocalId: pendingLocalIdProp,
 }: Props) {
   const t = useTranslations('activities');
   const tLoc = useTranslations('locations');
@@ -147,14 +147,25 @@ export function NewActivityForm({
 
   const online = useOnline();
   const [saving, setSaving] = React.useState(false);
-  const [loadingPending, setLoadingPending] = React.useState(!!pendingLocalId);
+  // Id do item pendente em edição. Pode vir da prop (server, online) ou do
+  // ?pending= lido no cliente — este último é o que funciona OFFLINE, já que
+  // a página vem do cache e o servidor não consegue ler o searchParams sem rede.
+  const [pendingId, setPendingId] = React.useState<string | undefined>(pendingLocalIdProp);
+  const [loadingPending, setLoadingPending] = React.useState(!!pendingLocalIdProp);
 
   // ── Edição de item da fila offline: carrega do IndexedDB e prefilla ────────
   React.useEffect(() => {
-    if (!pendingLocalId) return;
+    const id =
+      pendingLocalIdProp ??
+      (typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('pending') ?? undefined
+        : undefined);
+    if (!id) return;
+    setPendingId(id);
+    setLoadingPending(true);
     let cancelled = false;
     (async () => {
-      const act = await getActivity(pendingLocalId);
+      const act = await getActivity(id);
       if (cancelled) return;
       if (!act) {
         setLoadingPending(false);
@@ -173,7 +184,7 @@ export function NewActivityForm({
       setEndedAt(act.endedAt ? new Date(act.endedAt).toISOString().slice(0, 10) : '');
       setParticipants((act.participants ?? []) as Participant[]);
 
-      const phs = await getPhotos(pendingLocalId);
+      const phs = await getPhotos(id);
       if (cancelled) return;
       setCaptured(
         phs.map((p) => ({
@@ -192,7 +203,7 @@ export function NewActivityForm({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingLocalId]);
+  }, []);
 
   // ── Handlers de criação inline ───────────────────────────────────────────
 
@@ -276,7 +287,7 @@ export function NewActivityForm({
 
   /** Salva as alterações de um item já na fila (tela "Aguardando envio"). */
   async function saveEditedPending() {
-    await updateQueuedActivity(pendingLocalId!, buildOfflinePayload(), capturedToPhotos());
+    await updateQueuedActivity(pendingId!, buildOfflinePayload(), capturedToPhotos());
     toast.success('Atividade atualizada — sobe quando houver conexão.');
     void syncPending();
     router.push('/atividades/pendentes');
@@ -295,7 +306,7 @@ export function NewActivityForm({
 
     try {
       // ── Edição de item da fila offline ──
-      if (pendingLocalId) {
+      if (pendingId) {
         await saveEditedPending();
         return;
       }
@@ -577,14 +588,14 @@ export function NewActivityForm({
       <div className="flex flex-wrap gap-3 justify-end sticky bottom-4 z-10">
         <Button type="button" onClick={handleSave} disabled={!canSave || saving}>
           {saving ? <Loader2 className="animate-spin" /> : <Save />}
-          {pendingLocalId
+          {pendingId
             ? 'Salvar alterações'
             : mode === 'create' && typeIds.length > 1
             ? `Salvar ${typeIds.length} atividades`
             : t('actions.save')}
         </Button>
         <p className="w-full text-right text-xs text-muted-foreground -mt-1">
-          {pendingLocalId
+          {pendingId
             ? 'As alterações ficam salvas no aparelho e sobem quando houver conexão.'
             : 'Para enviar para assinatura, adicione ao Resumo Diário após salvar.'}
         </p>
