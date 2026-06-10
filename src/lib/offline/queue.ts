@@ -105,6 +105,47 @@ export async function markPhotoUploaded(photoLocalId: string, storagePath: strin
   await offlineDb.pending_photos.update(photoLocalId, { uploaded: true, storagePath });
 }
 
+/**
+ * Edita um item já na fila: substitui os campos e TODAS as fotos, e volta o
+ * status para 'pending' (zera tentativas/erro) para tentar subir de novo.
+ * Mantém o mesmo `localId` e `clientKey` — a idempotência no servidor continua
+ * valendo, então não duplica. Usado pela edição na tela "Aguardando envio".
+ */
+export async function updateQueuedActivity(
+  localId: string,
+  fields: NewActivityInput,
+  photos: NewPhotoInput[],
+): Promise<void> {
+  const now = Date.now();
+  await offlineDb.transaction('rw', offlineDb.pending_activities, offlineDb.pending_photos, async () => {
+    await offlineDb.pending_activities.update(localId, {
+      ...fields,
+      photoCount: photos.length,
+      status: 'pending',
+      attempts: 0,
+      error: undefined,
+      updatedAt: now,
+    });
+    // Troca o conjunto de fotos (mais simples e previsível que reconciliar).
+    await offlineDb.pending_photos.where('activityLocalId').equals(localId).delete();
+    if (photos.length) {
+      await offlineDb.pending_photos.bulkAdd(
+        photos.map((p) => ({
+          localId: uuid(),
+          activityLocalId: localId,
+          blob: p.blob,
+          fileType: p.fileType,
+          caption: p.caption,
+          lat: p.lat,
+          lng: p.lng,
+          uploaded: false,
+          createdAt: now,
+        })),
+      );
+    }
+  });
+}
+
 /** Remove uma atividade e suas fotos (após sync bem-sucedido ou descarte). */
 export async function removeActivity(localId: string): Promise<void> {
   await offlineDb.transaction('rw', offlineDb.pending_activities, offlineDb.pending_photos, async () => {

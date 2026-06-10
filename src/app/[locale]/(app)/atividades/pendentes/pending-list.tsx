@@ -9,11 +9,13 @@ import {
   AlertTriangle,
   Clock,
   RotateCw,
+  Pencil,
   ImageIcon,
   CheckCircle2,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Link } from '@/i18n/navigation';
 import { ConfirmDeleteButton } from '@/components/ui/confirm-delete-button';
 import { listUnsynced, removeActivity } from '@/lib/offline/queue';
 import { retryItem, syncPending } from '@/lib/offline/sync';
@@ -160,7 +162,13 @@ function PendingCard({
             </p>
           )}
 
-          <div className="flex justify-end gap-2 pt-1">
+          <div className="flex flex-wrap justify-end gap-2 pt-1">
+            <Button asChild size="sm" variant="ghost" disabled={item.status === 'syncing'}>
+              <Link href={`/atividades/nova?pending=${item.localId}`}>
+                <Pencil className="h-3.5 w-3.5" />
+                Editar
+              </Link>
+            </Button>
             <Button
               size="sm"
               variant="outline"

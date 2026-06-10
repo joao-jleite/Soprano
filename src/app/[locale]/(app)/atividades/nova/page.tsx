@@ -9,7 +9,7 @@ export default async function NewActivityPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ from?: string }>;
+  searchParams: Promise<{ from?: string; pending?: string }>;
 }) {
   const { locale } = await params;
   const sp = await searchParams;
@@ -70,13 +70,23 @@ export default async function NewActivityPage({
     }
   }
 
+  const editingPending = !!sp.pending;
+
   return (
     <div className="max-w-3xl space-y-6">
       <header>
-        <p className="text-data">{duplicating ? t('duplicating') : t('newActivity')}</p>
-        <h1 className="text-3xl font-semibold tracking-tight mt-2">{t('register')}</h1>
+        <p className="text-data">
+          {editingPending ? 'Editar pendente' : duplicating ? t('duplicating') : t('newActivity')}
+        </p>
+        <h1 className="text-3xl font-semibold tracking-tight mt-2">
+          {editingPending ? 'Editar atividade pendente' : t('register')}
+        </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          {duplicating ? t('duplicateHelp') : t('newHelp')}
+          {editingPending
+            ? 'Corrija o que for preciso e salve — a atividade volta para a fila e sobe quando houver conexão.'
+            : duplicating
+            ? t('duplicateHelp')
+            : t('newHelp')}
         </p>
       </header>
 
@@ -88,6 +98,7 @@ export default async function NewActivityPage({
         locale={locale}
         initial={initial}
         mode="create"
+        pendingLocalId={sp.pending}
       />
     </div>
   );

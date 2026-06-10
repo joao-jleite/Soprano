@@ -31,7 +31,15 @@ import {
 import { formatDate } from '@/lib/utils';
 import { useOnline } from '@/lib/offline/use-online';
 import { uploadPhotoBlob } from '@/lib/offline/photo-storage';
-import { enqueueActivity, type NewActivityInput } from '@/lib/offline/queue';
+import {
+  enqueueActivity,
+  updateQueuedActivity,
+  getActivity,
+  getPhotos,
+  type NewActivityInput,
+  type NewPhotoInput,
+} from '@/lib/offline/queue';
+import { syncPending } from '@/lib/offline/sync';
 
 export type InitialActivity = {
   id: string;
@@ -65,6 +73,8 @@ type Props = {
   locale: string;
   initial?: InitialActivity;
   mode?: 'create' | 'edit';
+  /** Quando definido, edita um item da fila offline (tela "Aguardando envio"). */
+  pendingLocalId?: string;
 };
 
 export function NewActivityForm({
@@ -75,6 +85,7 @@ export function NewActivityForm({
   locale,
   initial,
   mode = 'create',
+  pendingLocalId,
 }: Props) {
   const t = useTranslations('activities');
   const tLoc = useTranslations('locations');
@@ -136,6 +147,52 @@ export function NewActivityForm({
 
   const online = useOnline();
   const [saving, setSaving] = React.useState(false);
+  const [loadingPending, setLoadingPending] = React.useState(!!pendingLocalId);
+
+  // ── Edição de item da fila offline: carrega do IndexedDB e prefilla ────────
+  React.useEffect(() => {
+    if (!pendingLocalId) return;
+    let cancelled = false;
+    (async () => {
+      const act = await getActivity(pendingLocalId);
+      if (cancelled) return;
+      if (!act) {
+        setLoadingPending(false);
+        return;
+      }
+      draftIdRef.current = act.clientKey || draftIdRef.current;
+      setLocationId(act.locationId);
+      setTypeIds(act.activityTypeIds);
+      setClientId(act.clientId ?? null);
+      setDescription(act.description);
+      setNotes(act.notes ?? '');
+      setEvolucao(act.evolucao ?? '');
+      setPendencias(act.pendencias ?? '');
+      setContinuationOf(act.continuationOf ?? null);
+      setStartedAt(new Date(act.startedAt).toISOString().slice(0, 10));
+      setEndedAt(act.endedAt ? new Date(act.endedAt).toISOString().slice(0, 10) : '');
+      setParticipants((act.participants ?? []) as Participant[]);
+
+      const phs = await getPhotos(pendingLocalId);
+      if (cancelled) return;
+      setCaptured(
+        phs.map((p) => ({
+          id: crypto.randomUUID(),
+          blob: p.blob,
+          fileType: p.fileType,
+          previewUrl: URL.createObjectURL(p.blob),
+          caption: p.caption ?? '',
+          lat: p.lat,
+          lng: p.lng,
+        })),
+      );
+      setLoadingPending(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingLocalId]);
 
   // ── Handlers de criação inline ───────────────────────────────────────────
 
@@ -181,9 +238,9 @@ export function NewActivityForm({
     };
   }
 
-  /** Enfileira a atividade + fotos no banco local para sync posterior. */
-  async function saveOffline() {
-    const payload: NewActivityInput = {
+  /** Monta o payload offline (campos + rótulos de exibição), reusado por criar/editar. */
+  function buildOfflinePayload(): NewActivityInput {
+    return {
       ...buildBase(),
       activityTypeIds: typeIds,
       // Mesma chave do caminho online (draftId): se o envio começou online e
@@ -195,18 +252,32 @@ export function NewActivityForm({
         .map((id) => typeOptions.find((o) => o.value === id)?.label)
         .filter((l): l is string => !!l),
     };
-    await enqueueActivity(
-      payload,
-      captured.map((p) => ({
-        blob: p.blob,
-        fileType: p.fileType,
-        caption: p.caption || undefined,
-        lat: p.lat,
-        lng: p.lng,
-      })),
-    );
+  }
+
+  /** Fotos capturadas no formato da fila offline. */
+  function capturedToPhotos(): NewPhotoInput[] {
+    return captured.map((p) => ({
+      blob: p.blob,
+      fileType: p.fileType,
+      caption: p.caption || undefined,
+      lat: p.lat,
+      lng: p.lng,
+    }));
+  }
+
+  /** Enfileira a atividade + fotos no banco local para sync posterior. */
+  async function saveOffline() {
+    await enqueueActivity(buildOfflinePayload(), capturedToPhotos());
     toast.success(t('toasts.savedOffline'));
     router.push('/atividades');
+  }
+
+  /** Salva as alterações de um item já na fila (tela "Aguardando envio"). */
+  async function saveEditedPending() {
+    await updateQueuedActivity(pendingLocalId!, buildOfflinePayload(), capturedToPhotos());
+    toast.success('Atividade atualizada — sobe quando houver conexão.');
+    void syncPending();
+    router.push('/atividades/pendentes');
   }
 
   async function handleSave() {
@@ -221,6 +292,12 @@ export function NewActivityForm({
     setSaving(true);
 
     try {
+      // ── Edição de item da fila offline ──
+      if (pendingLocalId) {
+        await saveEditedPending();
+        return;
+      }
+
       // ── Modo edição (online apenas) ──
       if (mode === 'edit' && initial) {
         const result = await updateActivity({
@@ -287,6 +364,14 @@ export function NewActivityForm({
     !!(locationId && typeIds.length > 0 && description.trim().length >= 3) && !datesInvalid;
 
   // ── Render ───────────────────────────────────────────────────────────────
+
+  if (loadingPending) {
+    return (
+      <div className="flex justify-center py-16 text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -490,12 +575,16 @@ export function NewActivityForm({
       <div className="flex flex-wrap gap-3 justify-end sticky bottom-4 z-10">
         <Button type="button" onClick={handleSave} disabled={!canSave || saving}>
           {saving ? <Loader2 className="animate-spin" /> : <Save />}
-          {mode === 'create' && typeIds.length > 1
+          {pendingLocalId
+            ? 'Salvar alterações'
+            : mode === 'create' && typeIds.length > 1
             ? `Salvar ${typeIds.length} atividades`
             : t('actions.save')}
         </Button>
         <p className="w-full text-right text-xs text-muted-foreground -mt-1">
-          Para enviar para assinatura, adicione ao Resumo Diário após salvar.
+          {pendingLocalId
+            ? 'As alterações ficam salvas no aparelho e sobem quando houver conexão.'
+            : 'Para enviar para assinatura, adicione ao Resumo Diário após salvar.'}
         </p>
       </div>
     </div>
