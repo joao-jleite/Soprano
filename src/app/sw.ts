@@ -36,11 +36,14 @@ const serwist = new Serwist({
   runtimeCaching: [
     // Navegações de documento: tenta a rede (3s) e cai no cache aquecido quando
     // offline ou lento. Tem precedência sobre o defaultCache para navegações.
+    // `ignoreSearch` faz `/atividades/nova?pending=<id>` cair no shell cacheado
+    // de `/atividades/nova` (os dados do item vêm do IndexedDB no cliente).
     {
       matcher: ({ request }) => request.mode === 'navigate',
       handler: new NetworkFirst({
         cacheName: SHELL_CACHE,
         networkTimeoutSeconds: 3,
+        matchOptions: { ignoreSearch: true },
       }),
     },
     ...defaultCache,

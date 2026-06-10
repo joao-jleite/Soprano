@@ -140,21 +140,24 @@ function PendingCard({
     <li>
       <Card>
         <CardContent className="space-y-2 p-4">
-          <div className="flex items-start justify-between gap-3">
-            <p className="min-w-0 flex-1 text-sm font-medium">{item.description}</p>
-            <StatusPill status={item.status} />
-          </div>
+          {/* Toca para abrir e ver tudo (campos + fotos) — funciona offline. */}
+          <Link href={`/atividades/nova?pending=${item.localId}`} className="block space-y-2">
+            <div className="flex items-start justify-between gap-3">
+              <p className="min-w-0 flex-1 text-sm font-medium">{item.description}</p>
+              <StatusPill status={item.status} />
+            </div>
 
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-            {item.locationLabel && <span>{item.locationLabel}</span>}
-            {typeLabels && <span>· {typeLabels}</span>}
-            <span>· {formatDate(item.startedAt, loc)}</span>
-            {!!item.photoCount && (
-              <span className="inline-flex items-center gap-1">
-                · <ImageIcon className="h-3 w-3" /> {item.photoCount}
-              </span>
-            )}
-          </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              {item.locationLabel && <span>{item.locationLabel}</span>}
+              {typeLabels && <span>· {typeLabels}</span>}
+              <span>· {formatDate(item.startedAt, loc)}</span>
+              {!!item.photoCount && (
+                <span className="inline-flex items-center gap-1">
+                  · <ImageIcon className="h-3 w-3" /> {item.photoCount}
+                </span>
+              )}
+            </div>
+          </Link>
 
           {item.status === 'error' && item.error && (
             <p className="rounded-md bg-destructive/10 px-2.5 py-1.5 text-[11px] leading-snug text-destructive">

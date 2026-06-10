@@ -269,7 +269,9 @@ export function NewActivityForm({
   async function saveOffline() {
     await enqueueActivity(buildOfflinePayload(), capturedToPhotos());
     toast.success(t('toasts.savedOffline'));
-    router.push('/atividades');
+    // Vai para a fila "Aguardando envio" — lá a atividade aparece na hora,
+    // mesmo offline (a lista de /atividades é do servidor e não a mostra ainda).
+    router.push('/atividades/pendentes');
   }
 
   /** Salva as alterações de um item já na fila (tela "Aguardando envio"). */
