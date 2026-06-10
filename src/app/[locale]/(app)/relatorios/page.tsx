@@ -34,15 +34,17 @@ export default async function RelatoriosPage({
 
   const [{ data: byStatus }, { data: byLocation }, { data: monthly }, { data: signedReports }] =
     await Promise.all([
-      supabase.from('activities').select('status').gte('started_at', sinceISO),
+      supabase.from('activities').select('status').is('deleted_at', null).gte('started_at', sinceISO),
       supabase
         .from('activities')
         .select('locations(name)')
+        .is('deleted_at', null)
         .gte('started_at', sinceISO)
         .limit(1000),
       supabase
         .from('activities')
         .select('started_at')
+        .is('deleted_at', null)
         .gte('started_at', new Date(Date.now() - 365 * 24 * 3600 * 1000).toISOString())
         .limit(2000),
       // Resumos assinados nos últimos 90 dias (substitui query de signatures em activities)

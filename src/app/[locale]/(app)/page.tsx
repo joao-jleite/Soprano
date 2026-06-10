@@ -64,6 +64,7 @@ export default async function DashboardPage({
         supabase
           .from('activities')
           .select('*', { count: 'exact', head: true })
+          .is('deleted_at', null)
           .gte('started_at', monthStart),
       ),
       signedReportsQuery,
