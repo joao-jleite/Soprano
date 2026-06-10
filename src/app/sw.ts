@@ -7,7 +7,7 @@
 //
 import { defaultCache } from '@serwist/next/worker';
 import type { PrecacheEntry, SerwistGlobalConfig } from 'serwist';
-import { Serwist } from 'serwist';
+import { NetworkFirst, Serwist } from 'serwist';
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -18,13 +18,63 @@ declare global {
 
 declare const self: ServiceWorkerGlobalScope;
 
+// Cache do "app shell" — páginas de navegação. Nome próprio para podermos
+// aquecê-lo no install e a estratégia NetworkFirst lê dele quando offline.
+const SHELL_CACHE = 'soprano-app-shell';
+
+// Rotas aquecidas assim que o SW instala. Sem isto, abrir "Nova atividade"
+// pela PRIMEIRA vez já em campo (sem rede) caía no erro do navegador, pois
+// nada havia sido cacheado ainda. Em PT — o time de obra usa só português.
+const WARM_ROUTES = ['/pt', '/pt/atividades', '/pt/atividades/nova'];
+
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   // Ativa a nova versão imediatamente, sem esperar abas antigas fecharem.
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
-  runtimeCaching: defaultCache,
+  runtimeCaching: [
+    // Navegações de documento: tenta a rede (3s) e cai no cache aquecido quando
+    // offline ou lento. Tem precedência sobre o defaultCache para navegações.
+    {
+      matcher: ({ request }) => request.mode === 'navigate',
+      handler: new NetworkFirst({
+        cacheName: SHELL_CACHE,
+        networkTimeoutSeconds: 3,
+      }),
+    },
+    ...defaultCache,
+  ],
+  fallbacks: {
+    entries: [
+      {
+        // Última linha de defesa: navegação não-cacheada e sem rede → página
+        // offline amigável em vez do erro cru do navegador.
+        url: '/~offline',
+        matcher: ({ request }) => request.destination === 'document',
+      },
+    ],
+  },
+});
+
+// Aquece o cache do app shell no install (best-effort — falha de rede não
+// impede a instalação do SW).
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    (async () => {
+      const cache = await caches.open(SHELL_CACHE);
+      await Promise.allSettled(
+        WARM_ROUTES.map(async (route) => {
+          try {
+            const res = await fetch(route, { credentials: 'same-origin' });
+            if (res.ok) await cache.put(route, res.clone());
+          } catch {
+            /* aquecer é best-effort */
+          }
+        }),
+      );
+    })(),
+  );
 });
 
 serwist.addEventListeners();
