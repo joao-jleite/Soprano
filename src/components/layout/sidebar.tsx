@@ -29,7 +29,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/resumo-diario', labelKey: 'nav.dailyReport', icon: ClipboardList,       roles: ['admin', 'supervisor', 'cliente'] },
   { href: '/relatorios',    labelKey: 'nav.reports',     icon: FileText,            roles: ['admin', 'supervisor'] },
   { href: '/equipe',        labelKey: 'nav.team',        icon: Users,               roles: ['admin'] },
-  { href: '/reclamos',      labelKey: 'nav.complaints',  icon: MessageSquareWarning,roles: ['admin', 'supervisor'] },
+  { href: '/reclamos',      labelKey: 'nav.complaints',  icon: MessageSquareWarning,roles: ['admin', 'supervisor', 'cliente'] },
   { href: '/configuracoes', labelKey: 'nav.settings',    icon: Settings,            roles: ['admin', 'supervisor'] },
 ];
 

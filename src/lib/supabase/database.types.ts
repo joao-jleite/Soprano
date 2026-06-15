@@ -14,6 +14,17 @@ export type LocationKind = 'estacao' | 'vse' | 'se' | 'escadaria' | 'patio' | 'o
 export type ActivityStatus = 'rascunho' | 'enviada' | 'rejeitada';
 export type DailyReportStatus = 'rascunho' | 'aguardando_assinatura' | 'assinado' | 'cancelado';
 export type AuditAction = 'insert' | 'update' | 'delete' | 'soft_delete' | 'restore';
+export type ClaimType =
+  | 'suspensao_conveniencia'
+  | 'suspensao_falta_pagamento'
+  | 'falta_acesso_area'
+  | 'interferencia_terceiros'
+  | 'alteracao_escopo'
+  | 'risco_geotecnico_ambiental'
+  | 'forca_maior'
+  | 'suspensao_poder_concedente';
+export type ClaimStatus = 'rascunho' | 'enviado' | 'recebido' | 'em_analise' | 'respondido' | 'encerrado';
+export type ClaimOutcome = 'aceito' | 'rejeitado' | 'parcial';
 
 // ── Row types como aliases independentes (sem referência circular) ─────────────
 
@@ -166,6 +177,55 @@ type DailyReportSignatureRow = {
   user_agent: string | null;
   cancelled: boolean;
   cancel_reason: string | null;
+};
+
+type ClaimRow = {
+  id: string;
+  ref_code: string | null;
+  verification_code: string;
+  claim_type: ClaimType;
+  title: string;
+  description: string;
+  event_date: string;
+  time_impact_days: number | null;
+  cost_impact_amount: number | null;
+  currency: string;
+  location_id: string | null;
+  activity_id: string | null;
+  author_id: string | null;
+  client_id: string | null;
+  status: ClaimStatus;
+  notified_at: string | null;
+  acknowledged_at: string | null;
+  acknowledged_by: string | null;
+  ack_ip: string | null;
+  ack_user_agent: string | null;
+  response_at: string | null;
+  response_outcome: ClaimOutcome | null;
+  response_note: string | null;
+  responded_by: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+};
+
+type ClaimAttachmentRow = {
+  id: string;
+  claim_id: string;
+  storage_path: string;
+  caption: string | null;
+  uploaded_by: string | null;
+  uploaded_at: string;
+};
+
+type ClaimTimelineRow = {
+  id: string;
+  claim_id: string;
+  event: string;
+  actor_id: string | null;
+  actor_name: string | null;
+  detail: Json | null;
+  created_at: string;
 };
 
 // ── Database interface ─────────────────────────────────────────────────────────
@@ -441,6 +501,108 @@ export interface Database {
           },
         ];
       };
+      claims: {
+        Row: ClaimRow;
+        Insert: {
+          id?: string;
+          ref_code?: string | null;
+          verification_code?: string;
+          claim_type: ClaimType;
+          title: string;
+          description: string;
+          event_date: string;
+          time_impact_days?: number | null;
+          cost_impact_amount?: number | null;
+          currency?: string;
+          location_id?: string | null;
+          activity_id?: string | null;
+          author_id?: string | null;
+          client_id?: string | null;
+          status?: ClaimStatus;
+          notified_at?: string | null;
+          acknowledged_at?: string | null;
+          acknowledged_by?: string | null;
+          ack_ip?: string | null;
+          ack_user_agent?: string | null;
+          response_at?: string | null;
+          response_outcome?: ClaimOutcome | null;
+          response_note?: string | null;
+          responded_by?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: Partial<Omit<ClaimRow, 'id'>>;
+        Relationships: [
+          {
+            foreignKeyName: 'claims_location_id_fkey';
+            columns: ['location_id'];
+            isOneToOne: false;
+            referencedRelation: 'locations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'claims_activity_id_fkey';
+            columns: ['activity_id'];
+            isOneToOne: false;
+            referencedRelation: 'activities';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'claims_author_id_fkey';
+            columns: ['author_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'claims_client_id_fkey';
+            columns: ['client_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      claim_attachments: {
+        Row: ClaimAttachmentRow;
+        Insert: {
+          id?: string;
+          claim_id: string;
+          storage_path: string;
+          caption?: string | null;
+          uploaded_by?: string | null;
+        };
+        Update: Partial<Omit<ClaimAttachmentRow, 'id'>>;
+        Relationships: [
+          {
+            foreignKeyName: 'claim_attachments_claim_id_fkey';
+            columns: ['claim_id'];
+            isOneToOne: false;
+            referencedRelation: 'claims';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      claim_timeline: {
+        Row: ClaimTimelineRow;
+        Insert: {
+          id?: string;
+          claim_id: string;
+          event: string;
+          actor_id?: string | null;
+          actor_name?: string | null;
+          detail?: Json | null;
+        };
+        Update: Partial<Omit<ClaimTimelineRow, 'id'>>;
+        Relationships: [
+          {
+            foreignKeyName: 'claim_timeline_claim_id_fkey';
+            columns: ['claim_id'];
+            isOneToOne: false;
+            referencedRelation: 'claims';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
     };
     // Views e CompositeTypes usam Record<string, never> para satisfazer
     // GenericSchema do @supabase/supabase-js v2.100+. A sintaxe { [K in never]: never }
@@ -459,6 +621,9 @@ export interface Database {
       location_kind: LocationKind;
       activity_status: ActivityStatus;
       daily_report_status: DailyReportStatus;
+      claim_type: ClaimType;
+      claim_status: ClaimStatus;
+      claim_outcome: ClaimOutcome;
     };
     CompositeTypes: Record<string, Record<string, unknown>>;
   };

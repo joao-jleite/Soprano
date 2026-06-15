@@ -183,6 +183,125 @@ export function dailyReportSignedEmail(opts: {
   });
 }
 
+// ---------------------------------------------------------------
+// Reclamos (pleitos contratuais Zitrón → Acciona)
+// ---------------------------------------------------------------
+
+const ALERT = '#d97706'; // âmbar — reclamo é uma notificação formal, não um aviso comum
+
+function formatBRL(amount: number) {
+  try {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
+  } catch {
+    return `R$ ${amount.toFixed(2)}`;
+  }
+}
+
+/** Notifica a Acciona (cliente) de um novo reclamo emitido pela Zitrón. */
+export function claimNotificationEmail(opts: {
+  clientEmail: string;
+  clientName: string;
+  refCode: string;
+  typeLabel: string;
+  title: string;
+  description: string;
+  eventDate: string;
+  timeImpactDays?: number | null;
+  costImpactAmount?: number | null;
+  claimUrl: string;
+}) {
+  const impactRows: string[] = [];
+  if (opts.timeImpactDays != null) {
+    impactRows.push(`Impacto de prazo: <strong>${opts.timeImpactDays} dia(s)</strong>`);
+  }
+  if (opts.costImpactAmount != null) {
+    impactRows.push(`Impacto de custo: <strong>${formatBRL(opts.costImpactAmount)}</strong>`);
+  }
+  const impactHtml = impactRows.length
+    ? `<p style="font-size:13px;color:#d1d5db;margin:12px 0 0">${impactRows.join('<br/>')}</p>`
+    : '';
+
+  return sendEmail({
+    to: opts.clientEmail,
+    subject: `Soprano · Reclamo ${opts.refCode} — ${truncate(opts.title, 50)}`,
+    html: shell(`
+      <div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:${ALERT};margin-bottom:6px">
+        Notificação de reclamo contratual
+      </div>
+      <div style="font-size:18px;font-weight:600;margin-bottom:8px">Prezados, ${escapeHtml(opts.clientName)}</div>
+      <p style="font-size:14px;line-height:1.5;color:#d1d5db">
+        A Zitrón Brasil registra formalmente o reclamo <strong>${escapeHtml(opts.refCode)}</strong>,
+        com o seguinte fundamento: <strong>${escapeHtml(opts.typeLabel)}</strong>.
+      </p>
+      <div style="background:#0b1220;border-left:3px solid ${ALERT};padding:12px;border-radius:4px;margin:16px 0;font-size:14px">
+        <div style="font-weight:600;margin-bottom:4px">${escapeHtml(opts.title)}</div>
+        <div style="color:#9ca3af;font-size:13px;white-space:pre-wrap">${escapeHtml(truncate(opts.description, 400))}</div>
+        <div style="color:#6b7280;font-size:12px;margin-top:8px">Data do evento: ${escapeHtml(opts.eventDate)}</div>
+        ${impactHtml}
+      </div>
+      <p style="font-size:13px;color:${MUTED};margin-bottom:16px">
+        Solicitamos o acuse de recebimento desta notificação diretamente no sistema.
+      </p>
+      <a href="${opts.claimUrl}" style="display:inline-block;background:${PRIMARY};color:white;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px">
+        Acessar o reclamo →
+      </a>
+    `),
+  });
+}
+
+/** Avisa o autor (Zitrón) que a Acciona acusou o recebimento. */
+export function claimAcknowledgedEmail(opts: {
+  authorEmail: string;
+  authorName: string;
+  refCode: string;
+  clientName: string;
+  claimUrl: string;
+}) {
+  return sendEmail({
+    to: opts.authorEmail,
+    subject: `Soprano · Reclamo ${opts.refCode} — recebimento acusado`,
+    html: shell(`
+      <div style="font-size:18px;font-weight:600;margin-bottom:8px">Recebimento acusado ✓</div>
+      <p style="font-size:14px;line-height:1.5;color:#d1d5db">
+        <strong>${escapeHtml(opts.clientName)}</strong> acusou o recebimento do reclamo
+        <strong>${escapeHtml(opts.refCode)}</strong>.
+      </p>
+      <a href="${opts.claimUrl}" style="display:inline-block;background:${PRIMARY};color:white;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;margin-top:8px">
+        Ver detalhes →
+      </a>
+    `),
+  });
+}
+
+/** Avisa o autor (Zitrón) que a Acciona respondeu ao reclamo. */
+export function claimRespondedEmail(opts: {
+  authorEmail: string;
+  authorName: string;
+  refCode: string;
+  clientName: string;
+  outcomeLabel: string;
+  note: string;
+  claimUrl: string;
+}) {
+  return sendEmail({
+    to: opts.authorEmail,
+    subject: `Soprano · Reclamo ${opts.refCode} — resposta: ${opts.outcomeLabel}`,
+    html: shell(`
+      <div style="font-size:18px;font-weight:600;margin-bottom:8px">Reclamo respondido</div>
+      <p style="font-size:14px;line-height:1.5;color:#d1d5db">
+        <strong>${escapeHtml(opts.clientName)}</strong> respondeu ao reclamo
+        <strong>${escapeHtml(opts.refCode)}</strong>: <strong>${escapeHtml(opts.outcomeLabel)}</strong>.
+      </p>
+      <div style="background:#0b1220;border-left:3px solid ${PRIMARY};padding:12px;border-radius:4px;margin:16px 0;font-size:14px;white-space:pre-wrap">
+        ${escapeHtml(truncate(opts.note, 400))}
+      </div>
+      <a href="${opts.claimUrl}" style="display:inline-block;background:${PRIMARY};color:white;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px">
+        Ver detalhes →
+      </a>
+    `),
+  });
+}
+
 function escapeHtml(s: string) {
   return s
     .replace(/&/g, '&amp;')

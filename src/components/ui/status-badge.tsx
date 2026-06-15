@@ -4,6 +4,12 @@ const STATUS_VARIANT: Record<string, 'default' | 'warning' | 'success' | 'destru
   rascunho: 'secondary',
   enviada: 'warning',
   rejeitada: 'destructive',
+  // Reclamos (claims)
+  enviado: 'default',
+  recebido: 'warning',
+  em_analise: 'warning',
+  respondido: 'success',
+  encerrado: 'secondary',
 };
 
 export function StatusBadge({ status, label }: { status: string; label?: string }) {
