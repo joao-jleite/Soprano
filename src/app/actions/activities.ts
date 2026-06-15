@@ -16,7 +16,10 @@ const log = logger.for('activities');
 
 const participantSchema = z.object({
   name: z.string().min(1),
-  role: z.string().optional(),
+  // Aceita null: participantes salvos pelo editor (sem campo de função) ficam com
+  // role = null no banco; ao reabrir um rascunho para editar, esse null volta no
+  // payload. `.optional()` sozinho rejeitaria null ("Expected string, received null").
+  role: z.string().nullable().optional(),
 });
 
 const photoSchema = z.object({
