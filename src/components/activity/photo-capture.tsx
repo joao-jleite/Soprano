@@ -110,15 +110,20 @@ export function PhotoCapture({ value, onChange }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function handleFiles(files: FileList | null) {
-    if (!files || files.length === 0) return;
+  async function handleFiles(fileList: FileList | null) {
+    // Snapshot SÍNCRONO da seleção, ANTES de qualquer await. No celular, o
+    // `e.target.value = ''` que roda logo após esta chamada esvazia a FileList;
+    // se só lêssemos os arquivos depois do await (GPS), eles já teriam sumido e
+    // nada seria adicionado. Copiar para um array aqui preserva os File.
+    const files = fileList ? Array.from(fileList) : [];
+    if (files.length === 0) return;
     // Captura GPS uma vez para o lote de fotos adicionado.
     const pos = await getPosition();
     const lat = pos?.coords.latitude;
     const lng = pos?.coords.longitude;
 
     const added: CapturedPhoto[] = await Promise.all(
-      Array.from(files).map(async (file) => {
+      files.map(async (file) => {
         const { blob, fileType } = await normalizeImage(file);
         return {
           id: crypto.randomUUID(),
