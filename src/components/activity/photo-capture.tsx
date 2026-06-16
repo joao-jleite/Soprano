@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { ImagePlus, MapPin, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
@@ -81,15 +82,31 @@ async function normalizeImage(file: File): Promise<{ blob: Blob; fileType: strin
   }
 }
 
-/** Lê a posição GPS uma vez, tolerando ausência/negação de permissão. */
-function getPosition(): Promise<GeolocationPosition | null> {
+/**
+ * Lê a posição GPS uma vez. NUNCA trava nem lança: tem um teto rígido de 6s e
+ * cai para null em qualquer erro (inclusive quando bloqueada por Permissions
+ * Policy). Crucial porque o GPS roda em segundo plano e não pode segurar a foto.
+ */
+function getPositionSafe(): Promise<GeolocationPosition | null> {
   return new Promise((resolve) => {
-    if (!('geolocation' in navigator)) return resolve(null);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => resolve(pos),
-      () => resolve(null),
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
-    );
+    let settled = false;
+    const done = (v: GeolocationPosition | null) => {
+      if (!settled) {
+        settled = true;
+        resolve(v);
+      }
+    };
+    setTimeout(() => done(null), 6000);
+    try {
+      if (!('geolocation' in navigator)) return done(null);
+      navigator.geolocation.getCurrentPosition(
+        (pos) => done(pos),
+        () => done(null),
+        { enableHighAccuracy: true, timeout: 6000, maximumAge: 60000 },
+      );
+    } catch {
+      done(null);
+    }
   });
 }
 
@@ -100,6 +117,10 @@ type Props = {
 
 export function PhotoCapture({ value, onChange }: Props) {
   const t = useTranslations('photo');
+  // Espelho sempre-atualizado do value para a atualização em segundo plano
+  // (GPS/conversão) não usar uma cópia velha do array.
+  const valueRef = React.useRef(value);
+  valueRef.current = value;
 
   // Revoga os object URLs ao desmontar para não vazar memória.
   React.useEffect(() => {
@@ -112,31 +133,60 @@ export function PhotoCapture({ value, onChange }: Props) {
 
   async function handleFiles(fileList: FileList | null) {
     // Snapshot SÍNCRONO da seleção, ANTES de qualquer await. No celular, o
-    // `e.target.value = ''` que roda logo após esta chamada esvazia a FileList;
-    // se só lêssemos os arquivos depois do await (GPS), eles já teriam sumido e
-    // nada seria adicionado. Copiar para um array aqui preserva os File.
+    // `e.target.value = ''` que roda logo após esta chamada esvazia a FileList.
     const files = fileList ? Array.from(fileList) : [];
     if (files.length === 0) return;
-    // Captura GPS uma vez para o lote de fotos adicionado.
-    const pos = await getPosition();
-    const lat = pos?.coords.latitude;
-    const lng = pos?.coords.longitude;
 
-    const added: CapturedPhoto[] = await Promise.all(
-      files.map(async (file) => {
-        const { blob, fileType } = await normalizeImage(file);
-        return {
-          id: crypto.randomUUID(),
-          blob,
-          fileType,
-          previewUrl: URL.createObjectURL(blob),
-          caption: '',
-          lat,
-          lng,
-        };
-      }),
-    );
-    onChange([...value, ...added]);
+    try {
+      // 1) Mostra a miniatura NA HORA, a partir do arquivo original. Antes a
+      //    foto só era adicionada depois do GPS + conversão — se qualquer um
+      //    deles travasse, nada aparecia. Agora o preview é imediato.
+      const fresh: CapturedPhoto[] = files.map((file) => ({
+        id: crypto.randomUUID(),
+        blob: file,
+        fileType: file.type || 'image/jpeg',
+        previewUrl: URL.createObjectURL(file),
+        caption: '',
+      }));
+      onChange([...valueRef.current, ...fresh]);
+
+      // 2) Em segundo plano (não bloqueia o preview): GPS + conversão p/ JPEG.
+      const [pos, norms] = await Promise.all([
+        getPositionSafe(),
+        Promise.all(
+          fresh.map(async (item) => ({
+            id: item.id,
+            norm: await normalizeImage(item.blob as File).catch(() => null),
+          })),
+        ),
+      ]);
+      const lat = pos?.coords.latitude;
+      const lng = pos?.coords.longitude;
+      const normById = new Map(norms.map((n) => [n.id, n.norm] as const));
+
+      // Atualiza só os itens recém-adicionados; preserva o resto e nunca remove
+      // um item que ainda esteja no formulário (merge seguro contra corrida).
+      const applyEnhancements = (p: CapturedPhoto): CapturedPhoto => {
+        if (!normById.has(p.id)) return p;
+        let next: CapturedPhoto = lat != null ? { ...p, lat, lng } : p;
+        const norm = normById.get(p.id);
+        if (norm) {
+          URL.revokeObjectURL(p.previewUrl);
+          next = { ...next, blob: norm.blob, fileType: norm.fileType, previewUrl: URL.createObjectURL(norm.blob) };
+        }
+        return next;
+      };
+      const current = valueRef.current;
+      const seen = new Set(current.map((p) => p.id));
+      const merged = current.map(applyEnhancements);
+      // Garante que nenhum item recém-adicionado se perca (corrida rara de render).
+      for (const item of fresh) {
+        if (!seen.has(item.id)) merged.push(applyEnhancements(item));
+      }
+      onChange(merged);
+    } catch {
+      toast.error('Não foi possível anexar a foto. Tente novamente.');
+    }
   }
 
   function remove(photo: CapturedPhoto) {
