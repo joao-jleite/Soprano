@@ -8,6 +8,7 @@ import { PageTransition } from '@/components/layout/page-transition';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 import { SyncEngine } from '@/components/offline/sync-engine';
 import { OfflineIndicator } from '@/components/offline/offline-indicator';
+import { NameOnboarding } from '@/components/profile/name-onboarding';
 
 // Seed: emails que viram admin automaticamente se não tiverem profile.
 // Configurado via SEED_ADMIN_EMAILS no ambiente (vírgula-separado).
@@ -35,7 +36,7 @@ export default async function AppLayout({
   // Busca profile (RLS pode filtrar soft-deleted, por isso .maybeSingle)
   let { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, role')
+    .select('full_name, role, name_confirmed')
     .eq('id', user.id)
     .is('deleted_at', null)
     .maybeSingle();
@@ -44,10 +45,10 @@ export default async function AppLayout({
   // consegue ver/editar rows soft-deletados).
   let diagnostic = '';
   if (!profile) {
+    // Nunca usar o e-mail como nome — o nome real é capturado no onboarding
+    // (name_confirmed permanece false até o usuário preencher o pop-up).
     const fallbackName =
-      (user.user_metadata?.full_name as string | undefined) ??
-      user.email?.split('@')[0] ??
-      'Usuário';
+      (user.user_metadata?.full_name as string | undefined) ?? 'Novo usuário';
     const defaultRole = SEED_ADMINS.includes(user.email?.toLowerCase() ?? '')
       ? 'admin'
       : 'supervisor';
@@ -59,7 +60,7 @@ export default async function AppLayout({
       // 1) Verifica se existe linha (mesmo soft-deleted)
       const { data: existing, error: selErr } = await admin
         .from('profiles')
-        .select('full_name, role, deleted_at')
+        .select('full_name, role, name_confirmed, deleted_at')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -72,13 +73,17 @@ export default async function AppLayout({
             .from('profiles')
             .update({ deleted_at: null } as any)
             .eq('id', user.id)
-            .select('full_name, role')
+            .select('full_name, role, name_confirmed')
             .single();
           if (updErr) diagnostic = `UPDATE (revive) falhou: ${updErr.message}`;
           else profile = revived;
         } else {
           // Existe e não tá deleted — RLS estava escondendo? Usa o que veio.
-          profile = { full_name: (existing as any).full_name, role: (existing as any).role };
+          profile = {
+            full_name: (existing as any).full_name,
+            role: (existing as any).role,
+            name_confirmed: (existing as any).name_confirmed,
+          };
         }
       } else {
         // Não existe — cria do zero
@@ -89,7 +94,7 @@ export default async function AppLayout({
             full_name: fallbackName,
             role: defaultRole,
           } as any)
-          .select('full_name, role')
+          .select('full_name, role, name_confirmed')
           .single();
         if (insErr) diagnostic = `INSERT falhou: ${insErr.message}`;
         else profile = created;
@@ -122,8 +127,18 @@ export default async function AppLayout({
     }
   }
 
+  // Onboarding de nome: enquanto não confirmado, mostra o pop-up obrigatório.
+  // Pré-preenche a partir do nome atual, exceto quando ele parece um e-mail.
+  const nameConfirmed = (profile as { name_confirmed?: boolean }).name_confirmed === true;
+  const rawName = profile.full_name ?? '';
+  const looksLikeEmail = rawName.includes('@') || rawName === 'Novo usuário' || rawName === 'Usuário';
+  const nameParts = looksLikeEmail ? [] : rawName.trim().split(/\s+/).filter(Boolean);
+  const defaultFirst = nameParts[0] ?? '';
+  const defaultLast = nameParts.slice(1).join(' ');
+
   return (
     <div className="flex min-h-screen overflow-x-hidden">
+      <NameOnboarding open={!nameConfirmed} defaultFirst={defaultFirst} defaultLast={defaultLast} />
       <SyncEngine />
       <OfflineIndicator />
       <Sidebar role={profile.role} />

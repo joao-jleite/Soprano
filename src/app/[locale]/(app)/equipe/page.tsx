@@ -28,7 +28,7 @@ export default async function EquipePage({
 
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, full_name, email, role, company')
+    .select('id, full_name, role, company')
     .is('deleted_at', null)
     .order('role')
     .order('full_name');

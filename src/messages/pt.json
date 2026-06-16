@@ -315,7 +315,19 @@
     "profileDescription": "Informações visíveis para sua equipe e clientes.",
     "name": "Nome",
     "email": "Email",
-    "role": "Função"
+    "role": "Função",
+    "save": "Salvar",
+    "nameSaved": "Nome atualizado",
+    "emailPrivate": "Seu e-mail é privado — só você vê. Ele não aparece para os outros usuários."
+  },
+  "onboarding": {
+    "title": "Bem-vindo à Soprano",
+    "subtitle": "Antes de continuar, informe seu nome e sobrenome.",
+    "firstName": "Nome",
+    "lastName": "Sobrenome",
+    "save": "Salvar e continuar",
+    "saving": "Salvando...",
+    "validation": "Informe nome e sobrenome (mínimo 2 letras cada)."
   },
   "claims": {
     "subtitle": "Pleitos contratuais — Zitrón × Acciona",

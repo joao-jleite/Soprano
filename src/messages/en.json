@@ -315,7 +315,19 @@
     "profileDescription": "Information visible to your team and clients.",
     "name": "Name",
     "email": "Email",
-    "role": "Role"
+    "role": "Role",
+    "save": "Save",
+    "nameSaved": "Name updated",
+    "emailPrivate": "Your email is private — only you can see it. It is not shown to other users."
+  },
+  "onboarding": {
+    "title": "Welcome to Soprano",
+    "subtitle": "Before continuing, please enter your first and last name.",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "save": "Save and continue",
+    "saving": "Saving...",
+    "validation": "Enter first and last name (at least 2 letters each)."
   },
   "claims": {
     "subtitle": "Contractual claims — Zitrón × Acciona",
