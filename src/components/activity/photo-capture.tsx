@@ -39,33 +39,45 @@ const MAX_DIMENSION = 1600;
  */
 async function normalizeImage(file: File): Promise<{ blob: Blob; fileType: string }> {
   const fallback = { blob: file as Blob, fileType: file.type || 'image/jpeg' };
+  if (typeof document === 'undefined') return fallback;
+  if (file.type && !file.type.startsWith('image/')) return fallback;
+
+  // Decodifica via <img> (e não createImageBitmap): o Safari do iPhone decodifica
+  // HEIC neste caminho, enquanto createImageBitmap costuma falhar/travar com HEIC.
+  // Navegadores modernos já aplicam a orientação EXIF ao desenhar o <img>.
+  const url = URL.createObjectURL(file);
   try {
-    if (typeof createImageBitmap !== 'function') return fallback;
-    if (file.type && !file.type.startsWith('image/')) return fallback;
-    // 'from-image' respeita a orientação EXIF; cast porque nem toda versão do
-    // lib.dom inclui esse valor no tipo de ImageBitmapOptions.
-    const opts = { imageOrientation: 'from-image' } as unknown as ImageBitmapOptions;
-    const bitmap = await createImageBitmap(file, opts);
-    const scale = Math.min(1, MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
-    const w = Math.max(1, Math.round(bitmap.width * scale));
-    const h = Math.max(1, Math.round(bitmap.height * scale));
+    const img = document.createElement('img');
+    img.decoding = 'async';
+    const loaded = new Promise<boolean>((resolve) => {
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(false);
+    });
+    img.src = url;
+    // Rede de segurança: nunca trava a captura se o decode não responder.
+    const ok = await Promise.race([
+      loaded,
+      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 15000)),
+    ]);
+    if (!ok || !img.naturalWidth || !img.naturalHeight) return fallback;
+
+    const scale = Math.min(1, MAX_DIMENSION / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.max(1, Math.round(img.naturalWidth * scale));
+    const h = Math.max(1, Math.round(img.naturalHeight * scale));
     const canvas = document.createElement('canvas');
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      bitmap.close?.();
-      return fallback;
-    }
-    ctx.drawImage(bitmap, 0, 0, w, h);
-    bitmap.close?.();
+    if (!ctx) return fallback;
+    ctx.drawImage(img, 0, 0, w, h);
     const jpeg = await new Promise<Blob | null>((resolve) =>
       canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.85),
     );
-    if (!jpeg) return fallback;
-    return { blob: jpeg, fileType: 'image/jpeg' };
+    return jpeg && jpeg.size > 0 ? { blob: jpeg, fileType: 'image/jpeg' } : fallback;
   } catch {
     return fallback;
+  } finally {
+    URL.revokeObjectURL(url);
   }
 }
 
@@ -171,10 +183,11 @@ export function PhotoCapture({ value, onChange }: Props) {
         >
           <ImagePlus className="h-5 w-5" />
           <span>{t('upload')}</span>
+          {/* Sem `capture`: o celular abre o menu nativo com Câmera E Galeria.
+              Com `capture="environment"` ficava preso só na câmera. */}
           <input
             type="file"
             accept="image/*"
-            capture="environment"
             multiple
             className="sr-only"
             onChange={(e) => {

@@ -30,17 +30,14 @@ export function ParticipantsEditor({ value, onChange }: Props) {
 
     if (names.length === 0) return;
 
-    const existing = new Set(value.map((p) => p.name.toLowerCase()));
-    const toAdd = names
-      .filter((n) => !existing.has(n.toLowerCase()))
-      .map((name) => ({ name }));
-
-    if (toAdd.length > 0) onChange([...value, ...toAdd]);
+    // Nomes repetidos são permitidos de propósito (ex.: dois "José" na equipe).
+    const toAdd = names.map((name) => ({ name }));
+    onChange([...value, ...toAdd]);
     setInput('');
   }
 
-  function remove(name: string) {
-    onChange(value.filter((p) => p.name !== name));
+  function remove(index: number) {
+    onChange(value.filter((_, i) => i !== index));
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -69,16 +66,16 @@ export function ParticipantsEditor({ value, onChange }: Props) {
       onClick={() => inputRef.current?.focus()}
     >
       {/* Chips dos participantes já adicionados */}
-      {value.map((p) => (
+      {value.map((p, i) => (
         <Badge
-          key={p.name}
+          key={`${p.name}-${i}`}
           variant="secondary"
           className="pl-2.5 pr-1 py-0.5 gap-1.5 text-sm font-normal shrink-0"
         >
           {p.name}
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); remove(p.name); }}
+            onClick={(e) => { e.stopPropagation(); remove(i); }}
             className="rounded-full hover:bg-destructive/20 p-0.5 text-muted-foreground hover:text-destructive transition-colors"
             aria-label={`Remover ${p.name}`}
           >
