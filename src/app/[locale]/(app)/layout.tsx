@@ -36,7 +36,7 @@ export default async function AppLayout({
   // Busca profile (RLS pode filtrar soft-deleted, por isso .maybeSingle)
   let { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, role, name_confirmed')
+    .select('full_name, role')
     .eq('id', user.id)
     .is('deleted_at', null)
     .maybeSingle();
@@ -60,7 +60,7 @@ export default async function AppLayout({
       // 1) Verifica se existe linha (mesmo soft-deleted)
       const { data: existing, error: selErr } = await admin
         .from('profiles')
-        .select('full_name, role, name_confirmed, deleted_at')
+        .select('full_name, role, deleted_at')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -73,7 +73,7 @@ export default async function AppLayout({
             .from('profiles')
             .update({ deleted_at: null } as any)
             .eq('id', user.id)
-            .select('full_name, role, name_confirmed')
+            .select('full_name, role')
             .single();
           if (updErr) diagnostic = `UPDATE (revive) falhou: ${updErr.message}`;
           else profile = revived;
@@ -82,7 +82,6 @@ export default async function AppLayout({
           profile = {
             full_name: (existing as any).full_name,
             role: (existing as any).role,
-            name_confirmed: (existing as any).name_confirmed,
           };
         }
       } else {
@@ -94,7 +93,7 @@ export default async function AppLayout({
             full_name: fallbackName,
             role: defaultRole,
           } as any)
-          .select('full_name, role, name_confirmed')
+          .select('full_name, role')
           .single();
         if (insErr) diagnostic = `INSERT falhou: ${insErr.message}`;
         else profile = created;
@@ -127,9 +126,25 @@ export default async function AppLayout({
     }
   }
 
-  // Onboarding de nome: enquanto não confirmado, mostra o pop-up obrigatório.
+  // Onboarding de nome: lido SEPARADO e de forma defensiva. Se a coluna
+  // name_confirmed ainda não existir no banco (migration 0025 não aplicada),
+  // o erro é ignorado e tratamos como confirmado — o app carrega normal, sem
+  // pop-up, em vez de travar todo mundo na tela "Perfil não encontrado".
+  let nameConfirmed = true;
+  try {
+    const { data: nc, error: ncErr } = await supabase
+      .from('profiles')
+      .select('name_confirmed')
+      .eq('id', user.id)
+      .maybeSingle();
+    if (!ncErr && nc && typeof (nc as { name_confirmed?: boolean }).name_confirmed === 'boolean') {
+      nameConfirmed = (nc as { name_confirmed: boolean }).name_confirmed;
+    }
+  } catch {
+    /* coluna ausente ou erro de rede → não bloqueia o app */
+  }
+
   // Pré-preenche a partir do nome atual, exceto quando ele parece um e-mail.
-  const nameConfirmed = (profile as { name_confirmed?: boolean }).name_confirmed === true;
   const rawName = profile.full_name ?? '';
   const looksLikeEmail = rawName.includes('@') || rawName === 'Novo usuário' || rawName === 'Usuário';
   const nameParts = looksLikeEmail ? [] : rawName.trim().split(/\s+/).filter(Boolean);
