@@ -133,7 +133,9 @@ export async function GET(
     activity: {
       id: act.id,
       description: act.description,
+      evolucao: act.evolucao,
       notes: act.notes,
+      pendencias: act.pendencias,
       started_at: act.started_at,
       ended_at: act.ended_at,
       status: act.status,

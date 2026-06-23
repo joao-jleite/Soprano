@@ -8,7 +8,9 @@ export type PdfReportActivity = {
   location_sort_order?: number;
   type_label?: string;
   participants?: { name: string; role?: string | null }[];
+  evolucao?: string | null;
   notes?: string | null;
+  pendencias?: string | null;
   photos?: { url: string; caption?: string | null }[];
 };
 
@@ -212,7 +214,10 @@ export function buildDailyReportHtml(opts: BuildDailyReportHtmlOptions): string 
       padding-left: 6pt;
       border-left: 2pt solid #bfdbfe;
       font-style: italic;
+      white-space: pre-wrap;
     }
+    .act-notes strong { font-style: normal; font-weight: 700; color: #334155; }
+    .act-notes-pend { border-left-color: #fcd34d; }
 
     /* Photos */
     .photo-grid {
@@ -363,7 +368,9 @@ export function buildDailyReportHtml(opts: BuildDailyReportHtmlOptions): string 
               ${a.started_at ? ` · ${fmtTime(a.started_at)}` : ''}
             </div>
             ${teamStr ? `<div class="act-team">Equipe: ${escapeHtml(teamStr)}</div>` : ''}
-            ${a.notes ? `<div class="act-notes">${escapeHtml(a.notes)}</div>` : ''}
+            ${a.evolucao ? `<div class="act-notes"><strong>Evolução:</strong> ${escapeHtml(a.evolucao)}</div>` : ''}
+            ${a.notes ? `<div class="act-notes"><strong>Observações:</strong> ${escapeHtml(a.notes)}</div>` : ''}
+            ${a.pendencias ? `<div class="act-notes act-notes-pend"><strong>Pendências:</strong> ${escapeHtml(a.pendencias)}</div>` : ''}
             ${photosHtml}
           </td>
         </tr>`;
