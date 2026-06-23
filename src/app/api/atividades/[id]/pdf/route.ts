@@ -181,19 +181,20 @@ export async function GET(
         ),
       );
     });
+    // Espera as fontes (IBM Plex via Google Fonts) carregarem, com teto de tempo:
+    // se a rede do Chromium falhar no Lambda, segue com as fontes de fallback
+    // (system-ui / monospace) sem travar a geração do PDF.
+    await Promise.race([
+      page.evaluate(() => (document as unknown as { fonts: { ready: Promise<unknown> } }).fonts.ready),
+      new Promise((resolve) => setTimeout(resolve, 4000)),
+    ]);
     const pdf = await page.pdf({
       format: 'A4',
       printBackground: true,
-      displayHeaderFooter: true,
-      headerTemplate: '<span></span>',
-      footerTemplate: `
-        <div style="width:100%;padding:0 28mm;display:flex;justify-content:space-between;
-          font-size:7pt;color:#94a3b8;font-family:sans-serif;border-top:0.5pt solid #e2e8f0;
-          box-sizing:border-box;">
-          <span>Soprano · Registro de atividades — Zitrón Brasil</span>
-          <span>Linha 6 · São Paulo</span>
-        </div>`,
-      margin: { top: '0', right: '0', bottom: '14mm', left: '0' },
+      // Sem cabeçalho/rodapé do navegador — o template provê header/footer
+      // próprios (position:fixed) e as margens vêm do CSS (.hdr/.ftr-space + padding).
+      displayHeaderFooter: false,
+      margin: { top: '0', right: '0', bottom: '0', left: '0' },
     });
     return new NextResponse(Buffer.from(pdf), {
       headers: {

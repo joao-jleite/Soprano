@@ -24,7 +24,7 @@ describe('PDF de atividade — campos de evolução/pendências', () => {
     expect(html).toContain('Observações');
   });
 
-  it('coloca Evolução/Observações/Pendências ANTES das fotos (visibilidade)', () => {
+  it('ordena as seções conforme o template folha técnica (fotos → evolução → … → assinatura)', () => {
     const html = buildActivityHtml({
       activity: {
         id: '9e56e2e9-0000-0000-0000-000000000000',
@@ -39,11 +39,16 @@ describe('PDF de atividade — campos de evolução/pendências', () => {
       photos: [{ signedUrl: 'data:image/jpeg;base64,AAAA', caption: 'Foto 1' }],
     });
 
-    // Os três campos devem aparecer ANTES da seção de fotos (igual à tela de detalhe)
+    // Ordem do template de folha técnica:
+    //   Registro fotográfico → Evolução → Observações → Pendências → Assinatura.
+    // Os três campos de progresso continuam sempre presentes, agora entre as
+    // fotos e o quadro de assinatura.
     const fotos = html.indexOf('Registro fotográfico');
-    expect(html.indexOf('Evolução')).toBeLessThan(fotos);
-    expect(html.indexOf('Observações')).toBeLessThan(fotos);
-    expect(html.indexOf('Pendências')).toBeLessThan(fotos);
+    const assinatura = html.indexOf('Assinatura do cliente');
+    for (const campo of ['Evolução', 'Observações', 'Pendências']) {
+      expect(html.indexOf(campo), campo).toBeGreaterThan(fotos);
+      expect(html.indexOf(campo), campo).toBeLessThan(assinatura);
+    }
   });
 });
 
