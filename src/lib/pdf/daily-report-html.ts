@@ -8,8 +8,8 @@ export type PdfReportActivity = {
   location_sort_order?: number;
   type_label?: string;
   participants?: { name: string; role?: string | null }[];
-  notes?: string | null;
   evolucao?: string | null;
+  notes?: string | null;
   pendencias?: string | null;
   photos?: { url: string; caption?: string | null }[];
 };
@@ -216,25 +216,8 @@ export function buildDailyReportHtml(opts: BuildDailyReportHtmlOptions): string 
       font-style: italic;
       white-space: pre-wrap;
     }
-    .act-progress {
-      font-size: 7.5pt;
-      color: #475569;
-      margin-top: 3pt;
-      padding-left: 6pt;
-      border-left: 2pt solid #bfdbfe;
-      line-height: 1.5;
-      white-space: pre-wrap;
-    }
-    .act-progress-label {
-      display: block;
-      font-size: 6.5pt;
-      font-weight: 700;
-      font-style: normal;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: #334155;
-      margin-bottom: 1pt;
-    }
+    .act-notes strong { font-style: normal; font-weight: 700; color: #334155; }
+    .act-notes-pend { border-left-color: #fcd34d; }
 
     /* Photos */
     .photo-grid {
@@ -385,9 +368,9 @@ export function buildDailyReportHtml(opts: BuildDailyReportHtmlOptions): string 
               ${a.started_at ? ` · ${fmtTime(a.started_at)}` : ''}
             </div>
             ${teamStr ? `<div class="act-team">Equipe: ${escapeHtml(teamStr)}</div>` : ''}
-            ${a.evolucao ? `<div class="act-progress"><span class="act-progress-label">Evolução</span>${escapeHtml(a.evolucao)}</div>` : ''}
-            ${a.notes ? `<div class="act-notes">${escapeHtml(a.notes)}</div>` : ''}
-            ${a.pendencias ? `<div class="act-progress"><span class="act-progress-label">Pendências</span>${escapeHtml(a.pendencias)}</div>` : ''}
+            ${a.evolucao ? `<div class="act-notes"><strong>Evolução:</strong> ${escapeHtml(a.evolucao)}</div>` : ''}
+            ${a.notes ? `<div class="act-notes"><strong>Observações:</strong> ${escapeHtml(a.notes)}</div>` : ''}
+            ${a.pendencias ? `<div class="act-notes act-notes-pend"><strong>Pendências:</strong> ${escapeHtml(a.pendencias)}</div>` : ''}
             ${photosHtml}
           </td>
         </tr>`;

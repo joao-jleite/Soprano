@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ChangePasswordForm } from './change-password-form';
+import { EditNameForm } from './edit-name-form';
 
 export default async function ConfiguracoesPage({
   params,
@@ -37,11 +38,12 @@ export default async function ConfiguracoesPage({
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
             <Label>{t('settings.name')}</Label>
-            <Input defaultValue={profile?.full_name ?? ''} disabled />
+            <EditNameForm initialName={profile?.full_name ?? ''} />
           </div>
           <div className="space-y-1.5">
             <Label>{t('settings.email')}</Label>
             <Input defaultValue={profile?.email ?? ''} disabled />
+            <p className="text-[11px] text-muted-foreground">{t('settings.emailPrivate')}</p>
           </div>
           <div className="space-y-1.5">
             <Label>{t('settings.role')}</Label>

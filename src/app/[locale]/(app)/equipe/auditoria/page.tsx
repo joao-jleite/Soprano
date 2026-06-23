@@ -67,6 +67,21 @@ export default async function AuditoriaPage({
     new Set(((distinctTables ?? []) as any[]).map((r) => r.table_name)),
   ).sort();
 
+  // Mostra o NOME do autor (não o e-mail). O e-mail fica só no registro interno.
+  const actorIds = Array.from(
+    new Set(((logs ?? []) as any[]).map((l) => l.actor_id).filter(Boolean)),
+  ) as string[];
+  const nameById: Record<string, string> = {};
+  if (actorIds.length) {
+    const { data: actors } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', actorIds);
+    (actors ?? []).forEach((a: any) => {
+      nameById[a.id] = a.full_name;
+    });
+  }
+
   const total = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -114,7 +129,7 @@ export default async function AuditoriaPage({
                 </div>
                 <p className="text-sm">
                   <span className="text-muted-foreground">{t('by')} </span>
-                  <strong>{log.actor_email ?? t('system')}</strong>
+                  <strong>{nameById[log.actor_id] ?? t('system')}</strong>
                 </p>
                 {log.diff && (
                   <details className="mt-3 group">

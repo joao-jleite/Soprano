@@ -23,7 +23,6 @@ import { initials } from '@/lib/utils';
 type Profile = {
   id: string;
   full_name: string;
-  email: string;
   role: 'admin' | 'supervisor' | 'cliente';
   company: string | null;
 };
@@ -103,7 +102,6 @@ export function ProfileRow({ profile, editable, isSelf }: Props) {
                   </span>
                 )}
               </p>
-              <p className="text-xs text-muted-foreground truncate">{profile.email}</p>
               {profile.company && (
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
                   {profile.company}

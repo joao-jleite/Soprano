@@ -37,6 +37,7 @@ type ProfileRow = {
   phone: string | null;
   company: string | null;
   preferred_locale: string;
+  name_confirmed: boolean;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -244,6 +245,7 @@ export interface Database {
           phone?: string | null;
           company?: string | null;
           preferred_locale?: string;
+          name_confirmed?: boolean;
           deleted_at?: string | null;
         };
         Update: Partial<Omit<ProfileRow, 'id'>>;

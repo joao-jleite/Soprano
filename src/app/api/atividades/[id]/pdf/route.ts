@@ -133,8 +133,8 @@ export async function GET(
     activity: {
       id: act.id,
       description: act.description,
-      notes: act.notes,
       evolucao: act.evolucao,
+      notes: act.notes,
       pendencias: act.pendencias,
       started_at: act.started_at,
       ended_at: act.ended_at,
@@ -165,7 +165,22 @@ export async function GET(
   try {
     browser = await getBrowser();
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'domcontentloaded' });
+    // Mesmo sendo data URIs (sem rede), o Chromium precisa DECODIFICAR cada
+    // imagem antes de pintar. Imprimir em 'domcontentloaded' gerava PDF com as
+    // fotos em branco — esperamos o load + a decodificação de cada <img>.
+    await page.setContent(html, { waitUntil: 'load' });
+    await page.evaluate(async () => {
+      await Promise.all(
+        Array.from(document.images).map((img) =>
+          img.complete && img.naturalWidth > 0
+            ? Promise.resolve()
+            : new Promise<void>((resolve) => {
+                img.addEventListener('load', () => resolve());
+                img.addEventListener('error', () => resolve());
+              }),
+        ),
+      );
+    });
     // Espera as fontes (IBM Plex via Google Fonts) carregarem, com teto de tempo:
     // se a rede do Chromium falhar no Lambda, segue com as fontes de fallback
     // (system-ui / monospace) sem travar a geração do PDF.

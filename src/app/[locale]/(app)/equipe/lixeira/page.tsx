@@ -51,7 +51,7 @@ export default async function LixeiraPage({
       .limit(200),
     supabase
       .from('profiles')
-      .select('id, full_name, email, role, deleted_at')
+      .select('id, full_name, role, deleted_at')
       .not('deleted_at', 'is', null)
       .order('deleted_at', { ascending: false })
       .limit(200),
@@ -139,7 +139,7 @@ export default async function LixeiraPage({
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium truncate">{u.full_name}</p>
                   <p className="text-xs text-muted-foreground truncate">
-                    {u.email} · {u.role} · desativado em {formatDateTime(u.deleted_at, loc)}
+                    {u.role} · desativado em {formatDateTime(u.deleted_at, loc)}
                   </p>
                 </div>
                 <RestoreUserRow id={u.id} />

@@ -209,8 +209,8 @@ export default async function ActivityDetailPage({
           </CardHeader>
           <CardContent>
             <ul className="flex flex-wrap gap-2">
-              {act.activity_participants.map((p: any) => (
-                <li key={p.name}>
+              {act.activity_participants.map((p: any, i: number) => (
+                <li key={`${p.name}-${i}`}>
                   <Badge variant="secondary" className="px-3 py-1">
                     <span className="flex flex-col leading-tight">
                       <span className="font-medium">{p.name}</span>

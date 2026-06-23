@@ -8,6 +8,7 @@ import { PageTransition } from '@/components/layout/page-transition';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 import { SyncEngine } from '@/components/offline/sync-engine';
 import { OfflineIndicator } from '@/components/offline/offline-indicator';
+import { NameOnboarding } from '@/components/profile/name-onboarding';
 
 // Seed: emails que viram admin automaticamente se não tiverem profile.
 // Configurado via SEED_ADMIN_EMAILS no ambiente (vírgula-separado).
@@ -44,10 +45,10 @@ export default async function AppLayout({
   // consegue ver/editar rows soft-deletados).
   let diagnostic = '';
   if (!profile) {
+    // Nunca usar o e-mail como nome — o nome real é capturado no onboarding
+    // (name_confirmed permanece false até o usuário preencher o pop-up).
     const fallbackName =
-      (user.user_metadata?.full_name as string | undefined) ??
-      user.email?.split('@')[0] ??
-      'Usuário';
+      (user.user_metadata?.full_name as string | undefined) ?? 'Novo usuário';
     const defaultRole = SEED_ADMINS.includes(user.email?.toLowerCase() ?? '')
       ? 'admin'
       : 'supervisor';
@@ -78,7 +79,10 @@ export default async function AppLayout({
           else profile = revived;
         } else {
           // Existe e não tá deleted — RLS estava escondendo? Usa o que veio.
-          profile = { full_name: (existing as any).full_name, role: (existing as any).role };
+          profile = {
+            full_name: (existing as any).full_name,
+            role: (existing as any).role,
+          };
         }
       } else {
         // Não existe — cria do zero
@@ -122,8 +126,34 @@ export default async function AppLayout({
     }
   }
 
+  // Onboarding de nome: lido SEPARADO e de forma defensiva. Se a coluna
+  // name_confirmed ainda não existir no banco (migration 0025 não aplicada),
+  // o erro é ignorado e tratamos como confirmado — o app carrega normal, sem
+  // pop-up, em vez de travar todo mundo na tela "Perfil não encontrado".
+  let nameConfirmed = true;
+  try {
+    const { data: nc, error: ncErr } = await supabase
+      .from('profiles')
+      .select('name_confirmed')
+      .eq('id', user.id)
+      .maybeSingle();
+    if (!ncErr && nc && typeof (nc as { name_confirmed?: boolean }).name_confirmed === 'boolean') {
+      nameConfirmed = (nc as { name_confirmed: boolean }).name_confirmed;
+    }
+  } catch {
+    /* coluna ausente ou erro de rede → não bloqueia o app */
+  }
+
+  // Pré-preenche a partir do nome atual, exceto quando ele parece um e-mail.
+  const rawName = profile.full_name ?? '';
+  const looksLikeEmail = rawName.includes('@') || rawName === 'Novo usuário' || rawName === 'Usuário';
+  const nameParts = looksLikeEmail ? [] : rawName.trim().split(/\s+/).filter(Boolean);
+  const defaultFirst = nameParts[0] ?? '';
+  const defaultLast = nameParts.slice(1).join(' ');
+
   return (
     <div className="flex min-h-screen overflow-x-hidden">
+      <NameOnboarding open={!nameConfirmed} defaultFirst={defaultFirst} defaultLast={defaultLast} />
       <SyncEngine />
       <OfflineIndicator />
       <Sidebar role={profile.role} />
