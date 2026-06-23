@@ -1,4 +1,10 @@
-/** Gera o HTML completo do Resumo Diário para impressão via Puppeteer */
+/**
+ * Gera o HTML do Resumo Diário para impressão via Puppeteer.
+ *
+ * Mesma estética de "folha técnica de engenharia" do PDF de atividade:
+ * IBM Plex, azul royal #163d8a, fios finos, marca d'água RASCUNHO, sem cantos
+ * arredondados/gradientes/emojis.
+ */
 
 export type PdfReportActivity = {
   id: string;
@@ -39,13 +45,13 @@ export type BuildDailyReportHtmlOptions = {
 };
 
 const TZ = 'America/Sao_Paulo'; // servidor Vercel roda em UTC
+const DASH = '—';
 
 function fmt(iso: string) {
   try {
     return new Date(iso).toLocaleString('pt-BR', {
       day: '2-digit', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit',
-      timeZone: TZ,
+      hour: '2-digit', minute: '2-digit', timeZone: TZ,
     });
   } catch { return iso; }
 }
@@ -53,8 +59,7 @@ function fmt(iso: string) {
 function fmtDate(iso: string) {
   try {
     return new Date(iso).toLocaleDateString('pt-BR', {
-      weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
-      timeZone: TZ,
+      weekday: 'long', day: '2-digit', month: 'long', year: 'numeric', timeZone: TZ,
     });
   } catch { return iso; }
 }
@@ -74,6 +79,23 @@ function escapeHtml(s: unknown): string {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
+
+/** Selo de status no estilo mono contornado. */
+function statusSeal(status: string): { label: string; color: string } {
+  if (status === 'assinado') return { label: 'Assinado', color: '#1f5d4c' };
+  if (status === 'cancelado' || status === 'rejeitado') return { label: 'Cancelado', color: '#9a3412' };
+  if (status === 'rascunho') return { label: 'Rascunho', color: '#163d8a' };
+  return { label: 'Aguardando assinatura', color: '#92400e' };
+}
+
+/** Marca/logotipo Soprano embutido como SVG inline (sem requisição externa). */
+const SOPRANO_MARK = `
+  <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="height:26px;width:26px;display:block;">
+    <rect x="0.75" y="0.75" width="38.5" height="38.5" rx="9" stroke="#163d8a" stroke-opacity="0.28"/>
+    <path d="M27.5 12.5c-1.6-2.2-4.6-3.5-7.5-3.5-4.4 0-8 3-8 6.5 0 3.6 3 5.5 7 6.5 4 1 7 2.9 7 6.5 0 3.5-3.6 6.5-8 6.5-2.9 0-5.9-1.3-7.5-3.5" stroke="#163d8a" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="12.5" cy="32.5" r="1.25" fill="#163d8a"/>
+    <circle cx="27.5" cy="7.5" r="1.25" fill="#163d8a"/>
+  </svg>`;
 
 // Agrupa atividades por local (sort_order → name) e ordena
 function groupByLocation(activities: PdfReportActivity[]) {
@@ -97,401 +119,232 @@ function groupByLocation(activities: PdfReportActivity[]) {
 export function buildDailyReportHtml(opts: BuildDailyReportHtmlOptions): string {
   const { report, supervisorName, clientName, activities, signature, qrDataUrl, verifyUrl, generatedAt } = opts;
 
-  const css = `
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  const assinado = report.status === 'assinado' && !!signature;
+  const isRascunho = report.status === 'rascunho';
+  const seal = statusSeal(report.status);
+  const tituloData = fmtDate(report.report_date + 'T12:00:00');
+  const emissao = fmt(generatedAt);
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-      font-size: 10pt;
-      color: #0f172a;
-      background: #fff;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
+  /* ── Bloco de progresso (evolução/observações/pendências) por atividade ──── */
+  const progresso = (label: string, value?: string | null) =>
+    value
+      ? `<div style="margin-top:6px;padding-left:8px;border-left:2px solid #c7cdd6;">
+          <span style="font:600 7.5px/1 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#5b6470;">${label}</span>
+          <div style="margin-top:2px;font-size:11.5px;line-height:1.45;color:#16181d;white-space:pre-wrap;">${escapeHtml(value)}</div>
+        </div>`
+      : '';
 
-    .page {
-      width: 210mm;
-      min-height: 297mm;
-      padding: 0;
-      page-break-after: always;
-    }
-    .page:last-child { page-break-after: avoid; }
-
-    .header {
-      background: #0959C8;
-      color: #fff;
-      padding: 18pt 28pt 16pt;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-    }
-    .brand { font-size: 22pt; font-weight: 800; letter-spacing: 2px; line-height: 1; }
-    .brand-sub { font-size: 7pt; opacity: 0.7; margin-top: 4px; letter-spacing: 1.5px; text-transform: uppercase; }
-    .doc-meta { text-align: right; font-size: 7pt; opacity: 0.75; line-height: 1.7; }
-
-    .body { padding: 22pt 28pt 80pt; }
-
-    .report-date {
-      font-size: 9pt;
-      color: #64748b;
-      text-transform: capitalize;
-      margin-bottom: 4pt;
-    }
-    .report-title {
-      font-size: 20pt;
-      font-weight: 800;
-      line-height: 1.2;
-      margin-bottom: 18pt;
-    }
-
-    .section-title {
-      font-size: 7pt;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      color: #94a3b8;
-      margin: 18pt 0 8pt;
-      padding-bottom: 4pt;
-      border-bottom: 0.5pt solid #e2e8f0;
-    }
-
-    /* Meta cards */
-    .meta-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6pt; margin-bottom: 6pt; }
-    .meta-card {
-      background: #f8fafc;
-      border: 0.5pt solid #e2e8f0;
-      border-radius: 4pt;
-      padding: 8pt 10pt;
-    }
-    .meta-label { font-size: 6.5pt; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8; margin-bottom: 3pt; }
-    .meta-value { font-size: 10pt; font-weight: 600; color: #0f172a; }
-
-    /* Location group header */
-    .loc-header td {
-      background: #f1f5f9;
-      font-size: 8pt;
-      font-weight: 700;
-      color: #334155;
-      padding: 6pt 8pt;
-      border-bottom: 1pt solid #e2e8f0;
-      letter-spacing: 0.3px;
-    }
-
-    /* Activities table */
-    .act-table { width: 100%; border-collapse: collapse; }
-    .act-table th {
-      background: #f1f5f9;
-      font-size: 7pt;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      color: #64748b;
-      padding: 6pt 8pt;
-      text-align: left;
-      font-weight: 700;
-      border-bottom: 1pt solid #e2e8f0;
-    }
-    .act-table td {
-      padding: 9pt 8pt;
-      font-size: 9pt;
-      vertical-align: top;
-      border-bottom: 0.5pt solid #f1f5f9;
-    }
-    .act-table tr:last-child td { border-bottom: none; }
-    .act-num {
-      font-size: 8pt;
-      color: #94a3b8;
-      font-family: monospace;
-      font-weight: 700;
-      width: 20pt;
-    }
-    .act-desc { font-weight: 600; color: #0f172a; }
-    .act-sub { font-size: 7.5pt; color: #64748b; margin-top: 2pt; }
-    .act-team { font-size: 7.5pt; color: #64748b; margin-top: 2pt; font-style: italic; }
-    .act-notes {
-      font-size: 7.5pt;
-      color: #475569;
-      margin-top: 3pt;
-      padding-left: 6pt;
-      border-left: 2pt solid #bfdbfe;
-      font-style: italic;
-      white-space: pre-wrap;
-    }
-    .act-notes strong { font-style: normal; font-weight: 700; color: #334155; }
-    .act-notes-pend { border-left-color: #fcd34d; }
-
-    /* Photos */
-    .photo-grid {
-      display: flex;
-      gap: 5pt;
-      flex-wrap: wrap;
-      margin-top: 7pt;
-    }
-    .photo-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .photo-img {
-      width: 90pt;
-      height: 68pt;
-      object-fit: cover;
-      border-radius: 3pt;
-      border: 0.5pt solid #e2e8f0;
-      display: block;
-    }
-    .photo-caption {
-      font-size: 6pt;
-      color: #94a3b8;
-      text-align: center;
-      margin-top: 2pt;
-      max-width: 90pt;
-      line-height: 1.3;
-    }
-
-    /* Observations */
-    .notes-box {
-      background: #f8fafc;
-      border: 0.5pt solid #e2e8f0;
-      border-left: 3pt solid #0959C8;
-      border-radius: 4pt;
-      padding: 10pt 12pt;
-      font-size: 9.5pt;
-      line-height: 1.6;
-      color: #334155;
-    }
-
-    /* Signature — digital */
-    .sig-box {
-      border: 1pt solid #bfdbfe;
-      border-radius: 6pt;
-      padding: 14pt;
-      background: #f0f9ff;
-    }
-    .sig-verified {
-      display: flex;
-      align-items: center;
-      gap: 6pt;
-      font-size: 8pt;
-      font-weight: 700;
-      color: #166534;
-      margin-bottom: 8pt;
-    }
-    .sig-verified-dot {
-      width: 8pt;
-      height: 8pt;
-      border-radius: 50%;
-      background: #16a34a;
-      flex-shrink: 0;
-    }
-    .sig-name { font-size: 13pt; font-weight: 700; margin-bottom: 6pt; }
-    .sig-drawing { max-height: 80pt; margin: 8pt 0; overflow: hidden; }
-    .sig-drawing svg { max-height: 80pt; width: auto; }
-    .sig-meta { display: flex; gap: 16pt; font-size: 7.5pt; color: #64748b; margin-top: 6pt; flex-wrap: wrap; }
-    .verify-row {
-      display: flex; gap: 14pt; align-items: flex-start;
-      margin-top: 12pt; padding-top: 10pt;
-      border-top: 0.5pt dashed #cbd5e1;
-    }
-    .qr { width: 64pt; height: 64pt; flex-shrink: 0; }
-    .verify-text { font-size: 7.5pt; color: #475569; line-height: 1.6; }
-    .verify-title { font-weight: 700; color: #0f172a; margin-bottom: 3pt; }
-    .verify-url { color: #0959C8; word-break: break-all; }
-    .verify-code { margin-top: 4pt; }
-    .verify-code strong { font-family: monospace; font-size: 9pt; color: #0959C8; letter-spacing: 1px; }
-
-    /* Signature — blank/manual */
-    .sig-blank-box {
-      border: 1pt solid #e2e8f0;
-      border-radius: 6pt;
-      padding: 16pt;
-      background: #fafafa;
-    }
-    .sig-blank-instruction {
-      font-size: 8pt;
-      color: #64748b;
-      margin-bottom: 20pt;
-      line-height: 1.6;
-    }
-    .sig-blank-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 24pt; }
-    .sig-blank-field { padding-top: 52pt; }
-    .sig-blank-line { border-bottom: 1pt solid #334155; width: 100%; }
-    .sig-blank-label { font-size: 7pt; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8; margin-top: 5pt; }
-    .sig-consent {
-      margin-top: 16pt;
-      font-size: 7.5pt;
-      color: #64748b;
-      font-style: italic;
-      line-height: 1.6;
-      border-top: 0.5pt dashed #e2e8f0;
-      padding-top: 10pt;
-    }
-
-    /* footer removido — gerado via footerTemplate do Puppeteer para evitar páginas em branco */
-
-    @media print {
-      body { margin: 0; }
-      .page { page-break-after: always; }
-      .page:last-child { page-break-after: avoid; }
-    }
-  `;
-
-  // Agrupamento por local
+  /* ── Atividades agrupadas por local ──────────────────────────────────────── */
   const groups = groupByLocation(activities);
-
   let globalNum = 0;
-  const activityRows = groups.map(group => {
-    const locRow = `<tr class="loc-header"><td></td><td>📍 ${escapeHtml(group.locName)}</td></tr>`;
-    const itemRows = group.items.map(a => {
-      globalNum++;
-      const teamStr = (a.participants ?? [])
-        .map(p => p.role ? `${p.name} (${p.role})` : p.name)
-        .join(', ');
 
-      const photosHtml = (a.photos ?? []).length > 0
-        ? `<div class="photo-grid">
-            ${(a.photos ?? []).slice(0, 4).map(ph =>
-              `<div class="photo-item">
-                <img class="photo-img" src="${ph.url}" />
-                ${ph.caption ? `<div class="photo-caption">${escapeHtml(ph.caption)}</div>` : ''}
+  const activitiesHtml = groups
+    .map((group) => {
+      const locHeader = `
+        <div style="display:flex;align-items:center;gap:10px;margin:18px 0 4px;">
+          <span style="font:600 9px/1 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#16181d;white-space:nowrap;">${escapeHtml(group.locName)}</span>
+          <span style="flex:1;height:1px;background:#dfe3ea;"></span>
+        </div>`;
+
+      const items = group.items
+        .map((a) => {
+          globalNum++;
+          const num = String(globalNum).padStart(2, '0');
+          const teamStr = (a.participants ?? [])
+            .map((p) => (p.role ? `${p.name} (${p.role})` : p.name))
+            .join(', ');
+
+          const fotos = (a.photos ?? []).slice(0, 4);
+          const fotosHtml = fotos.length
+            ? `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:9px;">
+                ${fotos
+                  .map((ph, i) => {
+                    const fig = String(i + 1).padStart(2, '0');
+                    return `<figure class="avoid-break" style="margin:0;">
+                      <div style="border:1px solid #c7cdd6;padding:3px;background:#fff;">
+                        <img src="${ph.url}" alt="${escapeHtml(ph.caption ?? '')}" style="display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:#eef1f5;">
+                      </div>
+                      <figcaption style="display:flex;gap:6px;align-items:baseline;margin-top:5px;">
+                        <span style="font:600 8px/1.2 'IBM Plex Mono',monospace;letter-spacing:.08em;color:var(--ac);white-space:nowrap;">FIG.${fig}</span>
+                        <span style="font-size:9px;line-height:1.3;color:#5b6470;">${ph.caption ? escapeHtml(ph.caption) : DASH}</span>
+                      </figcaption>
+                    </figure>`;
+                  })
+                  .join('')}
               </div>`
-            ).join('')}
-          </div>`
-        : '';
+            : '';
 
-      return `
-        <tr>
-          <td class="act-num">${globalNum}</td>
-          <td>
-            <div class="act-desc">${escapeHtml(a.description)}</div>
-            <div class="act-sub">
-              ${a.type_label ? `${escapeHtml(a.type_label)}` : ''}
-              ${a.started_at ? ` · ${fmtTime(a.started_at)}` : ''}
-            </div>
-            ${teamStr ? `<div class="act-team">Equipe: ${escapeHtml(teamStr)}</div>` : ''}
-            ${a.evolucao ? `<div class="act-notes"><strong>Evolução:</strong> ${escapeHtml(a.evolucao)}</div>` : ''}
-            ${a.notes ? `<div class="act-notes"><strong>Observações:</strong> ${escapeHtml(a.notes)}</div>` : ''}
-            ${a.pendencias ? `<div class="act-notes act-notes-pend"><strong>Pendências:</strong> ${escapeHtml(a.pendencias)}</div>` : ''}
-            ${photosHtml}
-          </td>
-        </tr>`;
-    }).join('');
-    return locRow + itemRows;
-  }).join('');
+          return `
+            <div class="avoid-break" style="padding:12px 0;border-bottom:1px solid #eef1f5;">
+              <div style="display:flex;gap:12px;align-items:baseline;">
+                <span style="font:700 11px/1.3 'IBM Plex Mono',monospace;color:var(--ac);white-space:nowrap;">${num}</span>
+                <div style="flex:1;">
+                  <div style="font-size:14px;font-weight:600;color:#16181d;line-height:1.3;">${escapeHtml(a.description)}</div>
+                  <div style="margin-top:2px;font:500 9px/1.3 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#9aa2ad;">
+                    ${a.type_label ? escapeHtml(a.type_label) : DASH}${a.started_at ? ` · ${fmtTime(a.started_at)}` : ''}
+                  </div>
+                  ${teamStr ? `<div style="margin-top:5px;font-size:11.5px;color:#5b6470;"><span style="font:600 7.5px/1 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#9aa2ad;">Equipe</span> &nbsp;${escapeHtml(teamStr)}</div>` : ''}
+                  ${progresso('Evolução', a.evolucao)}
+                  ${progresso('Observações', a.notes)}
+                  ${progresso('Pendências', a.pendencias)}
+                  ${fotosHtml}
+                </div>
+              </div>
+            </div>`;
+        })
+        .join('');
 
-  // Signature block
-  const sigHtml = signature ? `
-    <div class="sig-box">
-      <div class="sig-verified">
-        <div class="sig-verified-dot"></div>
-        Documento assinado eletronicamente
-      </div>
-      <div class="sig-name">${escapeHtml(signature.signer_name)}</div>
-      ${signature.svg_data ? `<div class="sig-drawing"><img src="data:image/svg+xml;base64,${Buffer.from(signature.svg_data).toString('base64')}" /></div>` : ''}
-      <div class="sig-meta">
-        <span>Assinado em ${fmt(signature.signed_at)}</span>
-        ${signature.ip_address ? `<span>IP: ${signature.ip_address}</span>` : ''}
-        <span>Código: <strong style="font-family:monospace;color:#0959C8">${signature.verification_code}</strong></span>
-      </div>
-      ${qrDataUrl || verifyUrl ? `
-      <div class="verify-row">
-        ${qrDataUrl ? `<img class="qr" src="${qrDataUrl}" />` : ''}
-        <div class="verify-text">
-          <div class="verify-title">Verificação de autenticidade</div>
-          <div class="verify-url">${verifyUrl ?? ''}</div>
-          <div class="verify-code">Código: <strong>${signature.verification_code}</strong></div>
+      return locHeader + items;
+    })
+    .join('');
+
+  /* ── Assinatura ──────────────────────────────────────────────────────────── */
+  const assinaturaHtml = assinado && signature
+    ? `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:30px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:240px;">
+          ${signature.svg_data ? `<div style="max-height:80px;overflow:hidden;margin-bottom:8px;"><img src="data:image/svg+xml;base64,${Buffer.from(signature.svg_data).toString('base64')}" alt="Assinatura" style="max-height:80px;width:auto;display:block;"></div>` : ''}
+          <div style="font-size:22px;color:#16181d;border-bottom:1px solid #16181d;padding-bottom:6px;min-width:240px;">${escapeHtml(signature.signer_name)}</div>
+          <div class="lbl" style="letter-spacing:.18em;margin-top:8px;">Nome / Assinatura do representante do cliente</div>
         </div>
-      </div>` : ''}
-    </div>` : `
-    <div class="sig-blank-box">
-      <p class="sig-blank-instruction">
+        <div style="text-align:right;">
+          <div style="font:600 10px/1 'IBM Plex Mono',monospace;letter-spacing:.18em;text-transform:uppercase;color:#1f5d4c;">Assinado digitalmente</div>
+          <div style="font:400 11px/1.4 'IBM Plex Mono',monospace;color:#5b6470;margin-top:5px;">${fmt(signature.signed_at)}</div>
+          ${signature.ip_address ? `<div style="font:400 10px/1.4 'IBM Plex Mono',monospace;color:#9aa2ad;margin-top:3px;">IP ${escapeHtml(signature.ip_address)}</div>` : ''}
+        </div>
+      </div>
+      ${qrDataUrl || verifyUrl || signature.verification_code ? `
+      <div style="margin-top:18px;padding-top:14px;border-top:1px solid #dfe3ea;display:flex;gap:16px;align-items:flex-start;">
+        ${qrDataUrl ? `<img src="${qrDataUrl}" alt="QR de verificação" style="width:64px;height:64px;flex:none;border:1px solid #dfe3ea;">` : ''}
+        <div>
+          <div class="lbl" style="letter-spacing:.18em;">Verificação de autenticidade</div>
+          ${verifyUrl ? `<div style="margin-top:6px;font:400 11px/1.5 'IBM Plex Mono',monospace;color:var(--ac);word-break:break-all;">${escapeHtml(verifyUrl)}</div>` : ''}
+          <div style="margin-top:4px;font:400 11px/1.5 'IBM Plex Mono',monospace;color:#5b6470;">Código <strong style="color:var(--ac);letter-spacing:.06em;">${escapeHtml(signature.verification_code)}</strong></div>
+        </div>
+      </div>` : ''}`
+    : `
+      <p style="margin:0 0 18px;font-size:11.5px;line-height:1.6;color:#5b6470;max-width:78ch;">
         Ao assinar abaixo, o representante do cliente declara que todas as atividades listadas neste
         resumo diário foram realizadas conforme descrito, em conformidade com o contrato vigente entre
         as partes. Esta assinatura tem validade jurídica nos termos da Lei 14.063/2020.
       </p>
-      <div class="sig-blank-grid">
-        <div class="sig-blank-field">
-          <div class="sig-blank-line"></div>
-          <div class="sig-blank-label">Assinatura do representante do cliente</div>
-        </div>
-        <div class="sig-blank-field">
-          <div class="sig-blank-line"></div>
-          <div class="sig-blank-label">Nome legível / CPF</div>
-        </div>
-        <div class="sig-blank-field">
-          <div class="sig-blank-line"></div>
-          <div class="sig-blank-label">Data e hora</div>
-        </div>
+      <div style="display:grid;grid-template-columns:2fr 1.4fr 1fr;gap:28px;">
+        <div style="padding-top:46px;"><div style="border-bottom:1px solid #16181d;"></div><div class="lbl" style="letter-spacing:.16em;margin-top:7px;">Assinatura do representante</div></div>
+        <div style="padding-top:46px;"><div style="border-bottom:1px solid #16181d;"></div><div class="lbl" style="letter-spacing:.16em;margin-top:7px;">Nome legível / CPF</div></div>
+        <div style="padding-top:46px;"><div style="border-bottom:1px solid #16181d;"></div><div class="lbl" style="letter-spacing:.16em;margin-top:7px;">Data e hora</div></div>
       </div>
-      <p class="sig-consent">
-        Documento gerado pelo sistema Soprano · Zitrón Brasil · Linha 6 · São Paulo.<br>
-        ID do resumo: ${report.id} · Gerado em ${fmt(generatedAt)}
-      </p>
-    </div>`;
+      <p style="margin:16px 0 0;padding-top:10px;border-top:1px solid #dfe3ea;font:400 10px/1.5 'IBM Plex Mono',monospace;color:#9aa2ad;">
+        ID do resumo: ${escapeHtml(report.id)} · Gerado em ${escapeHtml(emissao)}
+      </p>`;
 
-  const html = `<!DOCTYPE html>
+  /* ── CSS (load-bearing para a paginação A4) ──────────────────────────────── */
+  const css = `
+    body{margin:0;background:#fff;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+    :root{--ac:#163d8a;}
+    .doc{box-sizing:border-box;max-width:210mm;margin:0 auto;padding:40px 16mm 76px;position:relative;z-index:1;
+         font-family:'IBM Plex Sans',system-ui,sans-serif;color:#3a4048;font-size:14px;line-height:1.62;}
+    .doc-frame{width:100%;border-collapse:collapse;} .doc-frame td{padding:0;}
+    .running-hdr,.running-ftr,.hdr-space,.ftr-space{display:none;}
+    h1,h2,h3{text-wrap:balance;} p,li{text-wrap:pretty;}
+    .lbl{font:500 9px/1 'IBM Plex Mono',monospace;letter-spacing:.2em;text-transform:uppercase;color:#9aa2ad;}
+    .sec{display:flex;align-items:center;gap:14px;margin:34px 0 14px;}
+    .sec .t{font:600 11px/1 'IBM Plex Mono',monospace;letter-spacing:.22em;text-transform:uppercase;color:var(--ac);white-space:nowrap;}
+    .sec .r{flex:1;height:1px;background:#dfe3ea;}
+    .sec .n{font:500 10px/1 'IBM Plex Mono',monospace;color:#9aa2ad;white-space:nowrap;}
+    .rascunho{position:fixed;inset:0;z-index:0;pointer-events:none;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+    .rascunho b{font:700 134px 'IBM Plex Sans',sans-serif;color:rgba(22,61,138,.05);letter-spacing:.12em;transform:rotate(-28deg);white-space:nowrap;}
+    .notes-box{border:1px solid #c7cdd6;border-left:3px solid var(--ac);padding:11px 14px;font-size:13px;line-height:1.55;color:#16181d;white-space:pre-wrap;}
+    @page{size:A4;margin:0;}
+    @media print{
+      html{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+      html,body{margin:0;padding:0;}
+      .doc{max-width:none;padding:0 16mm;}
+      .hdr-space,.ftr-space{display:table-cell;height:16mm;}
+      .running-hdr,.running-ftr{display:flex;justify-content:space-between;align-items:baseline;position:fixed;left:0;right:0;
+          font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#9aa2ad;}
+      .running-hdr{top:0;padding:9mm 16mm 0;} .running-ftr{bottom:0;padding:0 16mm 9mm;}
+      h1,h2,h3,h4{break-after:avoid;} figure,img,.avoid-break{break-inside:avoid;} p,li{orphans:3;widows:3;}
+    }
+  `;
+
+  /* ── Documento ───────────────────────────────────────────────────────────── */
+  return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <style>${css}</style>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>${css}</style>
 </head>
 <body>
-  <div class="page">
-    <div class="header">
-      <div>
-        <div class="brand">SOPRANO</div>
-        <div class="brand-sub">Zitrón Brasil · Linha 6 Laranja · Resumo Diário</div>
+<main class="doc">
+  ${isRascunho ? `<div class="rascunho" aria-hidden="true"><b>RASCUNHO</b></div>` : ''}
+  <div class="running-hdr"><span>Soprano · Resumo Diário — Zitrón Brasil</span><span>Linha 6 · São Paulo</span></div>
+  <div class="running-ftr"><span style="text-transform:capitalize;">${escapeHtml(tituloData)}</span><span>${clientName ? escapeHtml(clientName) : 'Linha 6 · São Paulo'}</span></div>
+  <table class="doc-frame" role="presentation">
+  <thead><tr><td class="hdr-space"></td></tr></thead>
+  <tbody><tr><td>
+
+    <!-- MASTHEAD -->
+    <header style="display:flex;justify-content:space-between;align-items:flex-start;gap:28px;">
+      <div style="display:flex;flex-direction:column;gap:13px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          ${SOPRANO_MARK}
+          <span style="font:700 19px/1 'IBM Plex Sans',sans-serif;letter-spacing:-.01em;color:#16181d;">SOPRANO</span>
+        </div>
+        <span class="lbl" style="letter-spacing:.26em;">Resumo diário de obras</span>
       </div>
-      <div class="doc-meta">
-        <div>ID: ${report.id.slice(0, 8)}</div>
-        <div>Gerado em ${fmt(generatedAt)}</div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:9px;text-align:right;">
+        <span style="font:600 10px/1 'IBM Plex Mono',monospace;letter-spacing:.22em;text-transform:uppercase;color:${seal.color};border:1px solid ${seal.color};padding:6px 11px;">${escapeHtml(seal.label)}</span>
+        <span style="font:500 10px/1.5 'IBM Plex Mono',monospace;color:#9aa2ad;">Sistema Soprano</span>
+      </div>
+    </header>
+
+    <div style="height:22px;"></div>
+    <h1 style="margin:0;font-size:30px;line-height:1.08;font-weight:600;letter-spacing:-.012em;color:#16181d;text-transform:capitalize;">${escapeHtml(tituloData)}</h1>
+
+    <div style="height:22px;"></div>
+
+    <!-- FAIXA DE REFERÊNCIA -->
+    <div style="border:1px solid #c7cdd6;display:grid;grid-template-columns:1.3fr 1fr 1fr;">
+      <div style="padding:11px 14px;border-right:1px solid #dfe3ea;"><div class="lbl">Projeto</div><div style="margin-top:6px;font-size:13px;color:#16181d;font-weight:500;">Zitrón Brasil · Linha 6 Laranja</div></div>
+      <div style="padding:11px 14px;border-right:1px solid #dfe3ea;"><div class="lbl">Supervisor</div><div style="margin-top:6px;font-size:13px;color:#16181d;font-weight:500;">${supervisorName ? escapeHtml(supervisorName) : DASH}</div></div>
+      <div style="padding:11px 14px;"><div class="lbl">Cliente</div><div style="margin-top:6px;font-size:13px;color:#16181d;font-weight:500;">${clientName ? escapeHtml(clientName) : DASH}</div></div>
+      <div style="grid-column:1/-1;padding:9px 14px;border-top:1px solid #dfe3ea;display:flex;gap:18px;align-items:baseline;flex-wrap:wrap;">
+        <span style="display:flex;gap:8px;align-items:baseline;"><span class="lbl">Documento Nº</span><span style="font:400 11px/1 'IBM Plex Mono',monospace;color:#5b6470;">${escapeHtml(report.id)}</span></span>
+        <span style="display:flex;gap:8px;align-items:baseline;"><span class="lbl">Atividades</span><span style="font:400 11px/1 'IBM Plex Mono',monospace;color:#5b6470;">${activities.length}</span></span>
+        <span style="display:flex;gap:8px;align-items:baseline;"><span class="lbl">Emissão</span><span style="font:400 11px/1 'IBM Plex Mono',monospace;color:#5b6470;">${escapeHtml(emissao)}</span></span>
       </div>
     </div>
 
-    <div class="body">
-      <div class="report-date">Resumo diário de obras</div>
-      <div class="report-title">${fmtDate(report.report_date + 'T12:00:00')}</div>
+    ${report.notes ? `
+    <!-- OBSERVAÇÕES GERAIS -->
+    <div class="sec"><span class="t">Observações gerais do dia</span><span class="r"></span></div>
+    <div class="notes-box avoid-break">${escapeHtml(report.notes)}</div>` : ''}
 
-      <div class="meta-grid">
-        <div class="meta-card">
-          <div class="meta-label">Supervisor</div>
-          <div class="meta-value">${supervisorName ? escapeHtml(supervisorName) : '—'}</div>
-        </div>
-        <div class="meta-card">
-          <div class="meta-label">Cliente</div>
-          <div class="meta-value">${clientName ? escapeHtml(clientName) : '—'}</div>
-        </div>
-        <div class="meta-card">
-          <div class="meta-label">Total de atividades</div>
-          <div class="meta-value">${activities.length}</div>
-        </div>
-      </div>
+    <!-- ATIVIDADES -->
+    <div class="sec"><span class="t">Atividades realizadas</span><span class="r"></span><span class="n">${activities.length} ${activities.length === 1 ? 'registro' : 'registros'}</span></div>
+    ${activities.length === 0
+      ? `<p style="margin:0;font:400 12.5px/1.4 'IBM Plex Mono',monospace;color:#9aa2ad;">${DASH} Nenhuma atividade registrada neste resumo.</p>`
+      : activitiesHtml}
 
-      ${report.notes ? `
-      <div class="section-title">Observações gerais do dia</div>
-      <div class="notes-box">${escapeHtml(report.notes)}</div>` : ''}
-
-      <div class="section-title">Atividades realizadas</div>
-      ${activities.length === 0
-        ? `<p style="font-size:9pt;color:#94a3b8;font-style:italic">Nenhuma atividade registrada neste resumo.</p>`
-        : `<table class="act-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Atividade</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${activityRows}
-            </tbody>
-          </table>`}
-
-      <div class="section-title">Assinatura do cliente</div>
-      ${sigHtml}
+    <!-- ASSINATURA -->
+    <div class="sec" style="margin-top:38px;"><span class="t">Assinatura do cliente</span><span class="r"></span></div>
+    <div class="avoid-break" style="border:1px solid #c7cdd6;padding:26px 24px 18px;">
+      ${assinaturaHtml}
     </div>
 
-  </div>
+    <!-- RODAPÉ DE FECHO -->
+    <div style="margin-top:30px;padding-top:14px;border-top:1px solid #dfe3ea;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <span style="font:400 10px/1.5 'IBM Plex Mono',monospace;color:#9aa2ad;">Soprano · Resumo Diário — Zitrón Brasil · Linha 6 Laranja</span>
+      <span style="font:400 10px/1.5 'IBM Plex Mono',monospace;color:#9aa2ad;">Gerado em ${escapeHtml(emissao)}</span>
+    </div>
+
+  </td></tr></tbody>
+  <tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+  </table>
+</main>
 </body>
 </html>`;
-
-  return html;
 }
