@@ -7,7 +7,7 @@
 //
 import { defaultCache } from '@serwist/next/worker';
 import type { PrecacheEntry, SerwistGlobalConfig } from 'serwist';
-import { NetworkFirst, Serwist } from 'serwist';
+import { NetworkFirst, NetworkOnly, Serwist } from 'serwist';
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -34,6 +34,17 @@ const serwist = new Serwist({
   clientsClaim: true,
   navigationPreload: true,
   runtimeCaching: [
+    // PDFs (atividade e resumo diário) são documentos dinâmicos gerados pelo
+    // servidor (Puppeteer) e podem demorar MAIS que o timeout do cache de APIs.
+    // Sem esta regra, o NetworkFirst de `/api/*` do defaultCache (ou o de
+    // navegação abaixo) servia um PDF ANTIGO do cache quando a geração passava
+    // do timeout — fazia o layout novo aparecer só em ALGUMAS atividades.
+    // NetworkOnly = sempre gera fresco, nunca lê de cache. Precisa vir PRIMEIRO.
+    {
+      matcher: ({ url, sameOrigin }) =>
+        sameOrigin && /^\/api\/.+\/pdf$/.test(url.pathname),
+      handler: new NetworkOnly(),
+    },
     // Navegações de documento: tenta a rede (3s) e cai no cache aquecido quando
     // offline ou lento. Tem precedência sobre o defaultCache para navegações.
     // `ignoreSearch` faz `/atividades/nova?pending=<id>` cair no shell cacheado
