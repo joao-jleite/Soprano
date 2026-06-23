@@ -120,7 +120,7 @@ export async function GET(
       includedIds.length
         ? supabase
             .from('activities')
-            .select('id, description, started_at, notes, locations(name, sort_order), activity_types(label_pt), activity_participants(name, role)')
+            .select('id, description, started_at, notes, evolucao, pendencias, locations(name, sort_order), activity_types(label_pt), activity_participants(name, role)')
             .in('id', includedIds)
             .order('started_at')
         : Promise.resolve({ data: [] }),
@@ -200,6 +200,8 @@ export async function GET(
         description: a.description,
         started_at: a.started_at,
         notes: a.notes,
+        evolucao: a.evolucao,
+        pendencias: a.pendencias,
         location_name: a.locations?.name,
         location_sort_order: a.locations?.sort_order,
         type_label: a.activity_types?.label_pt,

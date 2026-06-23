@@ -134,6 +134,8 @@ export async function GET(
       id: act.id,
       description: act.description,
       notes: act.notes,
+      evolucao: act.evolucao,
+      pendencias: act.pendencias,
       started_at: act.started_at,
       ended_at: act.ended_at,
       status: act.status,

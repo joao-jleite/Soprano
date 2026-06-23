@@ -4,6 +4,8 @@ export type PdfActivity = {
   id: string;
   description: string;
   notes?: string | null;
+  evolucao?: string | null;
+  pendencias?: string | null;
   started_at: string;
   ended_at?: string | null;
   status: string;
@@ -192,6 +194,7 @@ export function buildActivityHtml(opts: BuildHtmlOptions): string {
       font-size: 9.5pt;
       line-height: 1.65;
       color: #334155;
+      white-space: pre-wrap;
     }
 
     /* ── Participants ── */
@@ -278,13 +281,21 @@ export function buildActivityHtml(opts: BuildHtmlOptions): string {
       <div class="section-title">Equipe em campo</div>
       <div class="chips">${participantsHtml}</div>` : ''}
 
-      ${photos.length > 0 ? `
-      <div class="section-title">Registro fotográfico</div>
-      <div class="photo-grid">${photosHtml}</div>` : ''}
+      ${activity.evolucao ? `
+      <div class="section-title">Evolução</div>
+      <div class="notes-box">${escapeHtml(activity.evolucao)}</div>` : ''}
 
       ${activity.notes ? `
       <div class="section-title">Observações</div>
       <div class="notes-box">${escapeHtml(activity.notes)}</div>` : ''}
+
+      ${activity.pendencias ? `
+      <div class="section-title">Pendências</div>
+      <div class="notes-box">${escapeHtml(activity.pendencias)}</div>` : ''}
+
+      ${photos.length > 0 ? `
+      <div class="section-title">Registro fotográfico</div>
+      <div class="photo-grid">${photosHtml}</div>` : ''}
 
       <div class="section-title">Assinatura do cliente</div>
       ${sigHtml}
