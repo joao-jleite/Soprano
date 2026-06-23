@@ -23,6 +23,28 @@ describe('PDF de atividade — campos de evolução/pendências', () => {
     expect(html).toContain('Instalação dos atenuadores em andamento.');
     expect(html).toContain('Observações');
   });
+
+  it('coloca Evolução/Observações/Pendências ANTES das fotos (visibilidade)', () => {
+    const html = buildActivityHtml({
+      activity: {
+        id: '9e56e2e9-0000-0000-0000-000000000000',
+        description: 'VSE PHILLIPINI',
+        evolucao: 'Descida dos atenuadores',
+        notes: 'Trabalho paralisado',
+        pendencias: 'Instalação em andamento',
+        started_at: '2026-06-22T12:00:00Z',
+        status: 'rascunho',
+      },
+      generatedAt: '2026-06-23T12:00:00Z',
+      photos: [{ signedUrl: 'data:image/jpeg;base64,AAAA', caption: 'Foto 1' }],
+    });
+
+    // Os três campos devem aparecer ANTES da seção de fotos (igual à tela de detalhe)
+    const fotos = html.indexOf('Registro fotográfico');
+    expect(html.indexOf('Evolução')).toBeLessThan(fotos);
+    expect(html.indexOf('Observações')).toBeLessThan(fotos);
+    expect(html.indexOf('Pendências')).toBeLessThan(fotos);
+  });
 });
 
 describe('PDF de resumo diário — campos de evolução/pendências', () => {
