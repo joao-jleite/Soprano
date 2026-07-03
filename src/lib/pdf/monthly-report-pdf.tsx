@@ -15,9 +15,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 14,
     paddingBottom: 10,
-    borderBottom: '2pt solid #0959C8',
+    borderBottom: '2pt solid #1095D6',
   },
-  brand: { fontSize: 18, fontWeight: 700, color: '#0959C8', letterSpacing: 1 },
+  brand: { fontSize: 18, fontWeight: 700, color: '#1095D6', letterSpacing: 1 },
   brandSub: {
     fontSize: 8,
     color: '#6b7280',
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   kpiValue: { fontSize: 16, fontWeight: 700, color: '#0b1220' },
-  kpiAccent: { color: '#0959C8' },
+  kpiAccent: { color: '#1095D6' },
 
   tableHeader: {
     flexDirection: 'row',
@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
   },
   tableHeaderCell: {
     fontSize: 7,
-    color: '#0959C8',
+    color: '#1095D6',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     fontWeight: 700,
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     fontWeight: 700,
     marginTop: 10,
     marginBottom: 4,
-    color: '#0959C8',
+    color: '#1095D6',
   },
   locCount: { fontSize: 8, color: '#6b7280' },
 

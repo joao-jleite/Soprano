@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 const STATUS_VARIANT: Record<string, 'default' | 'warning' | 'success' | 'destructive' | 'secondary'> = {
   rascunho: 'secondary',
   enviada: 'warning',
+  assinada: 'success',
   rejeitada: 'destructive',
   // Reclamos (claims)
   enviado: 'default',

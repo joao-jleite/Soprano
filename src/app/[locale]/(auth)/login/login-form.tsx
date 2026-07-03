@@ -7,16 +7,19 @@ import { AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { SopranoSplash } from '@/components/brand/splash';
 import { loginAction } from '@/app/actions/auth';
 
 export function LoginForm() {
   const t = useTranslations('auth');
+  const tApp = useTranslations('app');
   const locale = useLocale();
   const searchParams = useSearchParams();
 
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+  const [splash, setSplash] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent) {
@@ -36,7 +39,13 @@ export function LoginForm() {
     try {
       const result = await loginAction(fd);
       if (result.ok && result.href) {
-        window.location.href = result.href;
+        // Splash de marca cobre a transição; a navegação dispara em paralelo
+        // e o browser mantém o overlay visível até a próxima página carregar.
+        setSplash(true);
+        const href = result.href;
+        setTimeout(() => {
+          window.location.href = href;
+        }, 1600);
         // não limpa loading — a página vai recarregar
       } else {
         setError(result.error ?? t('invalidCredentials'));
@@ -47,6 +56,8 @@ export function LoginForm() {
       setLoading(false);
     }
   }
+
+  if (splash) return <SopranoSplash subtitle={tApp('tagline')} />;
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
