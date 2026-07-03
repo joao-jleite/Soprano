@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { Calendar, MapPin, User, Users, Pencil, Copy } from 'lucide-react';
+import { Users, Pencil, Copy } from 'lucide-react';
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from '@/i18n/navigation';
@@ -91,59 +91,72 @@ export default async function ActivityDetailPage({
     }),
   );
 
+  const code = `ATV-${String(act.id).replace(/-/g, '').slice(0, 4).toUpperCase()}`;
+  const metaChips = [
+    [act.locations?.name, act.locations?.kind].filter(Boolean).join(' · '),
+    typeLabel,
+    formatDate(act.started_at, locale === 'pt' ? 'pt-BR' : locale),
+    act.supervisor?.full_name && `${t('activities.fields.supervisor')} · ${act.supervisor.full_name}`,
+    act.client?.full_name && `${t('activities.fields.client')} · ${act.client.full_name}`,
+  ].filter(Boolean) as string[];
+
   return (
-    <div className="max-w-4xl space-y-6">
-      <header className="space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <StatusBadge status={act.status} label={t(`activities.status.${act.status}`)} />
-            <span className="text-data">{typeLabel}</span>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap justify-end">
-            <PdfDownloadButton activityId={act.id} />
-            {act.status === 'rascunho' &&
-              (profile?.role === 'admin' || act.supervisor_id === user.id) && (
-                <Button asChild variant="outline" size="sm">
-                  <Link href={`/atividades/${act.id}/editar`}>
-                    <Pencil className="h-4 w-4" />
-                    {t('activities.actions.edit')}
-                  </Link>
-                </Button>
-              )}
-            {(profile?.role === 'admin' || profile?.role === 'supervisor') && (
+    <div className="max-w-4xl space-y-5">
+      <header className="flex flex-col gap-2.5">
+        <div className="flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted-foreground/70">
+          <Link href="/atividades" className="text-muted-foreground transition-colors hover:text-accent">
+            {t('activities.title')}
+          </Link>
+          <span>/</span>
+          <span className="text-accent">{code}</span>
+        </div>
+
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <h1 className="max-w-[30ch] text-2xl font-semibold leading-[1.3] tracking-[-0.015em]">
+            {act.description}
+          </h1>
+          <StatusBadge status={act.status} label={t(`activities.status.${act.status}`)} />
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {metaChips.map((chip) => (
+            <span
+              key={chip}
+              className="rounded-[7px] border border-border bg-card px-2.5 py-[5px] font-mono text-[10.5px] uppercase tracking-[0.06em] text-muted-foreground"
+            >
+              {chip}
+            </span>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          <PdfDownloadButton activityId={act.id} />
+          {act.status === 'rascunho' &&
+            (profile?.role === 'admin' || act.supervisor_id === user.id) && (
               <Button asChild variant="outline" size="sm">
-                <Link
-                  href={`/atividades/nova?from=${act.id}`}
-                >
-                  <Copy className="h-4 w-4" />
-                  {t('activities.duplicate')}
+                <Link href={`/atividades/${act.id}/editar`}>
+                  <Pencil className="h-4 w-4" />
+                  {t('activities.actions.edit')}
                 </Link>
               </Button>
             )}
-            {/* Admin deleta qualquer atividade. Supervisor deleta as suas (qualquer status). */}
-            {(profile?.role === 'admin' ||
-              (profile?.role === 'supervisor' && act.supervisor_id === user.id)) && (
-              <ActivityDeleteButton id={act.id} />
-            )}
-          </div>
+          {(profile?.role === 'admin' || profile?.role === 'supervisor') && (
+            <Button asChild variant="outline" size="sm">
+              <Link
+                href={`/atividades/nova?from=${act.id}`}
+              >
+                <Copy className="h-4 w-4" />
+                {t('activities.duplicate')}
+              </Link>
+            </Button>
+          )}
+          {/* Admin deleta qualquer atividade. Supervisor deleta as suas (qualquer status). */}
+          {(profile?.role === 'admin' ||
+            (profile?.role === 'supervisor' && act.supervisor_id === user.id)) && (
+            <ActivityDeleteButton id={act.id} />
+          )}
         </div>
-        <h1 className="text-3xl font-semibold tracking-tight">{act.description}</h1>
       </header>
-
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <InfoBlock icon={<MapPin className="h-4 w-4" />} label={t('activities.fields.location')}>
-          {act.locations?.name}
-        </InfoBlock>
-        <InfoBlock icon={<Calendar className="h-4 w-4" />} label={t('activities.fields.startedAt')}>
-          {formatDate(act.started_at, locale === 'pt' ? 'pt-BR' : locale)}
-        </InfoBlock>
-        <InfoBlock icon={<User className="h-4 w-4" />} label={t('activities.fields.supervisor')}>
-          {act.supervisor?.full_name ?? '—'}
-        </InfoBlock>
-        <InfoBlock icon={<User className="h-4 w-4" />} label={t('activities.fields.client')}>
-          {act.client?.full_name ?? '—'}
-        </InfoBlock>
-      </section>
 
       {/* Cadeia de continuações */}
       {(parentActivity || (continuations && continuations.length > 0)) && (
@@ -173,26 +186,35 @@ export default async function ActivityDetailPage({
         </Card>
       )}
 
-      {/* Evolução, Observações, Pendências */}
+      {/* Evolução, Observações, Pendências — bullets coloridos do design system */}
       {(act.evolucao || act.notes || act.pendencias) && (
-        <Card>
-          <CardContent className="p-4 space-y-4">
+        <Card className="rounded-[14px]">
+          <CardContent className="flex flex-col gap-4 p-5">
             {act.evolucao && (
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Evolução</p>
-                <p className="text-sm whitespace-pre-wrap">{act.evolucao}</p>
+              <div className="flex gap-2.5">
+                <span className="mt-1.5 h-1.5 w-1.5 flex-none rounded-full bg-ok" />
+                <div className="flex flex-col gap-1">
+                  <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground/70">Evolução</p>
+                  <p className="whitespace-pre-wrap text-[12.5px] leading-[1.6] text-muted-foreground">{act.evolucao}</p>
+                </div>
               </div>
             )}
             {act.notes && (
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Observações</p>
-                <p className="text-sm whitespace-pre-wrap">{act.notes}</p>
+              <div className="flex gap-2.5">
+                <span className="mt-1.5 h-1.5 w-1.5 flex-none rounded-full bg-zitron-steel" />
+                <div className="flex flex-col gap-1">
+                  <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground/70">Observações</p>
+                  <p className="whitespace-pre-wrap text-[12.5px] leading-[1.6] text-muted-foreground">{act.notes}</p>
+                </div>
               </div>
             )}
             {act.pendencias && (
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Pendências</p>
-                <p className="text-sm whitespace-pre-wrap">{act.pendencias}</p>
+              <div className="flex gap-2.5">
+                <span className="mt-1.5 h-1.5 w-1.5 flex-none rounded-full bg-warn" />
+                <div className="flex flex-col gap-1">
+                  <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground/70">Pendências</p>
+                  <p className="whitespace-pre-wrap text-[12.5px] leading-[1.6] text-muted-foreground">{act.pendencias}</p>
+                </div>
               </div>
             )}
           </CardContent>
@@ -229,9 +251,12 @@ export default async function ActivityDetailPage({
       )}
 
       {photosWithUrls.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t('activities.fields.photos')}</CardTitle>
+        <Card className="rounded-[14px]">
+          <CardHeader className="flex-row items-baseline justify-between space-y-0">
+            <CardTitle className="text-[13.5px]">{t('activities.fields.photos')}</CardTitle>
+            <span className="font-mono text-[10px] tracking-[0.1em] text-muted-foreground/70">
+              {photosWithUrls.length} {locale === 'en' ? 'RECORDS' : 'REGISTROS'}
+            </span>
           </CardHeader>
           <CardContent>
             <PhotoGallery photos={photosWithUrls as any} />
@@ -240,28 +265,6 @@ export default async function ActivityDetailPage({
       )}
 
     </div>
-  );
-}
-
-function InfoBlock({
-  icon,
-  label,
-  children,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          {icon}
-          <p className="text-[10px] uppercase tracking-wider">{label}</p>
-        </div>
-        <p className="mt-1.5 text-sm font-medium truncate">{children}</p>
-      </CardContent>
-    </Card>
   );
 }
 
