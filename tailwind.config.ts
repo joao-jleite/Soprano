@@ -100,6 +100,8 @@ const config: Config = {
         // Splash: rotor gira 3 voltas e assenta no S (curva do design system)
         'rotor-settle': 'rotor-settle 2.6s cubic-bezier(0.13, 0.62, 0.16, 1) both',
         'rotor-spin': 'rotor-spin 1.1s linear infinite',
+        // Giro lento contínuo — painel de marca do login
+        'rotor-drift': 'rotor-spin 14s linear infinite',
       },
     },
   },

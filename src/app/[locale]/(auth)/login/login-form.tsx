@@ -59,10 +59,14 @@ export function LoginForm() {
 
   if (splash) return <SopranoSplash subtitle={tApp('tagline')} />;
 
+  const labelClass =
+    'font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-normal';
+  const inputClass = 'h-[46px] rounded-[11px] px-4 text-sm';
+
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="email">{t('email')}</Label>
+        <Label htmlFor="email" className={labelClass}>{t('email')}</Label>
         <Input
           id="email"
           type="email"
@@ -71,16 +75,12 @@ export function LoginForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={loading}
+          className={inputClass}
         />
       </div>
 
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="password">{t('password')}</Label>
-          <a href={`/${locale}/esqueci-senha`} className="text-[11px] text-primary hover:underline">
-            {t('forgotPassword')}
-          </a>
-        </div>
+        <Label htmlFor="password" className={labelClass}>{t('password')}</Label>
         <Input
           id="password"
           type="password"
@@ -89,6 +89,7 @@ export function LoginForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           disabled={loading}
+          className={inputClass}
         />
       </div>
 
@@ -99,16 +100,28 @@ export function LoginForm() {
         </div>
       )}
 
-      <Button type="submit" size="lg" className="w-full" disabled={loading}>
+      <Button
+        type="submit"
+        size="lg"
+        className="h-12 w-full rounded-[11px] bg-gradient-to-b from-[#1BA2DE] to-[#0E7DB6] text-[14.5px] font-semibold text-white shadow-[0_10px_26px_-10px_rgba(16,149,214,0.55)] hover:brightness-110 hover:from-[#1BA2DE] hover:to-[#0E7DB6]"
+        disabled={loading}
+      >
         {loading ? (
           <>
             <Loader2 className="animate-spin" />
             {t('signingIn')}
           </>
         ) : (
-          t('signIn')
+          t('signInCta')
         )}
       </Button>
+
+      <a
+        href={`/${locale}/esqueci-senha`}
+        className="block text-center text-[12.5px] text-muted-foreground transition-colors hover:text-accent"
+      >
+        {t('forgotPassword')}
+      </a>
     </form>
   );
 }
