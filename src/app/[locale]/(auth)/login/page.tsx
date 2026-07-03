@@ -20,7 +20,7 @@ export default async function LoginPage({
     <Card className="w-full max-w-[420px] surface-elevated">
       <CardHeader className="space-y-4">
         <div className="flex items-center gap-3">
-          <SopranoMark className="h-10 w-10" />
+          <SopranoMark className="h-11 w-11" trail />
           <div>
             <CardTitle className="text-2xl">{t('signInTitle')}</CardTitle>
             <CardDescription>{t('signInSubtitle')}</CardDescription>
