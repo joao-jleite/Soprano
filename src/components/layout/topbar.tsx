@@ -44,7 +44,17 @@ export function Topbar({ fullName, role, pendingCount = 0 }: Props) {
   }
 
   async function handleLogout() {
-    await supabase.auth.signOut();
+    // Redirect sempre acontece, mesmo com sessão já expirada (signOut lança).
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      /* sessão já ausente no client */
+    }
+    try {
+      await fetch('/api/auth/signout', { method: 'POST' });
+    } catch {
+      /* offline — cookies do client já foram limpos */
+    }
     window.location.assign(`/${locale}/login`);
   }
 
