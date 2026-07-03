@@ -2,8 +2,8 @@
  * Gera o HTML da atividade para impressão via Puppeteer.
  *
  * Estética de "folha técnica de engenharia / dossiê de obra": fios finos,
- * rótulos em IBM Plex Mono maiúsculo, azul royal de marca (--ac: #163d8a),
- * sem cantos arredondados, gradientes ou emojis.
+ * rótulos em IBM Plex Mono maiúsculo, azul Zitrón de marca (--ac: #1095D6),
+ * fio duplo no masthead, sem cantos arredondados, gradientes ou emojis.
  */
 
 export type PdfActivity = {
@@ -76,17 +76,15 @@ function val(s?: string | null): string {
 function statusSeal(status: string): { label: string; color: string } {
   if (status === 'assinada') return { label: 'Assinado', color: '#1f5d4c' };
   if (status === 'rejeitada') return { label: 'Rejeitado', color: '#9a3412' };
-  if (status === 'enviada') return { label: 'Enviada', color: '#163d8a' };
-  return { label: 'Rascunho', color: '#163d8a' };
+  if (status === 'enviada') return { label: 'Enviada', color: '#1095D6' };
+  return { label: 'Rascunho', color: '#1095D6' };
 }
 
-/** Marca/logotipo Soprano embutido como SVG inline (sem requisição externa). */
+/** Marca Soprano — rotor com S vazado, embutido como SVG inline (papel branco). */
 const SOPRANO_MARK = `
-  <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="height:26px;width:26px;display:block;">
-    <rect x="0.75" y="0.75" width="38.5" height="38.5" rx="9" stroke="#163d8a" stroke-opacity="0.28"/>
-    <path d="M27.5 12.5c-1.6-2.2-4.6-3.5-7.5-3.5-4.4 0-8 3-8 6.5 0 3.6 3 5.5 7 6.5 4 1 7 2.9 7 6.5 0 3.5-3.6 6.5-8 6.5-2.9 0-5.9-1.3-7.5-3.5" stroke="#163d8a" stroke-width="3" stroke-linecap="round"/>
-    <circle cx="12.5" cy="32.5" r="1.25" fill="#163d8a"/>
-    <circle cx="27.5" cy="7.5" r="1.25" fill="#163d8a"/>
+  <svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" style="height:38px;width:38px;display:block;">
+    <circle cx="48" cy="48" r="34" fill="#1095D6"/>
+    <path d="M 55.42 30.08 A 10.5 10.5 0 1 0 48 48 A 10.5 10.5 0 1 1 40.58 65.92" stroke="#FFFFFF" stroke-width="8.5" fill="none" stroke-linecap="round"/>
   </svg>`;
 
 export function buildActivityHtml(opts: BuildHtmlOptions): string {
@@ -220,7 +218,7 @@ export function buildActivityHtml(opts: BuildHtmlOptions): string {
   /* ── CSS (load-bearing para a paginação A4) ──────────────────────────────── */
   const css = `
     body{margin:0;background:#fff;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
-    :root{--ac:#163d8a;}
+    :root{--ac:#1095D6;}
     .doc{box-sizing:border-box;max-width:210mm;margin:0 auto;padding:40px 16mm 76px;position:relative;z-index:1;
          font-family:'IBM Plex Sans',system-ui,sans-serif;color:#3a4048;font-size:14px;line-height:1.62;}
     .doc-frame{width:100%;border-collapse:collapse;} .doc-frame td{padding:0;}
@@ -231,7 +229,7 @@ export function buildActivityHtml(opts: BuildHtmlOptions): string {
     .sec .t{font:600 11px/1 'IBM Plex Mono',monospace;letter-spacing:.22em;text-transform:uppercase;color:var(--ac);white-space:nowrap;}
     .sec .r{flex:1;height:1px;background:#dfe3ea;}
     .rascunho{position:fixed;inset:0;z-index:0;pointer-events:none;display:flex;align-items:center;justify-content:center;overflow:hidden;}
-    .rascunho b{font:700 134px 'IBM Plex Sans',sans-serif;color:rgba(22,61,138,.05);letter-spacing:.12em;transform:rotate(-28deg);white-space:nowrap;}
+    .rascunho b{font:700 134px 'IBM Plex Sans',sans-serif;color:rgba(16,149,214,.06);letter-spacing:.12em;transform:rotate(-28deg);white-space:nowrap;}
     @page{size:A4;margin:0;}
     @media print{
       html{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
@@ -266,18 +264,22 @@ export function buildActivityHtml(opts: BuildHtmlOptions): string {
 
     <!-- MASTHEAD -->
     <header style="display:flex;justify-content:space-between;align-items:flex-start;gap:28px;">
-      <div style="display:flex;flex-direction:column;gap:13px;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          ${SOPRANO_MARK}
-          <span style="font:700 19px/1 'IBM Plex Sans',sans-serif;letter-spacing:-.01em;color:#16181d;">SOPRANO</span>
+      <div style="display:flex;align-items:center;gap:12px;">
+        ${SOPRANO_MARK}
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <span style="font:700 17px/1 'IBM Plex Sans',sans-serif;letter-spacing:.24em;color:#16181d;">SOPRANO</span>
+          <span style="font:500 8px/1 'IBM Plex Mono',monospace;letter-spacing:.3em;text-transform:uppercase;color:#5b6470;">Registro vivo de obra</span>
         </div>
-        <span class="lbl" style="letter-spacing:.26em;">Registro de atividades de campo</span>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:9px;text-align:right;">
-        <span style="font:600 10px/1 'IBM Plex Mono',monospace;letter-spacing:.22em;text-transform:uppercase;color:${seal.color};border:1px solid ${seal.color};padding:6px 11px;">${escapeHtml(seal.label)}</span>
-        <span style="font:500 10px/1.5 'IBM Plex Mono',monospace;color:#9aa2ad;">Sistema Soprano</span>
+        <span style="font:600 10px/1 'IBM Plex Mono',monospace;letter-spacing:.22em;text-transform:uppercase;color:${seal.color};border:1.5px solid ${seal.color};padding:6px 11px;">${escapeHtml(seal.label)}</span>
+        <span style="font:500 8px/1.5 'IBM Plex Mono',monospace;letter-spacing:.18em;text-transform:uppercase;color:#5b6470;">Zitrón Brasil · Sistemas de ventilação</span>
       </div>
     </header>
+
+    <!-- fio duplo do masthead -->
+    <div style="height:3px;background:#16181d;margin-top:16px;"></div>
+    <div style="height:1px;background:#16181d;margin-top:3px;"></div>
 
     <div style="height:22px;"></div>
     <h1 style="margin:0;font-size:33px;line-height:1.05;font-weight:600;letter-spacing:-.012em;color:#16181d;">${escapeHtml(titulo)}</h1>
@@ -339,7 +341,7 @@ export function buildActivityHtml(opts: BuildHtmlOptions): string {
 
     <!-- RODAPÉ DE FECHO -->
     <div style="margin-top:30px;padding-top:14px;border-top:1px solid #dfe3ea;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;">
-      <span style="font:400 10px/1.5 'IBM Plex Mono',monospace;color:#9aa2ad;">Soprano · Registro de atividades — Zitrón Brasil · Linha 6 Laranja</span>
+      <span style="font:400 10px/1.5 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#9aa2ad;">SOPRANO · ZITRÓN BRASIL — SISTEMAS DE VENTILAÇÃO · LINHA 6 — LARANJA</span>
       <span style="font:400 10px/1.5 'IBM Plex Mono',monospace;color:#9aa2ad;">Gerado em ${escapeHtml(emissao)}</span>
     </div>
 
