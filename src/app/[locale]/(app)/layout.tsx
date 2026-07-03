@@ -151,14 +151,21 @@ export default async function AppLayout({
   const defaultFirst = nameParts[0] ?? '';
   const defaultLast = nameParts.slice(1).join(' ');
 
+  // Contagem de atividades aguardando assinatura — badge da sidebar + sino
+  const { count: pendingCount } = await supabase
+    .from('activities')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'enviada')
+    .is('deleted_at', null);
+
   return (
     <div className="flex min-h-screen overflow-x-hidden">
       <NameOnboarding open={!nameConfirmed} defaultFirst={defaultFirst} defaultLast={defaultLast} />
       <SyncEngine />
       <OfflineIndicator />
-      <Sidebar role={profile.role} />
+      <Sidebar role={profile.role} fullName={profile.full_name} pendingCount={pendingCount ?? 0} />
       <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
-        <Topbar fullName={profile.full_name} role={profile.role} />
+        <Topbar fullName={profile.full_name} role={profile.role} pendingCount={pendingCount ?? 0} />
         <main className="flex-1 pb-20 lg:pb-8">
           <div className="px-4 lg:px-8 py-6 lg:py-8 w-full max-w-7xl">
             <Breadcrumbs />

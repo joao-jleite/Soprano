@@ -14,7 +14,11 @@
     "complaints": "Reclamos",
     "dailyReport": "Resumo Diário",
     "settings": "Configurações",
-    "logout": "Sair"
+    "logout": "Sair",
+    "operation": "Operação",
+    "management": "Gestão",
+    "search": "Buscar atividade, local, código…",
+    "awaitingSignature": "Aguardando assinatura"
   },
   "auth": {
     "signIn": "Entrar",
@@ -25,7 +29,12 @@
     "forgotPassword": "Esqueci minha senha",
     "noAccount": "Fale com o administrador para solicitar acesso",
     "invalidCredentials": "Email ou senha inválidos",
-    "signingIn": "Entrando..."
+    "signingIn": "Entrando...",
+    "signInCta": "Entrar no Soprano",
+    "signInHelp": "Use as credenciais fornecidas pela Zitrón Brasil.",
+    "restricted": "Acesso restrito",
+    "aSolutionBy": "Uma solução",
+    "brandDescription": "Registro vivo da obra de ventilação subterrânea — atividades, fotos, equipes e assinatura digital do cliente, em um só fluxo."
   },
   "roles": {
     "admin": "Administrador",
@@ -40,7 +49,14 @@
     "quickStats": "Resumo",
     "activitiesThisMonth": "Atividades no mês",
     "signedThisMonth": "Resumos assinados",
-    "teamOnSite": "Equipe em campo"
+    "teamOnSite": "Equipe em campo",
+    "subtitle": "{pending} resumos aguardando assinatura",
+    "activeFronts": "Frentes ativas",
+    "open": "Abrir",
+    "viewAllReports": "Ver todos os resumos →",
+    "viewAllActivities": "Ver todas →",
+    "thisMonth": "este mês",
+    "noPending": "Sem pendências."
   },
   "linha6": {
     "title": "Linha 6 — Laranja",
@@ -49,7 +65,13 @@
     "shaftsLabel": "Poços de ventilação (VSE)",
     "emergencyLabel": "Saídas de emergência (SE)",
     "totalActivities": "Total de atividades",
-    "byLocation": "Por local"
+    "byLocation": "Por local",
+    "mostActive": "Locais com mais atividades",
+    "last90": "ÚLTIMOS 90 DIAS",
+    "legendStation": "ESTAÇÃO",
+    "legendVse": "VSE — POÇO DE VENTILAÇÃO",
+    "legendSe": "SE — SAÍDA DE EMERGÊNCIA",
+    "schemeNote": "ESQUEMA ILUSTRATIVO"
   },
   "activities": {
     "title": "Atividades",
@@ -126,6 +148,18 @@
       "createLocation": "Erro ao criar local",
       "createType": "Erro ao criar tipo",
       "saveActivity": "Erro ao salvar atividade"
+    },
+    "all": "Todas",
+    "exportCsv": "Exportar CSV",
+    "showing": "Mostrando {shown} de {total}",
+    "table": {
+      "code": "Código",
+      "activity": "Atividade",
+      "location": "Local",
+      "team": "Equipe",
+      "photos": "Fotos",
+      "start": "Início",
+      "status": "Status"
     }
   },
   "expandableSelect": {

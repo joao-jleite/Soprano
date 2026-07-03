@@ -87,32 +87,37 @@ export default async function RelatoriosPage({
 
   return (
     <div className="space-y-8 max-w-5xl">
-      <header>
-        <h1 className="text-3xl font-semibold tracking-tight">{tr('title')}</h1>
-        <p className="text-sm text-muted-foreground mt-1">{tr('subtitle')}</p>
+      <header className="flex flex-col gap-2">
+        <span className="font-mono text-[10.5px] uppercase tracking-[0.24em] text-muted-foreground/70">
+          {t('nav.management')}
+        </span>
+        <h1 className="text-[28px] font-semibold tracking-[-0.015em]">{tr('title')}</h1>
+        <p className="text-[13.5px] text-muted-foreground">{tr('subtitle')}</p>
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3.5 sm:grid-cols-4">
         <Stat
           icon={<ActivityIcon className="h-4 w-4" />}
           label={tr('total90')}
           value={total}
         />
         <Stat
-          icon={<CheckCircle2 className="h-4 w-4 text-green-500" />}
+          icon={<CheckCircle2 className="h-4 w-4 text-ok" />}
           label={tr('signed')}
           value={signedCount90}
-          accent
+          tone="text-ok"
         />
         <Stat
-          icon={<Clock className="h-4 w-4 text-amber-400" />}
+          icon={<Clock className="h-4 w-4 text-warn" />}
           label={tr('pending')}
           value={statusCounts['enviada'] ?? 0}
+          tone={statusCounts['enviada'] ? 'text-warn' : undefined}
         />
         <Stat
-          icon={<XCircle className="h-4 w-4 text-destructive" />}
+          icon={<XCircle className="h-4 w-4 text-bad" />}
           label={tr('rejected')}
           value={statusCounts['rejeitada'] ?? 0}
+          tone={statusCounts['rejeitada'] ? 'text-bad' : undefined}
         />
       </section>
 
@@ -251,22 +256,24 @@ function Stat({
   icon,
   label,
   value,
-  accent,
+  tone,
 }: {
   icon: React.ReactNode;
   label: string;
   value: number | string;
-  accent?: boolean;
+  tone?: string;
 }) {
   return (
-    <Card className={accent ? 'surface-elevated border-primary/30' : ''}>
-      <CardContent className="p-5">
-        <div className="flex items-center justify-between">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">{label}</p>
-          {icon}
-        </div>
-        <p className="mt-3 text-3xl font-semibold font-mono tabular-nums">{value}</p>
-      </CardContent>
-    </Card>
+    <div className="flex flex-col gap-2.5 rounded-[14px] border border-border bg-card p-[18px] pb-4">
+      <div className="flex items-center justify-between">
+        <p className="font-mono text-[9.5px] uppercase tracking-[0.2em] text-muted-foreground/70">
+          {label}
+        </p>
+        {icon}
+      </div>
+      <p className={`font-mono text-[31px] font-semibold leading-none tracking-[-0.02em] tabular-nums ${tone ?? ''}`}>
+        {value}
+      </p>
+    </div>
   );
 }

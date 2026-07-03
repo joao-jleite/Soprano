@@ -14,7 +14,11 @@
     "complaints": "Complaints",
     "dailyReport": "Daily Report",
     "settings": "Settings",
-    "logout": "Sign out"
+    "logout": "Sign out",
+    "operation": "Operation",
+    "management": "Management",
+    "search": "Search activity, site, code…",
+    "awaitingSignature": "Awaiting signature"
   },
   "auth": {
     "signIn": "Sign in",
@@ -25,7 +29,12 @@
     "forgotPassword": "Forgot password",
     "noAccount": "Contact the administrator to request access",
     "invalidCredentials": "Invalid email or password",
-    "signingIn": "Signing in..."
+    "signingIn": "Signing in...",
+    "signInCta": "Sign in to Soprano",
+    "signInHelp": "Use the credentials provided by Zitrón Brasil.",
+    "restricted": "Restricted access",
+    "aSolutionBy": "A solution by",
+    "brandDescription": "The living record of underground ventilation works — activities, photos, crews and client digital signature, in one flow."
   },
   "roles": {
     "admin": "Administrator",
@@ -40,7 +49,14 @@
     "quickStats": "Overview",
     "activitiesThisMonth": "Activities this month",
     "signedThisMonth": "Signed reports",
-    "teamOnSite": "Team on site"
+    "teamOnSite": "Team on site",
+    "subtitle": "{pending} reports awaiting signature",
+    "activeFronts": "Active fronts",
+    "open": "Open",
+    "viewAllReports": "View all reports →",
+    "viewAllActivities": "View all →",
+    "thisMonth": "this month",
+    "noPending": "No pending items."
   },
   "linha6": {
     "title": "Line 6 — Orange",
@@ -49,7 +65,13 @@
     "shaftsLabel": "Ventilation shafts (VSE)",
     "emergencyLabel": "Emergency exits (SE)",
     "totalActivities": "Total activities",
-    "byLocation": "By location"
+    "byLocation": "By location",
+    "mostActive": "Most active sites",
+    "last90": "LAST 90 DAYS",
+    "legendStation": "STATION",
+    "legendVse": "VSE — VENTILATION SHAFT",
+    "legendSe": "SE — EMERGENCY EXIT",
+    "schemeNote": "ILLUSTRATIVE DIAGRAM"
   },
   "activities": {
     "title": "Activities",
@@ -126,6 +148,18 @@
       "createLocation": "Failed to create location",
       "createType": "Failed to create type",
       "saveActivity": "Failed to save activity"
+    },
+    "all": "All",
+    "exportCsv": "Export CSV",
+    "showing": "Showing {shown} of {total}",
+    "table": {
+      "code": "Code",
+      "activity": "Activity",
+      "location": "Location",
+      "team": "Team",
+      "photos": "Photos",
+      "start": "Start",
+      "status": "Status"
     }
   },
   "expandableSelect": {

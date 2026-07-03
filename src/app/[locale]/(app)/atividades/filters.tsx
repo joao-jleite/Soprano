@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ACTIVITY_STATUS } from '@/lib/constants';
 
 type Props = {
   locations: { id: string; name: string; kind: string }[];
@@ -88,22 +87,6 @@ export function ActivityFilters({ locations, types, localeKey }: Props) {
             {types.map((tp) => (
               <SelectItem key={tp.id} value={tp.id}>
                 {tp[localeKey]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </Filter>
-
-      <Filter label={t('filterByStatus')} className="min-w-[140px]">
-        <Select value={sp.get('status') ?? 'all'} onValueChange={(v) => update('status', v)}>
-          <SelectTrigger>
-            <SelectValue placeholder="—" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">—</SelectItem>
-            {Object.values(ACTIVITY_STATUS).map((s) => (
-              <SelectItem key={s} value={s}>
-                {t(`status.${s}` as any)}
               </SelectItem>
             ))}
           </SelectContent>

@@ -14,7 +14,11 @@
     "complaints": "Reclamos",
     "dailyReport": "Resumen Diario",
     "settings": "Ajustes",
-    "logout": "Salir"
+    "logout": "Salir",
+    "operation": "Operación",
+    "management": "Gestión",
+    "search": "Buscar actividad, lugar, código…",
+    "awaitingSignature": "Esperando firma"
   },
   "auth": {
     "signIn": "Entrar",
@@ -25,7 +29,12 @@
     "forgotPassword": "Olvidé mi contraseña",
     "noAccount": "Contacta al administrador para solicitar acceso",
     "invalidCredentials": "Correo o contraseña inválidos",
-    "signingIn": "Entrando..."
+    "signingIn": "Entrando...",
+    "signInCta": "Entrar en Soprano",
+    "signInHelp": "Usa las credenciales proporcionadas por Zitrón Brasil.",
+    "restricted": "Acceso restringido",
+    "aSolutionBy": "Una solución",
+    "brandDescription": "Registro vivo de la obra de ventilación subterránea — actividades, fotos, equipos y firma digital del cliente, en un solo flujo."
   },
   "roles": {
     "admin": "Administrador",
@@ -40,7 +49,14 @@
     "quickStats": "Resumen",
     "activitiesThisMonth": "Actividades del mes",
     "signedThisMonth": "Resúmenes firmados",
-    "teamOnSite": "Equipo en obra"
+    "teamOnSite": "Equipo en obra",
+    "subtitle": "{pending} resúmenes esperando firma",
+    "activeFronts": "Frentes activas",
+    "open": "Abrir",
+    "viewAllReports": "Ver todos los resúmenes →",
+    "viewAllActivities": "Ver todas →",
+    "thisMonth": "este mes",
+    "noPending": "Sin pendientes."
   },
   "linha6": {
     "title": "Línea 6 — Naranja",
@@ -49,7 +65,13 @@
     "shaftsLabel": "Pozos de ventilación (VSE)",
     "emergencyLabel": "Salidas de emergencia (SE)",
     "totalActivities": "Total de actividades",
-    "byLocation": "Por ubicación"
+    "byLocation": "Por ubicación",
+    "mostActive": "Lugares con más actividades",
+    "last90": "ÚLTIMOS 90 DÍAS",
+    "legendStation": "ESTACIÓN",
+    "legendVse": "VSE — POZO DE VENTILACIÓN",
+    "legendSe": "SE — SALIDA DE EMERGENCIA",
+    "schemeNote": "ESQUEMA ILUSTRATIVO"
   },
   "activities": {
     "title": "Actividades",
@@ -126,6 +148,18 @@
       "createLocation": "Error al crear la ubicación",
       "createType": "Error al crear el tipo",
       "saveActivity": "Error al guardar la actividad"
+    },
+    "all": "Todas",
+    "exportCsv": "Exportar CSV",
+    "showing": "Mostrando {shown} de {total}",
+    "table": {
+      "code": "Código",
+      "activity": "Actividad",
+      "location": "Lugar",
+      "team": "Equipo",
+      "photos": "Fotos",
+      "start": "Inicio",
+      "status": "Estado"
     }
   },
   "expandableSelect": {

@@ -106,6 +106,28 @@ export function SopranoRotorSettle({ className }: { className?: string }) {
   );
 }
 
+/** Rotor em giro lento contínuo — painel de marca do login. */
+export function SopranoRotorDrift({ className }: { className?: string }) {
+  const id = React.useId().replace(/[:]/g, '');
+  return (
+    <svg
+      viewBox="0 0 96 96"
+      xmlns="http://www.w3.org/2000/svg"
+      className={cn('h-24 w-24', className)}
+      aria-hidden="true"
+    >
+      <RotorDefs id={id} />
+      <RotorTrail />
+      <g
+        className="animate-rotor-drift"
+        style={{ transformBox: 'fill-box', transformOrigin: 'center' }}
+      >
+        <RotorDisc id={id} />
+      </g>
+    </svg>
+  );
+}
+
 /** S da marca em traço branco — para superfícies já azuis (FAB, ícone do app). */
 export function SopranoGlyph({ className }: { className?: string }) {
   return (

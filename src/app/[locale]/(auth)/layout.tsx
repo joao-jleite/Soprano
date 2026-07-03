@@ -1,24 +1,31 @@
-import { SopranoWordmark, ZitronBadge } from '@/components/brand/logo';
+import { getTranslations } from 'next-intl/server';
+import { SopranoWordmark } from '@/components/brand/logo';
+import { BrandPanel } from '@/components/brand/brand-panel';
 import { LocaleSwitcher } from '@/components/layout/locale-switcher';
 
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+export default async function AuthLayout({ children }: { children: React.ReactNode }) {
+  const t = await getTranslations('auth');
   return (
-    <div className="relative min-h-screen flex flex-col">
-      <div className="absolute inset-0 grid-lines opacity-[0.15] pointer-events-none" aria-hidden />
+    <div className="grid min-h-screen lg:grid-cols-[1.05fr_1fr]">
+      <BrandPanel />
 
-      <header className="relative z-10 flex items-center justify-between px-6 lg:px-10 py-5">
-        <SopranoWordmark />
-        <LocaleSwitcher />
-      </header>
+      <div className="flex min-h-screen flex-col">
+        {/* Marca compacta — só no mobile, onde o painel esquerdo some */}
+        <header className="flex items-center justify-center px-6 pt-10 lg:hidden">
+          <SopranoWordmark />
+        </header>
 
-      <main className="relative z-10 flex-1 flex items-center justify-center px-6 py-8">
-        {children}
-      </main>
+        <main className="flex flex-1 items-center justify-center px-6 py-10 lg:px-10">
+          <div className="w-full max-w-[392px]">{children}</div>
+        </main>
 
-      <footer className="relative z-10 flex items-center justify-between px-6 lg:px-10 py-5 text-xs text-muted-foreground">
-        <ZitronBadge />
-        <span className="font-mono uppercase tracking-wider">Linha 6 · Laranja · SP</span>
-      </footer>
+        <footer className="flex items-center justify-between px-6 pb-6 lg:px-10">
+          <LocaleSwitcher />
+          <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-muted-foreground/60">
+            {t('restricted')}
+          </span>
+        </footer>
+      </div>
     </div>
   );
 }

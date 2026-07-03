@@ -74,14 +74,14 @@ export default async function NewActivityPage({
 
   return (
     <div className="max-w-3xl space-y-6">
-      <header>
-        <p className="text-data">
+      <header className="flex flex-col gap-2">
+        <p className="font-mono text-[10.5px] uppercase tracking-[0.24em] text-muted-foreground/70">
           {editingPending ? 'Editar pendente' : duplicating ? t('duplicating') : t('newActivity')}
         </p>
-        <h1 className="text-3xl font-semibold tracking-tight mt-2">
+        <h1 className="text-[28px] font-semibold tracking-[-0.015em]">
           {editingPending ? 'Editar atividade pendente' : t('register')}
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-[13.5px] text-muted-foreground">
           {editingPending
             ? 'Corrija o que for preciso e salve — a atividade volta para a fila e sobe quando houver conexão.'
             : duplicating
