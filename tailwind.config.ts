@@ -56,6 +56,11 @@ const config: Config = {
           chrome: 'hsl(var(--zitron-chrome))',
           cyan: 'hsl(var(--zitron-cyan))',
         },
+        // Chips de status — par texto/fundo que se adapta ao tema
+        ok: { DEFAULT: 'hsl(var(--ok))', bg: 'hsl(var(--ok-bg))' },
+        warn: { DEFAULT: 'hsl(var(--warn))', bg: 'hsl(var(--warn-bg))' },
+        bad: { DEFAULT: 'hsl(var(--bad))', bg: 'hsl(var(--bad-bg))' },
+        brand: { bg: 'hsl(var(--brand-bg))' },
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -79,11 +84,22 @@ const config: Config = {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
         },
+        'rotor-settle': {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(1080deg)' },
+        },
+        'rotor-spin': {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         'shimmer': 'shimmer 2s linear infinite',
+        // Splash: rotor gira 3 voltas e assenta no S (curva do design system)
+        'rotor-settle': 'rotor-settle 2.6s cubic-bezier(0.13, 0.62, 0.16, 1) both',
+        'rotor-spin': 'rotor-spin 1.1s linear infinite',
       },
     },
   },

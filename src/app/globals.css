@@ -3,78 +3,99 @@
 @tailwind utilities;
 
 /*
-  Soprano — Design Tokens
+  Soprano — Design Tokens (Premium Redesign)
   ------------------------------------------------
   A paleta inteira da aplicação mora aqui.
-  Quando o manual de marca Zitrón oficial chegar,
-  só os valores HSL precisam mudar — nenhum componente.
+  Fonte: Soprano Brand/App .dc.html (design system Zitrón).
 
-  Cor primária: AZUL industrial Zitrón.
+  Cor primária: azul Zitrón #1095D6 (dark) / #0E86C4 (light).
 */
 
 @layer base {
   :root {
     /* Modo escuro é o padrão — industrial premium */
-    --zitron-blue: 212 95% 42%;         /* ~#0959C8 — azul industrial Zitrón */
-    --zitron-blue-bright: 208 100% 58%; /* acento mais vivo, tipo LED */
-    --zitron-ink: 220 20% 5%;           /* fundo principal (quase preto azulado) */
-    --zitron-graphite: 220 16% 10%;     /* superfícies elevadas */
-    --zitron-steel: 220 9% 46%;         /* texto secundário */
-    --zitron-chrome: 220 14% 96%;       /* texto claro / superfícies claras */
-    --zitron-cyan: 190 100% 55%;        /* dados / telemetria */
+    --zitron-blue: 200 86% 45%;         /* #1095D6 — azul Zitrón oficial */
+    --zitron-blue-bright: 200 91% 58%;  /* #35B6F5 — acento vivo */
+    --zitron-ink: 216 42% 5%;           /* #070B11 — fundo principal */
+    --zitron-graphite: 214 39% 7%;      /* #0B1119 — superfícies elevadas */
+    --zitron-steel: 212 18% 44%;        /* #5D7085 — texto terciário */
+    --zitron-chrome: 215 38% 94%;       /* #E9EEF5 — texto claro */
+    --zitron-cyan: 193 100% 64%;        /* #45D6FF — dados / telemetria */
+
+    /* Chips de status (par cor/fundo — mudam juntos no modo claro) */
+    --ok: 160 61% 47%;        /* #2FBF8F */
+    --ok-bg: 163 53% 11%;     /* #0D2A22 */
+    --warn: 37 79% 57%;       /* #E8A63D */
+    --warn-bg: 37 38% 12%;    /* #2A2113 */
+    --bad: 0 70% 62%;         /* #E25C5C */
+    --bad-bg: 0 35% 12%;      /* #2A1414 */
+    --brand-bg: 206 62% 12%;  /* #0C2233 */
 
     /* Shadcn tokens (derivados dos brand tokens) */
     --background: var(--zitron-ink);
     --foreground: var(--zitron-chrome);
 
-    --card: 220 16% 8%;
+    --card: 217 39% 9%;                 /* #0E1520 */
     --card-foreground: var(--zitron-chrome);
 
-    --popover: 220 16% 7%;
+    --popover: 214 39% 7%;              /* #0B1119 */
     --popover-foreground: var(--zitron-chrome);
 
     --primary: var(--zitron-blue);
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 14% 14%;
+    --secondary: 215 39% 11%;           /* #111A27 */
     --secondary-foreground: var(--zitron-chrome);
 
-    --muted: 220 14% 12%;
-    --muted-foreground: 220 9% 60%;
+    --muted: 215 39% 11%;
+    --muted-foreground: 212 19% 64%;    /* #93A3B5 */
 
     --accent: var(--zitron-blue-bright);
-    --accent-foreground: 220 20% 5%;
+    --accent-foreground: 216 42% 5%;
 
-    --destructive: 0 72% 51%;
+    --destructive: var(--bad);
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 14% 17%;
-    --input: 220 14% 14%;
+    --border: 213 33% 16%;              /* #1B2736 */
+    --input: 216 45% 9%;                /* #0C1420 */
     --ring: var(--zitron-blue);
 
     --radius: 0.625rem;
   }
 
-  /* Modo claro opcional — preparado mas não é o padrão */
+  /* Modo claro — folha técnica sobre aço claro */
   .light {
-    --background: 0 0% 100%;
-    --foreground: 220 20% 5%;
+    --zitron-blue: 200 87% 41%;         /* #0E86C4 */
+    --zitron-blue-bright: 200 87% 41%;
+    --zitron-steel: 212 16% 59%;        /* #8595A7 */
+    --zitron-cyan: 193 90% 32%;         /* ciano legível sobre claro */
+
+    --ok: 159 71% 32%;        /* #178A62 */
+    --ok-bg: 155 46% 93%;     /* #E4F5EE */
+    --warn: 37 79% 41%;       /* #B97A16 */
+    --warn-bg: 39 79% 92%;    /* #FBF0DC */
+    --bad: 0 56% 52%;         /* #C94040 */
+    --bad-bg: 0 71% 95%;      /* #FBE7E7 */
+    --brand-bg: 203 75% 94%;  /* #E3F2FB */
+
+    --background: 214 37% 96%;          /* #F2F5F9 */
+    --foreground: 215 39% 10%;          /* #0F1722 */
     --card: 0 0% 100%;
-    --card-foreground: 220 20% 5%;
+    --card-foreground: 215 39% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 5%;
+    --popover-foreground: 215 39% 10%;
     --primary: var(--zitron-blue);
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 220 20% 5%;
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
-    --accent: 220 14% 96%;
-    --accent-foreground: 220 20% 5%;
-    --destructive: 0 72% 51%;
+    --secondary: 210 60% 98%;           /* #F7FAFD */
+    --secondary-foreground: 215 39% 10%;
+    --muted: 210 60% 98%;
+    --muted-foreground: 212 19% 36%;    /* #4A5A6C */
+    --accent: var(--zitron-blue-bright);
+    --accent-foreground: 0 0% 100%;
+    --destructive: var(--bad);
     --destructive-foreground: 0 0% 100%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
+    --border: 212 30% 92%;              /* #E3E9F0 */
+    --input: 212 30% 92%;
     --ring: var(--zitron-blue);
   }
 }
@@ -94,7 +115,7 @@
     @apply bg-background text-foreground;
     overflow-x: hidden;
     background-image:
-      radial-gradient(1200px circle at 50% -10%, hsl(var(--zitron-blue) / 0.12), transparent 55%),
+      radial-gradient(1200px circle at 50% -10%, hsl(var(--zitron-blue) / 0.1), transparent 55%),
       radial-gradient(900px circle at 0% 100%, hsl(var(--zitron-cyan) / 0.04), transparent 60%);
     background-attachment: fixed;
   }
@@ -125,11 +146,11 @@
     background: linear-gradient(
       180deg,
       hsl(var(--card)) 0%,
-      hsl(220 16% 6%) 100%
+      hsl(216 42% 6%) 100%
     );
     box-shadow:
       0 1px 0 0 hsl(var(--border)) inset,
-      0 24px 48px -12px hsl(0 0% 0% / 0.6);
+      0 20px 40px -22px hsl(0 0% 0% / 0.55);
   }
 
   /* Modo claro: gradiente e sombra adaptados */
@@ -137,7 +158,7 @@
     background: linear-gradient(
       180deg,
       hsl(var(--card)) 0%,
-      hsl(220 14% 94%) 100%
+      hsl(210 60% 98%) 100%
     );
     box-shadow:
       0 1px 0 0 hsl(var(--border)) inset,
