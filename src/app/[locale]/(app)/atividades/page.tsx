@@ -58,7 +58,7 @@ export default async function ActivitiesPage({
   let q = supabase
     .from('activities')
     .select(
-      'id, description, status, started_at, supervisor_id, locations(name, kind), activity_types(label_pt, label_en, label_es), activity_participants(name), activity_photos(count)',
+      'id, description, status, started_at, supervisor_id, locations(name, kind), activity_types(label_pt, label_en, label_es), activity_participants(name), activity_photos(id)',
     )
     // Esconde as excluídas (soft-delete) — elas vivem na lixeira, não na lista.
     .is('deleted_at', null)
@@ -265,7 +265,7 @@ export default async function ActivitiesPage({
                     .join('')
                     .toUpperCase(),
               );
-              const photoCount = a.activity_photos?.[0]?.count ?? 0;
+              const photoCount = (a.activity_photos ?? []).length;
               const canDelete =
                 role === 'admin' || (role === 'supervisor' && a.supervisor_id === user?.id);
               return (

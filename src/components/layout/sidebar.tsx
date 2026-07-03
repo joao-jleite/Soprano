@@ -54,8 +54,19 @@ export function Sidebar({
   const supabase = createClient();
 
   async function handleLogout() {
-    await supabase.auth.signOut();
-    // Hard redirect para o middleware reconhecer o cookie expirado.
+    // signOut lança se a sessão já expirou — o redirect precisa acontecer
+    // SEMPRE, então cada etapa é isolada. O POST server-side limpa os
+    // cookies mesmo quando o client não tem mais sessão.
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      /* sessão já ausente no client */
+    }
+    try {
+      await fetch('/api/auth/signout', { method: 'POST' });
+    } catch {
+      /* offline — cookies do client já foram limpos */
+    }
     window.location.assign(`/${locale}/login`);
   }
 
@@ -112,25 +123,27 @@ export function Sidebar({
         </span>
       </Link>
 
-      <div className="px-2.5 pb-2 pt-2.5 font-mono text-[9px] uppercase tracking-[0.24em] text-muted-foreground/60">
-        {t('nav.operation')}
+      {/* Área rolável — garante que o card do usuário (logout) fique sempre
+          alcançável mesmo em telas baixas */}
+      <div className="min-h-0 flex-1 overflow-y-auto pb-2">
+        <div className="px-2.5 pb-2 pt-2.5 font-mono text-[9px] uppercase tracking-[0.24em] text-muted-foreground/60">
+          {t('nav.operation')}
+        </div>
+        <nav>
+          <ul className="space-y-0.5">{renderItems(OPS_ITEMS)}</ul>
+        </nav>
+
+        {MGMT_ITEMS.some((i) => i.roles.includes(role)) && (
+          <>
+            <div className="px-2.5 pb-2 pt-4 font-mono text-[9px] uppercase tracking-[0.24em] text-muted-foreground/60">
+              {t('nav.management')}
+            </div>
+            <nav>
+              <ul className="space-y-0.5">{renderItems(MGMT_ITEMS)}</ul>
+            </nav>
+          </>
+        )}
       </div>
-      <nav>
-        <ul className="space-y-0.5">{renderItems(OPS_ITEMS)}</ul>
-      </nav>
-
-      {MGMT_ITEMS.some((i) => i.roles.includes(role)) && (
-        <>
-          <div className="px-2.5 pb-2 pt-4 font-mono text-[9px] uppercase tracking-[0.24em] text-muted-foreground/60">
-            {t('nav.management')}
-          </div>
-          <nav>
-            <ul className="space-y-0.5">{renderItems(MGMT_ITEMS)}</ul>
-          </nav>
-        </>
-      )}
-
-      <div className="flex-1" />
 
       <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-3">
         <span className="inline-flex h-[34px] w-[34px] flex-none items-center justify-center rounded-full bg-brand-bg text-xs font-semibold text-accent">

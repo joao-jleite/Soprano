@@ -5,7 +5,6 @@ import { Sidebar } from '@/components/layout/sidebar';
 import { Topbar } from '@/components/layout/topbar';
 import { MobileNav } from '@/components/layout/mobile-nav';
 import { PageTransition } from '@/components/layout/page-transition';
-import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 import { SyncEngine } from '@/components/offline/sync-engine';
 import { OfflineIndicator } from '@/components/offline/offline-indicator';
 import { NameOnboarding } from '@/components/profile/name-onboarding';
@@ -168,7 +167,8 @@ export default async function AppLayout({
         <Topbar fullName={profile.full_name} role={profile.role} pendingCount={pendingCount ?? 0} />
         <main className="flex-1 pb-20 lg:pb-8">
           <div className="px-4 lg:px-8 py-6 lg:py-8 w-full max-w-7xl">
-            <Breadcrumbs />
+            {/* Breadcrumb global saiu — o design usa kickers mono por página
+                (e o detalhe da atividade tem breadcrumb próprio com código ATV) */}
             <PageTransition>{children}</PageTransition>
           </div>
         </main>
